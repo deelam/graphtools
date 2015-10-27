@@ -13,7 +13,7 @@ These tools use
 * Tinkerpop's Blueprints interfce to be independent of graph implementations
 * Currently focus on OLAP
  
-By combining these tools, I can scalably import data in various formats and store it in graph databases; merge the graphs so they have a consistent schema; and analyze, extract, and transform the merged graph into desired output.
+By combining these tools, we can scalably import data in various formats and store it in graph databases; "merge" the graphs so they have a consistent schema; and analyze, extract, and transform the merged graph into desired output.
 
 <pre>
 +-------------+      +-----------------+
@@ -30,14 +30,25 @@ By combining these tools, I can scalably import data in various formats and stor
                                                    +------------+
 </pre>
 
+Problem characteristics
+* There is no single graph schema to rule them all (for different datatypes, domains, and usecases).
+* Interpretation of sourceData is not trivial -- requires domain knowledge.  Hence, we enable those experts to map the sourceData into a graph representation, which is more easily interpretable.
+* Even when given a graph representation of the data, it needs to be translated into a graph schema that is at least compatible (if not consistent) with other graphs.
+* It may not be efficient or reasonable to merge graphs, which duplicate the original graph data.
+
 ## Level 0 Tools
 
 ### Importer
 * void import(sourceData, graphUri)
 * User needs to provide an input-data-specific Encoder that maps IORecord to GraphRecords.  The data import is done by the Importer.
-  * List\<GraphRecord> encode(ioRecord)
+  * souceData -> getNextRecord() -> IORecord -> encode() -> GraphRecord -> sort,merge,save() -> Graph
   * IORecord sourceData.getNextRecord()
-* IORecord -> encode() -> GraphRecord -> sort,merge,import() -> Graph
+  * List\<GraphRecord> encode(ioRecord, recordContext)
+    * A single ioRecord can map to multiple GraphRecords.
+    * This typically results in duplicate nodes, which are later sorted and merged before saving to the graph.
+    * For efficiency, recordContext can hold a Map<StringId,Node> to avoid populating nodes with the same properties and speeding up node merging later.
+    * The Encorder defines a set of RelationBuilders that declare nodes and edges to be created for GraphRecord.
+    * A RelationBuilder defines functions that, when given an ioRecord, provide the id, type/label, and properties of nodes and edges.  To reduce the risk of inconsistent graph schemas and having to reconcile and merge later, these functions should be reused and shared where possible.
 
 #### Graph URIs
 * file://[host[:port]]/path

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>net.deelam</groupId>
+    <artifactId>graphtools-dev-pom</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+  <artifactId>graphtools-importer</artifactId>
+  <packaging>bundle</packaging>
+  <name>GraphTools Importer</name>
+  <properties>
+    <bundle.embedDependency>*;scope=compile|runtime;type=!pom;inline=false</bundle.embedDependency>
+    <bundle.import_package>
+javassist.util.proxy, <!-- needed by frames; must manually import -->
+<!--sun.misc;resolution:=optional, sun.reflect;resolution:=optional,-->
+*</bundle.import_package>
+  </properties>
+  <dependencies>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.tinkerpop</groupId>
+      <artifactId>frames</artifactId>
+    </dependency>
+  </dependencies>
+</project>

@@ -4,7 +4,7 @@
 package graphtools;
 
 /**
- * @author dlam
+ * @author deelam
  *
  */
 public class GraphUtils {

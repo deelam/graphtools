@@ -8,7 +8,7 @@ import graphtools.importer.csv.domain.TelephoneBean;
 /**
  * Should not keep state across different sourceData.
  * Not thread safe -- create a new instance of each thread.
- * @author dlam
+ * @author deelam
  */
 public interface Encoder<B> {
 

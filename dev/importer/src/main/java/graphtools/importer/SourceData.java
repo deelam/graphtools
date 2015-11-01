@@ -6,7 +6,7 @@ package graphtools.importer;
 import java.io.IOException;
 
 /**
- * @author dlam
+ * @author deelam
  *
  */
 public interface SourceData<R> {

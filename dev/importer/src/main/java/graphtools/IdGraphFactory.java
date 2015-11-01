@@ -8,7 +8,7 @@ import org.apache.commons.configuration.Configuration;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
- * @author dlam
+ * @author deelam
  *
  */
 public interface IdGraphFactory {

@@ -11,7 +11,7 @@ import java.util.List;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
- * @author dlam
+ * @author deelam
  *
  */
 public interface Populator {

@@ -16,7 +16,7 @@ import com.tinkerpop.blueprints.impls.tg.TinkerGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
- * @author dlam
+ * @author deelam
  *
  */
 public class GraphUri {

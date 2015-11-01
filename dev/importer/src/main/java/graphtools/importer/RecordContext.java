@@ -4,7 +4,7 @@
 package graphtools.importer;
 
 /**
- * @author dlam
+ * @author deelam
  *
  */
 public interface RecordContext<B> {

@@ -17,7 +17,7 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 /**
  * Given sourceData, iterates through ioRecord of type R 
  * and populates provided graph.
- * @author dlam
+ * @author deelam
  */
 @RequiredArgsConstructor
 @Slf4j

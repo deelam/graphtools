@@ -22,7 +22,7 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
  * 
- * @author dlam
+ * @author deelam
  */
 public class ImporterManager {
 	@AllArgsConstructor

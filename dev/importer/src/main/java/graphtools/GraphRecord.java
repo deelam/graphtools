@@ -5,7 +5,7 @@ package graphtools;
 
 
 /**
- * @author dlam
+ * @author deelam
  *
  */
 public class GraphRecord extends StringIdNodeWritable{

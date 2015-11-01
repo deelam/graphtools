@@ -18,7 +18,7 @@ import org.supercsv.io.ICsvBeanReader;
 
 
 /**
- * @author dlam
+ * @author deelam
  */
 public class CsvFileToBeanSourceData<B> implements SourceData<B> {
 	

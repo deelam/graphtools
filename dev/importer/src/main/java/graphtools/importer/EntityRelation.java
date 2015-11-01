@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * Template for modeling an entity relationship.
- * @author dlam
+ * @author deelam
  */
 @RequiredArgsConstructor
 public class EntityRelation<C extends RecordContext>{	

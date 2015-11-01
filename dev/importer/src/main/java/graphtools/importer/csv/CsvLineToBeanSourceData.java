@@ -17,7 +17,7 @@ import com.google.common.io.LineReader;
 
 
 /**
- * @author dlam
+ * @author deelam
  */
 @Slf4j
 public class CsvLineToBeanSourceData<B> implements SourceData<B> {

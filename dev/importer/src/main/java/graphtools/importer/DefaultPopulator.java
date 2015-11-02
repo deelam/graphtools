@@ -56,7 +56,7 @@ public class DefaultPopulator implements Populator{
 	}
 	
 
-	private void importEdges(IdGraph graph, Direction direction, Vertex newV, Vertex vertex){
+	private void importEdges(Graph graph, Direction direction, Vertex newV, Vertex vertex){
 		for(Edge e:vertex.getEdges(direction)){
 			Vertex oppV=e.getVertex(direction.opposite());
 			Vertex newOpp=importVertex(graph, oppV);
@@ -75,12 +75,12 @@ public class DefaultPopulator implements Populator{
 			copyProperties(v, newV);
 			String origId=v.getProperty(IdGraph.ID);
 			if(origId == null){
-				origId=v.getProperty("__origId");
+				origId=v.getProperty("_.origId");
 			}
 			if(origId == null){
 				origId=(String) v.getId();
 			}
-			newV.setProperty("__origId", origId);
+			newV.setProperty("_.origId", origId);
 		}
 		return newV;
 	}
@@ -102,7 +102,7 @@ public class DefaultPopulator implements Populator{
 		return newEdge;
 	}
 
-	static final String SET_SUFFIX="_SET__";
+	static final String SET_SUFFIX="_.SET_";
 
 	public static void copyProperties(Element fromE, Element toE){
 		for(String key:fromE.getPropertyKeys()){
@@ -110,9 +110,6 @@ public class DefaultPopulator implements Populator{
 				continue;
 			if(key.endsWith(SET_SUFFIX)){ // ignore
 				switch(key){
-					case "nameQualifier_SET__": // telephone DB
-					case "phoneType_SET__": // contacts DB
-					break;
 					default:
 						log.warn("Ignoring property: " + fromE + " " + key + "=" + fromE.getProperty(key));
 						continue;

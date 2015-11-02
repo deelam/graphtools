@@ -27,7 +27,7 @@ public class StringIdNodeWritable extends StringIdElementWritable implements Ver
 	private static final long serialVersionUID=201508251201L;
 
 	@Setter
-	private static String NODE_TYPE_KEY = "__type";
+	private static String NODE_TYPE_KEY = "_.type";
 	
 	public StringIdNodeWritable(String strId) {
 		super(strId);

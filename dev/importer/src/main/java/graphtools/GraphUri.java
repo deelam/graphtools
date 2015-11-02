@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.configuration.BaseConfiguration;
@@ -19,14 +20,17 @@ import com.tinkerpop.blueprints.impls.tg.TinkerGraph.FileType;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
+ * GraphUri examples:
+ * <li> "tinker:///": in-memory TinkerGraph 
+ * <li> "tinker:///./testGraphs/tGraph": on-disk TinkerGraph in relative directory
+ * <li> "tinker:///./testGraphs/tGraphML?fileType=graphml": on-disk TinkerGraph in GraphML format
  * @author deelam
- *
  */
+@RequiredArgsConstructor
 @Slf4j
 public class GraphUri {
-	private static final String URI$ = "__uri";
-	private static final String URI_PATH = "__uriPath";
-	private static final String URI_SCHEMA_PART = "__uriSchemaSpecificPart";
+	private static final String URI_PATH = "_uriPath";
+	private static final String URI_SCHEMA_PART = "_uriSchemaSpecificPart";
 	
 	@Getter
 	private final URI uri;
@@ -58,16 +62,19 @@ public class GraphUri {
 		register("tinker", new IdGraphFactory(){
 			@Override
 			public IdGraph open(Configuration conf) {
-				String path = conf.getString(URI_PATH);
-				if(path.length()>1 && path.charAt(1)=='.')
-					path=path.substring(1);
-				
+				// check desired output format
 				FileType fileType = TinkerGraph.FileType.JAVA;
 				String fileTypeStr = conf.getString("fileType");
 				if(fileTypeStr!=null){
 					fileType=TinkerGraph.FileType.valueOf(fileTypeStr.toUpperCase());
 				}
 				
+				String path = conf.getString(URI_PATH);
+				// check if path is relative
+				if(path.length()>1 && path.charAt(1)=='.')
+					path=path.substring(1);
+				
+				// open graph
 				IdGraph<?> graph;
 				if(path==null || path.equals("/")){
 					log.debug("Opening tinker graph in memory");

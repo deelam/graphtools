@@ -13,7 +13,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
-import org.junit.Before;
+import org.apache.commons.io.FileUtils;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -21,10 +22,10 @@ import org.junit.Test;
  */
 public class ImportingTest {
 	
-	ImporterManager mgr=new ImporterManager();
+	static ImporterManager mgr=new ImporterManager();
 	
-	@Before
-	public void setup(){
+	@BeforeClass
+	public static void setup() throws IOException{
 		mgr.register("companyContactsCsv",
 				new CsvBeanSourceDataFactory<CompanyContactBean>(new CompanyContactsCsvParser()), 
 				new DefaultImporter<CompanyContactBean>(
@@ -37,6 +38,8 @@ public class ImportingTest {
 	@Test
 	public void importCsvFileTest() throws IOException, URISyntaxException {
 		File csvFile = new File(getClass().getResource("/us-500.csv").getFile());
+		
+		FileUtils.deleteDirectory(new File("us500test"));
 		mgr.importFile("companyContactsCsv", csvFile, new GraphUri("tinker:///./us500test?fileType=graphml"));
 	}
 }

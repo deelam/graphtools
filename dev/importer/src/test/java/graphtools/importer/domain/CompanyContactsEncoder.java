@@ -84,15 +84,17 @@ public class CompanyContactsEncoder implements Encoder<CompanyContactBean>{
 	
 		/// Person -> company Location
 		new EntityRelation<CompanyContactsRC>(
-			new PersonNodeFiller(),
-			new LocationNodeFiller(),
-			new EmployeeAtEdgeFiller())
-		,
+			new PersonNodeFiller(),	new LocationNodeFiller(),
+			new EmployeeAtEdgeFiller()),
 
+		/// company Location -> USState
+		new EntityRelation<CompanyContactsRC>(
+			new LocationNodeFiller(), new StateNodeFiller(),
+			new InStateEdgeFiller()),
+			
 		/// Person -> CommDevice
 		new EntityRelation<CompanyContactsRC>(
-			new PersonNodeFiller(),
-			new DeviceNodeFiller(),
+			new PersonNodeFiller(),	new DeviceNodeFiller(),
 			new HasDeviceEdgeFiller()
 			){
 			@Override
@@ -135,7 +137,8 @@ public class CompanyContactsEncoder implements Encoder<CompanyContactBean>{
 		@Override
 		public void fill(Vertex v, CompanyContactsRC context){
 			CompanyContactBean b = context.bean;
-			new Location(v).address(b.address).city(b.city)
+			new Location(v, Location.LOCATION_TYPES.Company)
+				.address(b.address).city(b.city)
 				.county(b.county).state(b.state).zip(b.zip);
 		}
 	}
@@ -151,6 +154,35 @@ public class CompanyContactsEncoder implements Encoder<CompanyContactBean>{
 		}
 	}
 
+	static final class StateNodeFiller extends NodeFiller<CompanyContactsRC> {
+		public StateNodeFiller(){
+			super(Location.ENTITY_TYPE);
+		}
+		
+		@Override
+		public String getId(CompanyContactsRC context){
+			return "State:" + context.bean.state;
+		}
+
+		@Override
+		public void fill(Vertex v, CompanyContactsRC context){
+			CompanyContactBean b = context.bean;
+			new Location(v, Location.LOCATION_TYPES.USState)
+				.state(b.state);
+		}
+	}
+	
+	static final class InStateEdgeFiller extends EdgeFiller<CompanyContactsRC> {
+		public InStateEdgeFiller() {
+			super("inState");
+		}
+
+		@Override
+		public String getId(StringIdNodeWritable outFv,	StringIdNodeWritable inFv, CompanyContactsRC context){
+			return outFv.getId() + ":inState>" + context.bean.state; 
+		}
+	}
+	
 	/// CommDevice entity
 
 	@Slf4j

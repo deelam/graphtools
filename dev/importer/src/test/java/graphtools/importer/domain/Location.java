@@ -6,9 +6,10 @@ class Location {
 	static final String ENTITY_TYPE="LOCATION";
 	final Vertex node;
 
-	public Location(Vertex node) {
+	enum LOCATION_TYPES { Company, USState };
+	public Location(Vertex node, LOCATION_TYPES locationType) {
 		this.node = node;
-		node.setProperty("locationType", "");
+		node.setProperty("locationType", locationType.toString());
 	}
 
 	Location name(String val){

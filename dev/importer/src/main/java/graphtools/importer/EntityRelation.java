@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
  * @author deelam
  */
 @RequiredArgsConstructor
-public class EntityRelation<C extends RecordContext>{	
+public class EntityRelation<C extends RecordContext<?>>{	
 	final NodeFiller<C> srcNodeFiller;
 	final NodeFiller<C> dstNodeFiller;
 	final EdgeFiller<C> edgeFiller;

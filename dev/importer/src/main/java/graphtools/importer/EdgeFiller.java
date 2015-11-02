@@ -1,6 +1,6 @@
 package graphtools.importer;
 
-import graphtools.StringIdNodeWritable;
+import graphtools.GraphRecord;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -19,7 +19,7 @@ public abstract class EdgeFiller<C extends RecordContext<?>> {
 		return this;
 	}
 
-	abstract public String getId(StringIdNodeWritable outFv, StringIdNodeWritable inFv, C context);
+	abstract public String getId(GraphRecord outFv, GraphRecord inFv, C context);
 
 	public void fill(Edge e, C context) {
 	}

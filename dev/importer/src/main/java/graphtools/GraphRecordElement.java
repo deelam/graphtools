@@ -15,12 +15,12 @@ import com.tinkerpop.blueprints.Element;
 
 @NoArgsConstructor
 @ToString
-public class StringIdElementWritable implements Element, Serializable {
+public class GraphRecordElement implements Element, Serializable {
 	private static final long serialVersionUID=201509030419L;
 	
 	public static final String LONG_ID_PROPKEY="_longId";
 
-	public StringIdElementWritable(String strId){
+	public GraphRecordElement(String strId){
 		checkNotNull(strId);
 		id=strId;
 	}
@@ -40,8 +40,8 @@ public class StringIdElementWritable implements Element, Serializable {
 	public boolean equals(Object obj){
 		if(obj == null)
 			return false;
-		if(obj instanceof StringIdElementWritable)
-			return id.equals( ((StringIdElementWritable) obj).getId());
+		if(obj instanceof GraphRecordElement)
+			return id.equals( ((GraphRecordElement) obj).getId());
 		return false;
 	}
 

@@ -1,6 +1,6 @@
 package graphtools.importer.domain;
 
-import graphtools.StringIdNodeWritable;
+import graphtools.GraphRecord;
 import graphtools.importer.EdgeFiller;
 import graphtools.importer.Encoder;
 import graphtools.importer.EntityRelation;
@@ -149,7 +149,7 @@ public class CompanyContactsEncoder implements Encoder<CompanyContactBean>{
 		}
 
 		@Override
-		public String getId(StringIdNodeWritable outFv,	StringIdNodeWritable inFv, CompanyContactsRC context){
+		public String getId(GraphRecord outFv,	GraphRecord inFv, CompanyContactsRC context){
 			return outFv.getId() + ":location>" + context.bean.address; 
 		}
 	}
@@ -178,7 +178,7 @@ public class CompanyContactsEncoder implements Encoder<CompanyContactBean>{
 		}
 
 		@Override
-		public String getId(StringIdNodeWritable outFv,	StringIdNodeWritable inFv, CompanyContactsRC context){
+		public String getId(GraphRecord outFv,	GraphRecord inFv, CompanyContactsRC context){
 			return outFv.getId() + ":inState>" + context.bean.state; 
 		}
 	}
@@ -211,7 +211,7 @@ public class CompanyContactsEncoder implements Encoder<CompanyContactBean>{
 		}
 
 		@Override
-		public String getId(StringIdNodeWritable outFv,	StringIdNodeWritable inFv, CompanyContactsRC context){
+		public String getId(GraphRecord outFv,	GraphRecord inFv, CompanyContactsRC context){
 			return outFv.getId() + "->" + inFv.getId();
 		}
 

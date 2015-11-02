@@ -4,7 +4,7 @@
 package graphtools.importer;
 
 import graphtools.GraphRecord;
-import graphtools.StringIdEdgeWritable;
+import graphtools.GraphRecordEdge;
 
 import java.util.Collection;
 import java.util.Hashtable;
@@ -69,9 +69,9 @@ public class GraphRecordBuilder<B> {
 					String label=edgeFiller.getLabel();
 					String edgeId=edgeFiller.getId(outFv, inFv, rContext);
 					if(label != null && edgeId!=null && outFv != null && inFv != null){
-						StringIdEdgeWritable fe=outFv.getOutEdge(edgeId);
+						GraphRecordEdge fe=outFv.getOutEdge(edgeId);
 						if(fe==null){
-							fe=new StringIdEdgeWritable(edgeId, label, outFv, inFv);
+							fe=new GraphRecordEdge(edgeId, label, outFv, inFv);
 							fe.setProperty(IdGraph.ID, edgeId);
 							//fe.setProperty(CsvGraphFiller.LONG_ID_PROPKEY, generateEdgeId());
 							outFv.addEdge(fe);

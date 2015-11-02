@@ -39,7 +39,7 @@ public class ImportingTest {
 	public void importCsvFileTest() throws IOException, URISyntaxException {
 		File csvFile = new File(getClass().getResource("/us-500.csv").getFile());
 		
-		FileUtils.deleteDirectory(new File("us500test"));
-		mgr.importFile("companyContactsCsv", csvFile, new GraphUri("tinker:///./us500test?fileType=graphml"));
+		FileUtils.deleteDirectory(new File("target/us500test"));
+		mgr.importFile("companyContactsCsv", csvFile, new GraphUri("tinker:///./target/us500test?fileType=graphml"));
 	}
 }

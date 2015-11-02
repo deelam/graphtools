@@ -17,7 +17,7 @@ import com.tinkerpop.blueprints.Vertex;
  */
 @NoArgsConstructor
 //@ToString
-public class StringIdEdgeWritable extends StringIdElementWritable implements Edge, Serializable {
+public class GraphRecordEdge extends GraphRecordElement implements Edge, Serializable {
 
 	private static final long serialVersionUID=201509030420L;
 
@@ -29,22 +29,22 @@ public class StringIdEdgeWritable extends StringIdElementWritable implements Edg
 	@Getter
 	String inVertexStringId;
 
-	public StringIdEdgeWritable emptyCopy(){
-		return new StringIdEdgeWritable(getStringId(), label, outVertexStringId, inVertexStringId);
+	public GraphRecordEdge emptyCopy(){
+		return new GraphRecordEdge(getStringId(), label, outVertexStringId, inVertexStringId);
 	}
 
-	private StringIdEdgeWritable(String id, String label, String outVertex, String inVertex){
+	private GraphRecordEdge(String id, String label, String outVertex, String inVertex){
 		super(id);
 		this.label=label;
 		outVertexStringId=outVertex;
 		inVertexStringId=inVertex;
 	}
 
-	public StringIdEdgeWritable(String id, String label, Vertex outVertex, Vertex inVertex){
+	public GraphRecordEdge(String id, String label, Vertex outVertex, Vertex inVertex){
 		this(id, label, (String) outVertex.getId(), (String) inVertex.getId());
 	}
 
-	public StringIdEdgeWritable(String label, Vertex outVertex, Vertex inVertex){
+	public GraphRecordEdge(String label, Vertex outVertex, Vertex inVertex){
 		this(newEdgeId(), label, (String) outVertex.getId(), (String) inVertex.getId());
 	}
 
@@ -70,10 +70,10 @@ public class StringIdEdgeWritable extends StringIdElementWritable implements Edg
 	@Override
 	public Vertex getVertex(Direction direction) throws IllegalArgumentException{
 		if(direction == Direction.OUT)
-			return new StringIdNodeWritable(outVertexStringId);
+			return new GraphRecord(outVertexStringId);
 
 		if(direction == Direction.IN)
-			return new StringIdNodeWritable(inVertexStringId);
+			return new GraphRecord(inVertexStringId);
 
 		throw new UnsupportedOperationException();
 	}

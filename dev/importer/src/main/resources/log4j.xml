@@ -11,7 +11,7 @@
 	</appender>
 
    <logger name="graphtools">
-		<level value="DEBUG" />
+		<level value="INFO" />
 	</logger>
 
    <logger name="org.apache.zookeeper">

@@ -17,12 +17,12 @@ public class GraphUriTest {
 
 	@Before
 	public void setUp() throws Exception {
-		new File("testGraphs").mkdir();
+//		new File("testGraphs").mkdir();
 	}
 
 	@AfterClass
 	public static void tearDown() throws IOException{
-		FileUtils.deleteDirectory(new File("testGraphs"));
+//		FileUtils.deleteDirectory(new File("testGraphs"));
 	}
 
 	@Test
@@ -34,14 +34,14 @@ public class GraphUriTest {
 	
 	@Test
 	public void testSavedGraph() {
-		GraphUri gUri = new GraphUri("tinker:///./testGraphs/tGraph");
+		GraphUri gUri = new GraphUri("tinker:///./target/tGraph");
 		IdGraph<TinkerGraph> graph = gUri.openIdGraph();
 		graph.shutdown();
 	}
 
 	@Test
 	public void testSavedGraphml() {
-		GraphUri gUri = new GraphUri("tinker:///./testGraphs/tGraphML?fileType=graphml");
+		GraphUri gUri = new GraphUri("tinker:///./target/tGraphML?fileType=graphml");
 		IdGraph<TinkerGraph> graph = gUri.openIdGraph();
 		graph.shutdown();
 	}

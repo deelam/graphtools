@@ -9,7 +9,7 @@ package graphtools;
  */
 public class GraphUtils {
 
-	public static String toString(StringIdEdgeWritable edge) {
+	public static String toString(GraphRecordEdge edge) {
 		// TODO Auto-generated method stub
 		return null;
 	}

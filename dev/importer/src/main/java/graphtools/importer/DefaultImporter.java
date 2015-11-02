@@ -42,7 +42,7 @@ public class DefaultImporter<R> implements Importer<R> {
 			while((ioRecord=sourceData.getNextRecord()) !=null){
 				log.debug("-------------- row=" + ioRecord);
 				Collection<GraphRecord> gRecords=grBuilder.build(ioRecord);
-				log.debug(gRecords.toString().replace(",", ",\n"));
+				//log.debug(gRecords.toString());
 				
 				populator.populateGraph(graph, gRecords);
 			}

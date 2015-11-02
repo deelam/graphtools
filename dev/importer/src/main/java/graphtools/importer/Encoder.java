@@ -3,7 +3,6 @@
  */
 package graphtools.importer;
 
-import graphtools.importer.csv.domain.TelephoneBean;
 
 /**
  * Should not keep state across different sourceData.

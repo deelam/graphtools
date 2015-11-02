@@ -1,10 +1,6 @@
 package graphtools.importer;
 
 import graphtools.GraphUri;
-import graphtools.importer.csv.CsvBeanSourceDataFactory;
-import graphtools.importer.csv.domain.TelephoneBean;
-import graphtools.importer.csv.domain.TelephoneCsvParser;
-import graphtools.importer.csv.domain.TelephoneEncoder;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,16 +36,6 @@ public class ImporterManager {
 		return registry.keySet();
 	}
 		
-	public static void main(String[] args) throws IOException {
-		ImporterManager mgr=new ImporterManager();
-		
-		mgr.register("telephoneCsv",
-				new CsvBeanSourceDataFactory<TelephoneBean>(new TelephoneCsvParser()), 
-				new DefaultImporter<TelephoneBean>(new TelephoneEncoder(), new DefaultPopulator("telephoneCsv")));
-		
-		mgr.importFile(args[0], new File(args[1]), new GraphUri(args[2]));
-	}
-	
 	@SuppressWarnings("unchecked")
 	public void importFile(String ingesterId, File file, GraphUri destName) throws IOException{
 		// get ingester

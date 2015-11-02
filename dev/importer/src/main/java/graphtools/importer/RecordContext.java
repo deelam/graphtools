@@ -9,6 +9,7 @@ package graphtools.importer;
  */
 public interface RecordContext<B> {
 	B getBean();
+	void setBean(B bean);
 	void setInstanceIndex(int j);
 	int getInstanceIndex();
 }

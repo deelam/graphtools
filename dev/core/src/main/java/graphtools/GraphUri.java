@@ -35,12 +35,15 @@ public class GraphUri {
 	@Getter
 	private final URI uri;
 	public GraphUri(String uri) {
+		this(uri, new BaseConfiguration());
+	}
+	public GraphUri(String uri, Configuration config) {
 		this.uri=URI.create(uri);
+		conf=config;
 	}
+	@Getter
+	private Configuration conf;
 	public IdGraph openIdGraph() {
-		return openIdGraph(null);
-	}
-	public IdGraph openIdGraph(Configuration conf) {
 		IdGraphFactory factory = graphFtry.get(uri.getScheme());
 		Preconditions.checkNotNull(factory, "Unknown schema: "+uri.getScheme());
 		if(conf==null)

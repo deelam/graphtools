@@ -20,6 +20,11 @@ javassist.util.proxy, <!-- needed by frames; must manually import -->
   <dependencies>
   <!-- embedded dependencies -->
     <dependency>
+		<groupId>net.deelam</groupId>
+		<artifactId>graphtools-core</artifactId>
+		<version>${project.version}</version>
+    </dependency>
+    <dependency>
 		<groupId>net.sf.supercsv</groupId>
 		<artifactId>super-csv</artifactId>
 		<version>2.1.0</version>

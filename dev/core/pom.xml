@@ -10,24 +10,36 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <artifactId>graphtools-core</artifactId>
   <packaging>bundle</packaging>
   <name>GraphTools Core</name>
-  <properties>
-    <bundle.embedDependency>*;scope=compile|runtime;type=!pom;inline=false</bundle.embedDependency>
-  </properties>
+  <profiles>
+    <profile>
+      <activation>
+        <property>
+          <name>osgiBundling</name>
+        </property>
+      </activation>
+      <properties>
+        <!-- <bundle.embedDependency>*;scope=compile|runtime;type=!pom;inline=false</bundle.embedDependency> -->
+      </properties>
+    </profile>
+  </profiles>
   <dependencies>
-  <!-- embedded dependencies -->
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
-      <version>3.1</version>	
     </dependency>
-  <!-- provided dependencies -->
+    <dependency>
+      <groupId>commons-configuration</groupId>
+      <artifactId>commons-configuration</artifactId>
+    </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
+    
     <dependency>
-      <groupId>com.tinkerpop</groupId>
-      <artifactId>frames</artifactId>
+      <groupId>com.tinkerpop.blueprints</groupId>
+      <artifactId>blueprints-core</artifactId>
     </dependency>
+    
   </dependencies>
 </project>

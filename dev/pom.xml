@@ -17,6 +17,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     *</bundle.import_package>
   </properties>
   <modules>
+    <module>core</module>
     <module>importer</module>
   </modules>
   <profiles>
@@ -53,17 +54,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         <dependency>
           <groupId>org.slf4j</groupId>
           <artifactId>slf4j-api</artifactId>
-          <scope>provided</scope>
         </dependency>
         <dependency>
           <groupId>org.slf4j</groupId>
           <artifactId>slf4j-log4j12</artifactId>
-          <scope>provided</scope>
         </dependency>
         <dependency>
           <groupId>org.projectlombok</groupId>
           <artifactId>lombok</artifactId>
-          <scope>provided</scope>
         </dependency>
         <dependency>
           <groupId>junit</groupId>

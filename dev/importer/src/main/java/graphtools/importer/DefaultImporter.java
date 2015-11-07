@@ -3,6 +3,7 @@
  */
 package graphtools.importer;
 
+import edu.utexas.arlut.cf.utils.GraphTransaction;
 import graphtools.GraphRecord;
 import graphtools.GraphRecordEdge;
 
@@ -12,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import com.google.common.base.Preconditions;
@@ -29,18 +31,31 @@ public class DefaultImporter<B> implements Importer<B> {
 	private final Encoder<B> encoder;
 	private final Populator populator;
 	
+	@Setter
+	private int commitThreshold;
+	
 	@Override
 	public void importFile(SourceData<B> sourceData, IdGraph graph) throws IOException {
 		encoder.reinit(sourceData);
-		try{// TODO: open graphTransaction
+ 		int tx=GraphTransaction.begin(graph);
+		try{
+			int gRecCounter=0;
 			B inRecord;
 			while((inRecord=sourceData.getNextRecord()) !=null){
 				log.debug("-------------- row=" + inRecord);
 				Collection<GraphRecord> gRecords=build(inRecord);
 				//log.debug(gRecords.toString());
-				
+				gRecCounter+=gRecords.size();
 				populator.populateGraph(graph, gRecords);
+				if(gRecCounter>commitThreshold){
+					GraphTransaction.commit(tx);
+					gRecCounter=0;
+				}
 			}
+			GraphTransaction.commit(tx);
+		}catch(RuntimeException re){
+			GraphTransaction.rollback(tx);
+			throw re;
 		}finally{
 			encoder.close(sourceData);
 		}

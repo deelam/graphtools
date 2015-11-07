@@ -3,9 +3,9 @@
  */
 package graphtools.importer;
 
-import edu.utexas.arlut.cf.utils.GraphTransaction;
 import graphtools.GraphRecord;
 import graphtools.GraphRecordEdge;
+import graphtools.GraphTransaction;
 
 import java.io.IOException;
 import java.util.Collection;

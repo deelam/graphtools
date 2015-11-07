@@ -47,12 +47,5 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <artifactId>frames</artifactId>
     </dependency>
 
-<!-- FIXME: migrate classes from below artifact: GraphTransaction -->    
-      <dependency>
-        <groupId>edu.utexas.arlut</groupId>
-        <artifactId>edu.utexas.arlut.cf.api</artifactId>
-        <version>3.0.22</version>
-      </dependency>
-    
   </dependencies>
 </project>

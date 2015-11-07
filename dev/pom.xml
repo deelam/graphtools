@@ -11,6 +11,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <name>GraphTools dev parent</name>
   <packaging>pom</packaging>
   <properties>
+    <maven.test.skip>true</maven.test.skip>
     <bundle.embedDependency />
     <bundle.import_package>
 <!--sun.misc;resolution:=optional, sun.reflect;resolution:=optional,-->
@@ -22,14 +23,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   </modules>
   <profiles>
     <profile>
-      <id>skipTests-exists</id>
+      <id>runTests-exists</id>
       <activation>
         <file>
-          <exists>skipTests</exists>
+          <exists>runTests</exists>
         </file>
       </activation>
       <properties>
-        <maven.test.skip>true</maven.test.skip>
+        <maven.test.skip>false</maven.test.skip>
       </properties>
     </profile>
     <profile>

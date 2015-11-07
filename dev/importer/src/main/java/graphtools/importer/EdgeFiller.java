@@ -7,7 +7,7 @@ import lombok.Getter;
 import com.tinkerpop.blueprints.Edge;
 
 /**
- * @author dnlam, Created:Jan 27, 2015
+ * @author deelam
  */
 @AllArgsConstructor
 public abstract class EdgeFiller<C extends RecordContext<?>> {

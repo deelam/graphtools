@@ -9,6 +9,7 @@ import java.util.Set;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 
 import com.tinkerpop.blueprints.Element;
@@ -18,7 +19,8 @@ import com.tinkerpop.blueprints.Element;
 public class GraphRecordElement implements Element, Serializable {
 	private static final long serialVersionUID=201509030419L;
 	
-	public static final String LONG_ID_PROPKEY="_longId";
+	@Setter
+	public static String LONG_ID_PROPKEY="_longId";
 
 	public GraphRecordElement(String strId){
 		checkNotNull(strId);

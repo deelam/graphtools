@@ -119,13 +119,14 @@ public class DefaultPopulator implements Populator{
 			//					System.out.println("  setting property=" + pkey);
 			Object toValue=toE.getProperty(key);
 			Object fromValue=fromE.getProperty(key);
-			if(toValue == null){
+			if(fromValue == null){
+			} else if(toValue == null){
 				if(fromValue instanceof Date){
-					log.warn("Converting from Date to String: " + fromValue);
-					fromValue=fromValue.toString();
+//					log.warn("Converting from Date to String: " + fromValue);
+//					fromValue=fromValue.toString();
 				}
 				toE.setProperty(key, fromValue);
-			}else if(fromValue == null || toValue.equals(fromValue)){ // nothing to do
+			}else if(toValue.equals(fromValue)){ // nothing to do
 			}else{ // toValue and fromValue are not null and not equal
 
 				//				// Try https://github.com/thinkaurelius/titan/wiki/Datatype-and-Attribute-Serializer-Configuration

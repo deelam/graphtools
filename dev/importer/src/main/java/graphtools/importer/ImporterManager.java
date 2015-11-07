@@ -43,8 +43,7 @@ public class ImporterManager {
 		Preconditions.checkNotNull(ingester, "ingester not registered: "+ingesterId);
 
 		// create graph
-		Configuration conf=new BaseConfiguration();
-		IdGraph<?> graph=destName.openIdGraph(conf);
+		IdGraph<?> graph=destName.openIdGraph();
 		Preconditions.checkNotNull(graph, "Could not open graph: "+graph);
 		
 		// apply ingester on graph

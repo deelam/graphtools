@@ -7,9 +7,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <artifactId>graphtools-dev-pom</artifactId>
     <version>0.0.1-SNAPSHOT</version>
   </parent>
-  <artifactId>graphtools-importer</artifactId>
+  <artifactId>graphtools-core</artifactId>
   <packaging>bundle</packaging>
-  <name>GraphTools Importer</name>
+  <name>GraphTools Core</name>
   <profiles>
     <profile>
       <activation>
@@ -18,34 +18,36 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         </property>
       </activation>
       <properties>
-        <bundle.embedDependency>artifactId=super-csv
-          ;scope=compile|runtime;type=!pom;inline=false</bundle.embedDependency>
-        <bundle.import_package>
-          javassist.util.proxy, <!-- needed by frames; must manually import -->
-          *
-        </bundle.import_package>
+        <!-- <bundle.embedDependency>*;scope=compile|runtime;type=!pom;inline=false</bundle.embedDependency> -->
       </properties>
     </profile>
   </profiles>
-
   <dependencies>
     <dependency>
-		<groupId>net.deelam</groupId>
-		<artifactId>graphtools-core</artifactId>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
     </dependency>
     <dependency>
-		<groupId>net.sf.supercsv</groupId>
-		<artifactId>super-csv</artifactId>
-		<version>2.1.0</version>
+      <groupId>commons-configuration</groupId>
+      <artifactId>commons-configuration</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
+    
     <dependency>
-      <groupId>com.tinkerpop</groupId>
-      <artifactId>frames</artifactId>
+      <groupId>com.tinkerpop.blueprints</groupId>
+      <artifactId>blueprints-core</artifactId>
     </dependency>
-
+    
+    
+      <dependency>
+        <groupId>com.tinkerpop.blueprints</groupId>
+        <artifactId>blueprints-neo4j-graph</artifactId>
+        <scope>provided</scope><!-- only include for compilation -->
+      </dependency>
+    
+    
   </dependencies>
 </project>

@@ -7,7 +7,7 @@ import java.io.Reader;
  * Copied StringReader code and added reinit() method.
  * Did not delegate/wrap StringReader because that approach requires instantiating a new StringReader for each reinit().
  * 
- * @author dnlam, Created:Mar 3, 2015
+ * @author deelam
  */
 public class SequenceStringReader extends Reader{
 	

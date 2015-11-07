@@ -13,7 +13,7 @@ import com.tinkerpop.blueprints.Vertex;
 /**
  * This class is created only for ingestion.
  * 
- * @author dnlam, Created:Nov 10, 2014
+ * @author deelam
  */
 @NoArgsConstructor
 //@ToString

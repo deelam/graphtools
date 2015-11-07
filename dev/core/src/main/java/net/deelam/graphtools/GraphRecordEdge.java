@@ -16,7 +16,6 @@ import com.tinkerpop.blueprints.Vertex;
  * @author deelam
  */
 @NoArgsConstructor
-//@ToString
 public class GraphRecordEdge extends GraphRecordElement implements Edge, Serializable {
 
   private static final long serialVersionUID = 201509030420L;
@@ -106,14 +105,6 @@ public class GraphRecordEdge extends GraphRecordElement implements Edge, Seriali
   public Long getNodeId(Direction dir) {
     return getProperty(dir.toString() + LONG_ID_PROPKEY);
   }
-
-  //	@Getter
-  //	@Setter
-  //	long inNodeLongId property vs. field?????;
-  //	
-  //	@Getter
-  //	@Setter
-  //	long outNodeLongId;
 
   public String toString() {
     return "EdgeWritable[" + super.toString() + ",outStrId=" + outVertexStringId + " inStrId="

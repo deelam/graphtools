@@ -40,7 +40,8 @@ public class GraphRecord extends GraphRecordElement implements Vertex, Serializa
   }
 
   // TODO: 5: address supernode memory problem (i.e., in-memory Map of in and out edges) by splitting node.  How does Faunus/Gremlin address this?
-  private static final int SUPERNODE_THRESHOLD = 100000;
+  @Setter
+  private static int SUPERNODE_THRESHOLD = 100000;
 
   @Getter
   protected Map<String, Edge> inEdges = new HashMap<>();
@@ -170,7 +171,7 @@ public class GraphRecord extends GraphRecordElement implements Vertex, Serializa
   }
 
   public String toString() {
-    return "VertexWritable[" + super.toString() + ",outEdges=" + outEdges.size() + " inEdges="
+    return "GraphRecord[" + super.toString() + ",outEdges=" + outEdges.size() + " inEdges="
         + inEdges.size() + "]";
   }
 

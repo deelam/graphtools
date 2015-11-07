@@ -119,7 +119,7 @@ public class DefaultImporter<B> implements Importer<B> {
               //log.info("Creating edge: "+fe);
 
               // use an empty edge to reduce merging properties later
-              //StringIdEdgeWritable feEmpty=new StringIdEdgeWritable(label, outFv, inFv);
+              //GraphRecordEdge feEmpty=new GraphRecordEdge(label, outFv, inFv);
               if (!outFv.equals(inFv)) // if edge is self-edge, it has already been added to both IN and OUT edge tables
                 inFv.addEdge(fe/*.emptyCopy()*/);
               //log.info("inEdges: "+Iterables.toString(inFv.getEdges(Direction.BOTH)));

@@ -72,7 +72,7 @@ An input (or output) dataset is modeled as containing individual records to faci
 To specify a graph as a destination for importing or as source of data, a GraphUri is used.  The following URIs are supported (see GraphUriTest.java for example usage):
 * "tinker:///" - in-memory TinkerGraph (from Blueprints library)
 * "tinker:///./target/tGraph" - a TinkerGraph saved as a binary file in the ./target/tGraph relative directory 
-* "tinker:///./target/tGraphML?fileType=graphml - a TinkerGraph saved in GraphML format in the ./target/tGraphML directory.  See TinkerGraph.FileType for other supported file types.
+* "tinker:///./target/tGraphML?fileType=graphml" - a TinkerGraph saved in GraphML format in the ./target/tGraphML directory.  See TinkerGraph.FileType for other supported file types.
 
 *TODO*: The following will soon be supported
 * "neo4j://[host[:port]]/./myNeoDir" - a Neo4jGraph stored in the ./myNeoDir directory

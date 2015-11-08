@@ -29,6 +29,9 @@ public class GraphRecord extends GraphRecordElement implements Vertex, Serializa
 
   @Setter
   private static String NODE_TYPE_KEY = "_.type";
+  public static String getType(Vertex v){
+    return v.getProperty(NODE_TYPE_KEY);
+  }
 
   public GraphRecord(String strId) {
     super(strId);

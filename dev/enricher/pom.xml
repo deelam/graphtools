@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>net.deelam</groupId>
+    <artifactId>graphtools-dev-pom</artifactId>
+    <version>0.0.2-SNAPSHOT</version>
+  </parent>
+  <artifactId>graphtools-enricher</artifactId>
+  <packaging>bundle</packaging>
+  <name>GraphTools Enricher</name>
+  <properties>
+    <lucene.ver>5.3.1</lucene.ver>
+  </properties>
+  <profiles>
+    <profile>
+      <activation>
+        <property>
+          <name>osgiBundling</name>
+        </property>
+      </activation>
+      <properties>
+        <bundle.embedDependency>artifactId=
+          ;scope=compile|runtime;type=!pom;inline=false</bundle.embedDependency>
+        <bundle.import_package>
+          javassist.util.proxy, <!-- needed by frames; must manually import -->
+          *
+        </bundle.import_package>
+      </properties>
+    </profile>
+  </profiles>
+
+  <dependencies>
+    <dependency>
+		<groupId>net.deelam</groupId>
+		<artifactId>graphtools-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-core</artifactId>
+      <version>${lucene.ver}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-queryparser</artifactId>
+      <version>${lucene.ver}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-analyzers-common</artifactId>
+      <version>${lucene.ver}</version>
+    </dependency>
+    
+<!-- TODO: should leverage this -->    
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-analyzers-phonetic</artifactId>
+      <version>${lucene.ver}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-expressions</artifactId>
+      <version>${lucene.ver}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-misc</artifactId>
+      <version>${lucene.ver}</version>
+    </dependency>
+    
+    <!--  -->
+    <dependency>
+		<groupId>net.deelam</groupId>
+		<artifactId>graphtools-importer</artifactId>
+		<scope>test</scope>
+    </dependency>
+
+  </dependencies>
+</project>

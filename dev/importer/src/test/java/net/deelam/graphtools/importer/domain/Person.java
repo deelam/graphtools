@@ -7,7 +7,6 @@ import com.tinkerpop.blueprints.Vertex;
 @RequiredArgsConstructor
 class Person {
 	static final String ENTITY_TYPE="PERSON";
-	public static final String nameProp = null;
 	
 	final Vertex node;
 

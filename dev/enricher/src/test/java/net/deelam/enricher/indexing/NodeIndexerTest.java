@@ -1,0 +1,45 @@
+package net.deelam.enricher.indexing;
+
+import java.io.IOException;
+
+import net.deelam.enricher.indexing.domain.LocationIndexer;
+import net.deelam.enricher.indexing.domain.PersonIndexer;
+import net.deelam.graphtools.GraphUri;
+
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.lucene.queryparser.classic.ParseException;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
+
+public class NodeIndexerTest {
+
+  IdGraph<?> graph;
+  
+  @Before
+  public void setUp() throws Exception {
+    GraphUri guri = new GraphUri("tinker:///./target/test-classes/us500test?fileType=graphml");
+    graph=guri.openIdGraph();
+  }
+  
+  @After
+  public void tearDown() {
+    graph.shutdown();
+  }
+
+  @Test
+  public void test() throws IOException, ConfigurationException, ParseException {
+//    FileUtils.deleteDirectory(new File("target/us500test"));
+    
+    NodeIndexer indexer = new NodeIndexer();
+    indexer.registerEntityIndexer(PersonIndexer.ENTITY_TYPE, new PersonIndexer());
+    indexer.registerEntityIndexer(LocationIndexer.ENTITY_TYPE, new LocationIndexer());
+    
+    indexer.indexGraph(graph, "us500test");
+    indexer.list("firstNameSorted", "STRING", "firstName");
+    indexer.list("zipSorted", "INT", "zip");
+  }
+
+}

@@ -123,6 +123,11 @@
         <artifactId>graphtools-core</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>net.deelam</groupId>
+        <artifactId>graphtools-importer</artifactId>
+        <version>${project.version}</version>
+      </dependency>
       <!--
       <dependency>
         <groupId>org.osgi</groupId>

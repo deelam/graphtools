@@ -103,11 +103,6 @@
         <version>2.4</version>
       </dependency>
       <dependency>
-        <groupId>commons-configuration</groupId>
-        <artifactId>commons-configuration</artifactId>
-        <version>1.6</version>
-      </dependency>
-      <dependency>
         <groupId>net.sourceforge.collections</groupId>
         <artifactId>collections-generic</artifactId>
         <version>4.01</version>

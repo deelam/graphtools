@@ -38,7 +38,7 @@ public class ImporterManager {
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
-  public void importFile(String ingesterId, File file, GraphUri destName) throws IOException {
+  public void importFile(String ingesterId, File file, GraphUri destUri) throws IOException {
     // get ingester
     Ingester ingester = registry.get(ingesterId);
     Preconditions.checkNotNull(ingester, "ingester not registered: " + ingesterId);
@@ -46,11 +46,11 @@ public class ImporterManager {
     SourceData sData = ingester.sdFactory.createFrom(file);
     final Importer importer = ingester.importer;
     
-    importData(sData, importer, destName);
+    importData(sData, importer, destUri);
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
-  public void importReadable(String ingesterId, Readable readable, GraphUri destName) throws IOException {
+  public void importReadable(String ingesterId, Readable readable, GraphUri destUri) throws IOException {
     // get ingester
     Ingester ingester = registry.get(ingesterId);
     Preconditions.checkNotNull(ingester, "ingester not registered: " + ingesterId);
@@ -58,13 +58,13 @@ public class ImporterManager {
     SourceData sData = ingester.sdFactory.createFrom(readable);
     final Importer importer = ingester.importer;
     
-    importData(sData, importer, destName);
+    importData(sData, importer, destUri);
   }
   
-  public <B> void importData(SourceData<B> sData, final Importer<B> importer, GraphUri destName)
+  public <B> void importData(SourceData<B> sData, final Importer<B> importer, GraphUri destUri)
       throws IOException {
     // create graph
-    IdGraph<?> graph = destName.openIdGraph();
+    IdGraph<?> graph = destUri.openIdGraph();
     Preconditions.checkNotNull(graph, "Could not open graph: " + graph);
 
     // apply ingester on graph

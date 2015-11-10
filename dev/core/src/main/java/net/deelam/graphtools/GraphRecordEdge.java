@@ -21,12 +21,12 @@ public class GraphRecordEdge extends GraphRecordElement implements Edge, Seriali
   private static final long serialVersionUID = 201509030420L;
 
   @Getter
-  private String label;
+  protected String label;
 
   @Getter
-  String outVertexStringId;
+  protected String outVertexStringId;
   @Getter
-  String inVertexStringId;
+  protected String inVertexStringId;
 
   public GraphRecordEdge emptyCopy() {
     return new GraphRecordEdge(getStringId(), label, outVertexStringId, inVertexStringId);

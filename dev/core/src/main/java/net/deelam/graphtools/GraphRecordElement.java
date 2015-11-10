@@ -53,7 +53,7 @@ public class GraphRecordElement implements Element, Serializable {
   }
 
   @Getter
-  Map<String, Object> props = new HashMap<>();
+  protected Map<String, Object> props = new HashMap<>();
 
   @Override
   public void setProperty(final String key, final Object value) {

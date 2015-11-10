@@ -19,12 +19,23 @@ public class CsvBeanSourceDataFactory<B> implements SourceDataFactory {
 
   private final CsvParser<B> parser;
 
+  @Override
   public SourceData<B> createFrom(File file) throws FileNotFoundException {
     return new CsvFileToBeanSourceData<B>(file, parser);
   }
 
+  @Override
   public SourceData<B> createFrom(Readable readable) {
-    //Readable readable=new FileReader(file);
-    return new CsvLineToBeanSourceData<B>(readable, parser);
+    return new CsvReadableToBeanSourceData<B>(readable, parser);
   }
+  
+  /**
+   * Application is expected to call CsvLineToBeanSourceData.setNextInput() prior to each SourceData.getNextRecord() call.
+   * Or call CsvLineToBeanSourceData.parse() directly.
+   */
+  @Override
+  public SourceData<B> create() {
+    return new CsvLineToBeanSourceData<B>(parser);
+  }
+
 }

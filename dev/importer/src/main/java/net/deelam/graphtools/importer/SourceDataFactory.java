@@ -14,4 +14,8 @@ public interface SourceDataFactory {
 
   SourceData<?> createFrom(File file) throws FileNotFoundException;
 
+  SourceData<?> createFrom(Readable readable);
+
+  SourceData<?> create();
+
 }

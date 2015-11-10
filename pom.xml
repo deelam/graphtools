@@ -219,9 +219,14 @@
   </build>
   <profiles>
     <profile>
+      <id>skipTests</id>
+      <properties>
+        <maven.test.skip>true</maven.test.skip>
+      </properties>
+    </profile>
+    <profile>
       <id>deployment</id>
       <properties>
-        <maven.test.skip>false</maven.test.skip>
       </properties>
       <build>
         <plugins>

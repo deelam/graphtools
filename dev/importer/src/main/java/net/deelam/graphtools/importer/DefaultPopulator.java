@@ -123,8 +123,9 @@ public class DefaultPopulator implements Populator {
       if (fromValue == null) {
       } else if (toValue == null) {
         if (fromValue instanceof Date) {
-          //					log.warn("Converting from Date to String: " + fromValue);
-          //					fromValue=fromValue.toString();
+          log.warn("Converting from Date to String: " + fromValue+"  and setting new property "+key+"_millis");
+          fromValue = fromValue.toString();
+          toE.setProperty(key+"_millis", ((Date)fromValue).getTime());
         }
         toE.setProperty(key, fromValue);
       } else if (toValue.equals(fromValue)) { // nothing to do

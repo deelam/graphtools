@@ -20,28 +20,28 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 @Slf4j
 public class IdGraphFactoryNeo4j implements IdGraphFactory {
 
-  public static final String CONFIG_PREFIX = "blueprints.neo4j.conf";
+  private static final String CONFIG_PREFIX = "blueprints.neo4j.conf.";
 
   public static void register() {
     GraphUri.register("neo4j", new IdGraphFactoryNeo4j());
   }
 
+  @SuppressWarnings("unchecked")
   @Override
-  public IdGraph<?> open(Configuration conf) {
+  public IdGraph<Neo4jGraph> open(Configuration conf) {
 
     /// copy properties to new keys that Neo4jGraph looks for
-    @SuppressWarnings("unchecked")
     String[] keys = Iterators.toArray(conf.getKeys(), String.class);
     for (String key : keys) {
       if (key.startsWith("blueprints.neo4j"))
         continue;
-      conf.setProperty(CONFIG_PREFIX + "." + key, conf.getProperty(key));
+      conf.setProperty(CONFIG_PREFIX + key, conf.getProperty(key));
     }
     //		GraphUri.printConfig(conf);
 
     String path = conf.getString(GraphUri.URI_PATH);
     // open graph
-    IdGraph<?> graph;
+    IdGraph<Neo4jGraph> graph;
     if (path == null || path.equals("/")) {
       throw new IllegalArgumentException("Provide a path like so: 'neo4j://./myDB'");
     } else {

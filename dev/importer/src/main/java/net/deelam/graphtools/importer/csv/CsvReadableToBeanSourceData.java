@@ -40,6 +40,7 @@ public class CsvReadableToBeanSourceData<B> implements SourceData<B> {
     String line;
     do {
       line = lr.readLine();
+      ++lineNum;
       if (line == null) {
         log.debug("Reached end of file: {}", lr);
         return null; // end of file

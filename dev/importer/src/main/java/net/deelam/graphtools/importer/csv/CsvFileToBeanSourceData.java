@@ -3,12 +3,7 @@
  */
 package net.deelam.graphtools.importer.csv;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.Reader;
+import java.io.*;
 
 import net.deelam.graphtools.importer.SourceData;
 
@@ -39,7 +34,16 @@ public class CsvFileToBeanSourceData<B> implements SourceData<B> {
         B bean =
             beanReader.read(parser.getBeanClass(), parser.getCsvFields(),
                 parser.getCellProcessors());
-        return bean; // bean=null if EOF
+        if(bean==null) // bean=null if EOF
+          return null;
+        
+        // bean may have been successfully created for a row that should be ignored
+        String rowStr = beanReader.getUntokenizedRow();
+        if(CsvLineToBeanSourceData.shouldIgnore(rowStr, beanReader.getLineNumber(), parser)) {
+          continue;
+        }else{
+          return bean;
+        }
       } catch (SuperCsvException e) {
         String rowStr = beanReader.getUntokenizedRow();
         if (!CsvLineToBeanSourceData.shouldIgnore(rowStr, beanReader.getLineNumber(), parser))

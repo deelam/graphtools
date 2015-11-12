@@ -122,11 +122,11 @@ public class DefaultPopulator implements Populator {
       Object fromValue = fromE.getProperty(key);
       if (fromValue == null) {
       } else if (toValue == null) {
-        if (fromValue instanceof Date) {
-          log.warn("Converting from Date to String: " + fromValue+"  and setting new property "+key+"_millis");
-          fromValue = fromValue.toString();
-          toE.setProperty(key+"_millis", ((Date)fromValue).getTime());
-        }
+//        if (fromValue instanceof Date) {
+//          log.warn("Converting from Date to String: " + fromValue+"  and setting new property "+key+"_millis");
+//          toE.setProperty(key+"_millis", ((Date)fromValue).getTime());
+//          fromValue = fromValue.toString();
+//        }
         toE.setProperty(key, fromValue);
       } else if (toValue.equals(fromValue)) { // nothing to do
       } else { // toValue and fromValue are not null and not equal

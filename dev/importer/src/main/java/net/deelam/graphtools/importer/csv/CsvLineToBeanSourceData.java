@@ -36,6 +36,7 @@ public class CsvLineToBeanSourceData<B> implements SourceData<B> {
     if(line!=null){
       log.error("Previous line was not done processing! "+line);
     }
+    ++lineNum;
     this.line=nextLine;
   }
 
@@ -51,6 +52,7 @@ public class CsvLineToBeanSourceData<B> implements SourceData<B> {
   }
   
   public B parse(String line) throws IOException{
+    ++lineNum;
     if (line == null) {
       log.debug("Reached end of file.");
       return null; // end of file

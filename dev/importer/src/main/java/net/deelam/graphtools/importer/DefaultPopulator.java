@@ -75,12 +75,12 @@ public class DefaultPopulator implements Populator {
       copyProperties(v, newV);
       String origId = v.getProperty(IdGraph.ID);
       if (origId == null) {
-        origId = v.getProperty("_.origId");
+        origId = v.getProperty("__origId");
       }
       if (origId == null) {
         origId = (String) v.getId();
       }
-      newV.setProperty("_.origId", origId);
+      newV.setProperty("__origId", origId);
     }
     return newV;
   }

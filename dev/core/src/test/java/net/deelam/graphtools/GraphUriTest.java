@@ -28,31 +28,52 @@ public class GraphUriTest {
 
   @Test
   public void testInMemGraph() {
-    GraphUri gUri = new GraphUri("tinker:///");
+    GraphUri gUri = new GraphUri("tinker:");
     IdGraph<TinkerGraph> graph = gUri.openIdGraph();
     graph.shutdown();
   }
 
   @Test
-  public void testSavedGraph() {
+  public void testInMemGraph2() {
+    GraphUri gUri = new GraphUri("tinker:/");
+    IdGraph<TinkerGraph> graph = gUri.openIdGraph();
+    graph.shutdown();
+  }
+  
+  @Test
+  public void testSavedGraph0() {
+    GraphUri gUri = new GraphUri("tinker:./target/tGraph");
+    IdGraph<TinkerGraph> graph = gUri.openIdGraph();
+    graph.shutdown();
+  }
+  
+  @Test
+  public void testSavedGraph1() {
     GraphUri gUri = new GraphUri("tinker:///./target/tGraph");
     IdGraph<TinkerGraph> graph = gUri.openIdGraph();
     graph.shutdown();
   }
 
   @Test
+  public void testSavedGraph2() {
+    GraphUri gUri = new GraphUri("tinker:/tmp/target/tGraph");
+    IdGraph<TinkerGraph> graph = gUri.openIdGraph();
+    graph.shutdown();
+  }
+  
+  @Test
   public void testSavedGraphml() {
-    GraphUri gUri = new GraphUri("tinker:///./target/tGraphML?fileType=graphml");
+    GraphUri gUri = new GraphUri("tinker:./target/tGraphML?fileType=graphml");
     IdGraph<TinkerGraph> graph = gUri.openIdGraph();
     graph.shutdown();
   }
 
   @Test
   public void testTwoSavedGraphs() {
-    GraphUri gUri = new GraphUri("tinker:///./target/tGraphML?fileType=graphml");
+    GraphUri gUri = new GraphUri("tinker:./target/tGraphML?fileType=graphml");
     IdGraph<TinkerGraph> graph = gUri.openIdGraph();
 
-    GraphUri gUri2 = new GraphUri("tinker:///./target/tGraphML2?fileType=graphml");
+    GraphUri gUri2 = new GraphUri("tinker:./target/tGraphML2?fileType=graphml");
     IdGraph<TinkerGraph> graph2 = gUri2.openIdGraph();
 
     graph.shutdown();

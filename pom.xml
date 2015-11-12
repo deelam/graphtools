@@ -36,7 +36,7 @@
   </distributionManagement>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <blueprints.ver>2.5.0</blueprints.ver>
+    <blueprints.ver>2.6.0</blueprints.ver>
   </properties>
   <modules>
     <module>dev</module>
@@ -161,11 +161,6 @@
         <groupId>com.tinkerpop.blueprints</groupId>
         <artifactId>blueprints-graph-jung</artifactId>
         <version>${blueprints.ver}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.tinkerpop.blueprints</groupId>
-        <artifactId>blueprints-orient-graph</artifactId>
-        <version>2.4.0</version>
       </dependency>
       <dependency>
         <groupId>com.tinkerpop.blueprints</groupId>

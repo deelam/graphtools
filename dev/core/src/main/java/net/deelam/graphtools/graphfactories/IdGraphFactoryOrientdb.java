@@ -51,8 +51,7 @@ public class IdGraphFactoryOrientdb implements IdGraphFactory {
     } else {
       log.info("Opening OrientDB graph at URI=" + uri);
       // Set other settings using prefix "blueprints.orientdb"
-      conf.setProperty(CONFIG_PREFIX+"url", uri.toString()); // 
-      //OrientGraphFactory oFactory=new OrientGraphFactory("plocal:"+path);
+      conf.setProperty(CONFIG_PREFIX+"url", uri.toString());
       graph = new IdGraph<>(new OrientGraph(conf));
     }
     return graph;

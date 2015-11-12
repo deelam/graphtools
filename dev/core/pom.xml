@@ -46,23 +46,18 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <artifactId>blueprints-neo4j-graph</artifactId>
       <scope>provided</scope><!-- only include for compilation -->
     </dependency> 
-    <dependency>
+<!--     <dependency>
       <groupId>com.tinkerpop.blueprints</groupId>
       <artifactId>blueprints-orient-graph</artifactId>
-      <scope>provided</scope><!-- only include for compilation -->
-    </dependency> 
-<!--     <dependency>
-	  <groupId>com.orientechnologies</groupId>
-	  <artifactId>orientdb-core</artifactId>
-	  <version>2.1.5</version>
       <scope>provided</scope>only include for compilation
-	</dependency>
+    </dependency> 
+ -->
     <dependency>
       <groupId>com.orientechnologies</groupId>
       <artifactId>orientdb-graphdb</artifactId>
       <version>2.1.5</version>
-      <scope>provided</scope>only include for compilation
-    </dependency> -->
+      <scope>provided</scope><!-- only include for compilation -->
+    </dependency>
 	<!-- 
 <dependency>
 	<groupId>com.orientechnologies</groupId>

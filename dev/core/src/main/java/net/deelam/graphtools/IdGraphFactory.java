@@ -5,6 +5,7 @@ package net.deelam.graphtools;
 
 import org.apache.commons.configuration.Configuration;
 
+import com.tinkerpop.blueprints.KeyIndexableGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
@@ -12,5 +13,5 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
  *
  */
 public interface IdGraphFactory {
-  public IdGraph<?> open(Configuration conf);
+  public <T extends KeyIndexableGraph> IdGraph<T> open(Configuration conf);
 }

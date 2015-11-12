@@ -41,13 +41,58 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <artifactId>blueprints-core</artifactId>
     </dependency>
     
-    
-      <dependency>
-        <groupId>com.tinkerpop.blueprints</groupId>
-        <artifactId>blueprints-neo4j-graph</artifactId>
-        <scope>provided</scope><!-- only include for compilation -->
-      </dependency>
-    
-    
+    <dependency>
+      <groupId>com.tinkerpop.blueprints</groupId>
+      <artifactId>blueprints-neo4j-graph</artifactId>
+      <scope>provided</scope><!-- only include for compilation -->
+    </dependency> 
+<!--     <dependency>
+      <groupId>com.tinkerpop.blueprints</groupId>
+      <artifactId>blueprints-orient-graph</artifactId>
+      <scope>provided</scope>only include for compilation
+    </dependency> 
+ -->
+    <dependency>
+      <groupId>com.orientechnologies</groupId>
+      <artifactId>orientdb-graphdb</artifactId>
+      <version>2.1.5</version>
+      <scope>provided</scope><!-- only include for compilation -->
+    </dependency>
+	<!-- 
+<dependency>
+	<groupId>com.orientechnologies</groupId>
+	<artifactId>orient-commons</artifactId>
+	<version>2.0-M1</version>
+</dependency>
+<dependency>
+	<groupId>com.orientechnologies</groupId>
+	<artifactId>orientdb-community</artifactId>
+	<version>2.1.5</version>
+</dependency>
+ -->    
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.4</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>graphtools.Run</mainClass>
+              <addClasspath>true</addClasspath>
+              <classpathPrefix>lib</classpathPrefix>
+              <useUniqueVersions>false</useUniqueVersions>
+            </manifest>
+            <manifestEntries>
+              <Class-Path>.</Class-Path>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
 </project>

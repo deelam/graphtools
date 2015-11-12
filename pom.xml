@@ -36,7 +36,7 @@
   </distributionManagement>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <blueprints.ver>2.5.0</blueprints.ver>
+    <blueprints.ver>2.6.0</blueprints.ver>
   </properties>
   <modules>
     <module>dev</module>
@@ -103,11 +103,6 @@
         <version>2.4</version>
       </dependency>
       <dependency>
-        <groupId>commons-configuration</groupId>
-        <artifactId>commons-configuration</artifactId>
-        <version>1.6</version>
-      </dependency>
-      <dependency>
         <groupId>net.sourceforge.collections</groupId>
         <artifactId>collections-generic</artifactId>
         <version>4.01</version>
@@ -121,6 +116,11 @@
       <dependency>
         <groupId>net.deelam</groupId>
         <artifactId>graphtools-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.deelam</groupId>
+        <artifactId>graphtools-importer</artifactId>
         <version>${project.version}</version>
       </dependency>
       <!--

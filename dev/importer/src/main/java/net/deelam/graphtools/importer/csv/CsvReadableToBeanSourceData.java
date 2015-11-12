@@ -45,32 +45,12 @@ public class CsvReadableToBeanSourceData<B> implements SourceData<B> {
         log.debug("Reached end of file: {}", lr);
         return null; // end of file
       }
-    } while (shouldIgnore(line, lineNum, parser));
+    } while (CsvUtils.shouldIgnore(line, lineNum, parser));
 
     reader.reinit(line);
     B bean =
         beanReader.read(parser.getBeanClass(), parser.getCsvFields(), parser.getCellProcessors());
     return bean;
-  }
-
-  static boolean shouldIgnore(String rowStr, long lineNum, CsvParser<?> parser) {
-    if (rowStr == null)
-      return true;
-
-    if (rowStr.length() == 0) {
-      log.warn("Skipping blank line (at line {})", lineNum);
-      return true;
-    }
-    if (rowStr.startsWith("#")) {
-      log.warn("Skipping comment (at line {}): {}", lineNum, rowStr);
-      return true;
-    }
-
-    if (parser.shouldIgnore(rowStr)) {
-      log.warn("Ignoring line (at line {}): {}", lineNum, rowStr);
-      return true;
-    }
-    return false;
   }
 
 }

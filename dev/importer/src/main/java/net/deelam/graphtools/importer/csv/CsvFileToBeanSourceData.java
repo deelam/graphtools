@@ -39,14 +39,14 @@ public class CsvFileToBeanSourceData<B> implements SourceData<B> {
         
         // bean may have been successfully created for a row that should be ignored
         String rowStr = beanReader.getUntokenizedRow();
-        if(CsvLineToBeanSourceData.shouldIgnore(rowStr, beanReader.getLineNumber(), parser)) {
+        if(CsvUtils.shouldIgnore(rowStr, beanReader.getLineNumber(), parser)) {
           continue;
         }else{
           return bean;
         }
       } catch (SuperCsvException e) {
         String rowStr = beanReader.getUntokenizedRow();
-        if (!CsvLineToBeanSourceData.shouldIgnore(rowStr, beanReader.getLineNumber(), parser))
+        if (!CsvUtils.shouldIgnore(rowStr, beanReader.getLineNumber(), parser))
           throw e;
         //else try reading next line
       }

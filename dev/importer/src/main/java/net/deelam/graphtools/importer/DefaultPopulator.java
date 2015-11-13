@@ -41,7 +41,6 @@ public class DefaultPopulator implements Populator {
     if (importerName != null) {
       markRecords(gRecords);
     }
-    // TODO: sort and merge
 
     // add to graph
     for (GraphRecord gr : gRecords) {

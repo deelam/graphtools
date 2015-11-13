@@ -9,17 +9,15 @@ import java.net.URISyntaxException;
 
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryTinker;
-import net.deelam.graphtools.importer.DefaultImporter;
-import net.deelam.graphtools.importer.DefaultPopulator;
-import net.deelam.graphtools.importer.ImporterManager;
 import net.deelam.graphtools.importer.csv.CsvBeanSourceDataFactory;
 import net.deelam.graphtools.importer.domain.CompanyContactBean;
 import net.deelam.graphtools.importer.domain.CompanyContactsCsvParser;
 import net.deelam.graphtools.importer.domain.CompanyContactsEncoder;
 
-import org.apache.commons.io.FileUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
  * @author deelam
@@ -40,8 +38,12 @@ public class ImportingTest {
   public void importCsvFileTest() throws IOException, URISyntaxException {
     File csvFile = new File(getClass().getResource("/us-500.csv").getFile());
 
-    FileUtils.deleteDirectory(new File("target/us500test"));
-    mgr.importFile("companyContactsCsv", csvFile, new GraphUri(
-        "tinker:///./target/us500test?fileType=graphml"));
+    // create new graph
+    IdGraph<?> graph = new GraphUri("tinker:///./target/us500test?fileType=graphml")
+      .createNewIdGraph(true);
+    mgr.importFile("companyContactsCsv", csvFile, graph);
+    
+    // close graph
+    graph.shutdown();
   }
 }

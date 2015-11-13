@@ -17,11 +17,11 @@ public class CsvUtils {
       return true;
   
     if (rowStr.length() == 0) {
-      log.warn("Skipping blank line (at line {})", lineNum);
+      log.info("Skipping blank line (at line {})", lineNum);
       return true;
     }
     if (rowStr.startsWith("#")) {
-      log.warn("Skipping comment (at line {}): {}", lineNum, rowStr);
+      log.info("Skipping comment (at line {}): {}", lineNum, rowStr);
       return true;
     }
   

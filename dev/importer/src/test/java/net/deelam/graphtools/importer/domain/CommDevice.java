@@ -11,7 +11,7 @@ class CommDevice {
 
 	enum DEVICE_TYPES { PHONE, EMAIL };
 	CommDevice deviceType(DEVICE_TYPES val){
-		node.setProperty("deviceType", val);
+		node.setProperty("deviceType", val.toString());
 		return this;
 	}
 

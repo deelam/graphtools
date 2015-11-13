@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Set;
 
 import lombok.AllArgsConstructor;
-import net.deelam.graphtools.GraphUri;
 
 import com.google.common.base.Preconditions;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
@@ -38,7 +37,7 @@ public class ImporterManager {
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
-  public void importFile(String ingesterId, File file, GraphUri destUri) throws IOException {
+  public void importFile(String ingesterId, File file, IdGraph<?> graph) throws IOException {
     // get ingester
     Ingester ingester = registry.get(ingesterId);
     Preconditions.checkNotNull(ingester, "ingester not registered: " + ingesterId);
@@ -46,11 +45,11 @@ public class ImporterManager {
     SourceData sData = ingester.sdFactory.createFrom(file);
     final Importer importer = ingester.importer;
     
-    importData(sData, importer, destUri);
+    importData(sData, importer, graph);
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
-  public void importReadable(String ingesterId, Readable readable, GraphUri destUri) throws IOException {
+  public void importReadable(String ingesterId, Readable readable, IdGraph<?> graph) throws IOException {
     // get ingester
     Ingester ingester = registry.get(ingesterId);
     Preconditions.checkNotNull(ingester, "ingester not registered: " + ingesterId);
@@ -58,19 +57,14 @@ public class ImporterManager {
     SourceData sData = ingester.sdFactory.createFrom(readable);
     final Importer importer = ingester.importer;
     
-    importData(sData, importer, destUri);
+    importData(sData, importer, graph);
   }
   
-  public <B> void importData(SourceData<B> sData, final Importer<B> importer, GraphUri destUri)
+  public <B> void importData(SourceData<B> sData, final Importer<B> importer, IdGraph<?> graph)
       throws IOException {
-    // create graph
-    IdGraph<?> graph = destUri.openIdGraph();
     Preconditions.checkNotNull(graph, "Could not open graph: " + graph);
 
     // apply ingester on graph
     importer.importFile(sData, graph);
-
-    // close graph
-    graph.shutdown();
   }
 }

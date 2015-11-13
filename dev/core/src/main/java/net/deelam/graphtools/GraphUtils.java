@@ -1,6 +1,9 @@
 package net.deelam.graphtools;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+
+import java.util.Date;
+
 import lombok.extern.slf4j.Slf4j;
 
 import com.google.common.collect.Iterables;
@@ -12,6 +15,7 @@ import com.tinkerpop.blueprints.TransactionalGraph;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.impls.tg.TinkerGraph;
 import com.tinkerpop.blueprints.util.wrappers.WrapperGraph;
+import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
  * Operations on Blueprints graphs
@@ -160,6 +164,35 @@ public final class GraphUtils {
     }
     return sb.toString();
   }
+  
+
+  // returns whether currGraph is nested at some depth within g
+  public static boolean isWrappedWithin(Graph g, Graph currGraph) {
+    while (g instanceof WrapperGraph) {
+      g = ((WrapperGraph<?>) g).getBaseGraph();
+      if (g == currGraph)
+        return true;
+    }
+    return false;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T extends Graph> T unwrapToGraphType(Class<T> clazz, Graph g) {
+    if (clazz.isInstance(g))
+      return (T) g;
+
+    while (g instanceof WrapperGraph) {
+      g = ((WrapperGraph<?>) g).getBaseGraph();
+      if (clazz.isInstance(g))
+        return (T) g;
+    }
+    return null;
+  }
+  
+  
+  /* 
+   * WRITE operations
+   */
 
   public static void clearGraph(Graph graph) {
     checkNotNull(graph);
@@ -190,34 +223,21 @@ public final class GraphUtils {
     }
   }
 
-  // returns whether currGraph is nested at some depth within g
-  public static boolean isWrappedWithin(Graph g, Graph currGraph) {
-    while (g instanceof WrapperGraph) {
-      g = ((WrapperGraph<?>) g).getBaseGraph();
-      if (g == currGraph)
-        return true;
+  private static final String METADATA_VERTEXID = "_GRAPH_METADATA_";
+  private static final String TIMESTAMP_PROP = "_GRAPHURI_";
+  private static final String GRAPHURI_PROP = "_GRAPHURI_";
+  private static final String VERTEXTYPES_PROP = "_VERTEXTYPES_";
+  private static final String EDGELABELS_PROP = "_EDGELABELS_";
+
+  public static void addMetaDataNode(GraphUri gUri, IdGraph<?> graph){
+    Vertex mdV = graph.getVertex(METADATA_VERTEXID);
+    if(mdV==null){
+      mdV=graph.addVertex(METADATA_VERTEXID);
+      mdV.setProperty(TIMESTAMP_PROP, new Date());
+      mdV.setProperty(GRAPHURI_PROP, gUri.toString());
+//      mdV.setProperty(VERTEXTYPES_PROP, gUri.getVertexTypes());
+//      mdV.setProperty(EDGELABELS_PROP, gUri.getEdgeLabels());
     }
-    return false;
   }
-
-  @SuppressWarnings("unchecked")
-  public static <T extends Graph> T unwrapToGraphType(Class<T> clazz, Graph g) {
-    if (clazz.isInstance(g))
-      return (T) g;
-
-    while (g instanceof WrapperGraph) {
-      g = ((WrapperGraph<?>) g).getBaseGraph();
-      if (clazz.isInstance(g))
-        return (T) g;
-    }
-    return null;
-  }
-
-  public static void main(String[] args) {
-    TinkerGraph f = new TinkerGraph();
-    Vertex v = f.addVertex("asdf");
-    v.setProperty("asdf", "asdfasd");
-    v.setProperty("asdfasdf", "asdfasd");
-    System.out.println(toString(f, -1, "asdf", "asdfasdf"));
-  }
+  
 }

@@ -14,7 +14,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-import net.deelam.graphtools.graphfactories.IdGraphFactoryTinker;
 
 import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.commons.configuration.Configuration;
@@ -83,7 +82,8 @@ public class GraphUri {
       else
         throw new FileAlreadyExistsException("Graph exists at: "+getUriPath());
     }
-    return openIdGraph(KeyIndexableGraph.class);
+    IdGraph<KeyIndexableGraph> graph = openIdGraph(KeyIndexableGraph.class);
+    return graph;
   }
 
   /**
@@ -101,6 +101,9 @@ public class GraphUri {
     parseQuery(baseUri.toString());
     IdGraph<T> graph = factory.open(this);
     log.info("Opened graph=" + graph);
+    {
+      GraphUtils.addMetaDataNode(this, graph);
+    }
     return graph;
   }
 
@@ -146,6 +149,17 @@ public class GraphUri {
   }
   public String getUriPath() {
     return getConfig().getString(URI_PATH);
+  }
+
+  public String[] getVertexTypes() {
+    String[] types=new String[0];
+    // TODO Auto-generated method stub
+    return types;
+  }
+
+  public String[] getEdgeLabels() {
+    String[] labels=new String[0];
+    return labels;
   }
 
 }

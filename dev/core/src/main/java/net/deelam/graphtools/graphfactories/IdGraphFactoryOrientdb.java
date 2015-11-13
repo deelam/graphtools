@@ -3,6 +3,8 @@
  */
 package net.deelam.graphtools.graphfactories;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +12,7 @@ import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.IdGraphFactory;
 
 import org.apache.commons.configuration.Configuration;
+import org.apache.commons.io.FileUtils;
 
 import com.google.common.collect.Iterators;
 import com.tinkerpop.blueprints.impls.orient.OrientGraph;
@@ -31,8 +34,8 @@ public class IdGraphFactoryOrientdb implements IdGraphFactory {
 
   @SuppressWarnings("unchecked")
   @Override
-  public IdGraph<OrientGraph> open(Configuration conf) {
-
+  public IdGraph<OrientGraph> open(GraphUri gUri) {
+    Configuration conf=gUri.getConfig();
     /// copy properties to new keys that OrientGraph looks for
     String[] keys = Iterators.toArray(conf.getKeys(), String.class);
     for (String key : keys) {
@@ -43,7 +46,7 @@ public class IdGraphFactoryOrientdb implements IdGraphFactory {
     //		GraphUri.printConfig(conf);
     setDefaultAuthentication(conf);
 
-    URI uri = (URI) conf.getProperty(GraphUri.BASE_URI);
+    URI uri = gUri.getUri();
     // open graph
     IdGraph<OrientGraph> graph;
     if (uri == null) {
@@ -68,6 +71,34 @@ public class IdGraphFactoryOrientdb implements IdGraphFactory {
     if(pwd==null){
       log.info("Using default OrientDB password");
       conf.setProperty(CONFIG_PREFIX+"password", "admin");
+    }
+  }
+  
+  enum DB_TYPE { plocal, memory, remote }
+
+  private DB_TYPE getDBType(GraphUri gUri) {
+    URI uri = gUri.getUri();
+    return DB_TYPE.valueOf(uri.getScheme());
+  }
+
+  @Override
+  public void delete(GraphUri gUri) throws IOException {
+    DB_TYPE dbType = getDBType(gUri);
+    if(dbType==DB_TYPE.plocal){
+      File pathFile = new File(gUri.getUri().getSchemeSpecificPart());
+      log.info("Deleting OrientDB at {}",pathFile);
+      FileUtils.deleteDirectory(pathFile);
+    }
+  }
+
+  @Override
+  public boolean exists(GraphUri gUri) {
+    DB_TYPE dbType = getDBType(gUri);
+    if(dbType==DB_TYPE.plocal){
+      File pathFile = new File(gUri.getUri().getSchemeSpecificPart());
+      return pathFile.exists();
+    }else{
+      return false; // FIXME: check remote
     }
   }
 

@@ -27,9 +27,9 @@ public class IdGraphFactoryNeo4jTest {
   }
 
   @Test
-  public void testNeo4jFileUri() {
+  public void testNeo4jFileUri() throws IOException {
     GraphUri gUri = new GraphUri("neo4j:file:///./target/myDb");
-    IdGraph<Neo4jGraph> graph = gUri.openIdGraph();
+    IdGraph<Neo4jGraph> graph = gUri.createNewIdGraph(true);
     graph.shutdown();
   }
 
@@ -41,12 +41,12 @@ public class IdGraphFactoryNeo4jTest {
   }
   
   @Test
-  public void testNeo4jUsingConf() {
+  public void testNeo4jUsingConf() throws IOException {
     BaseConfiguration conf = new BaseConfiguration();
     conf.setProperty("node_auto_indexing", "false"); // FIXME: insert neo4j setting that can be checked
 
     GraphUri gUri = new GraphUri("neo4j:./target/myDb", conf);
-    IdGraph<Neo4jGraph> graph = gUri.openIdGraph();
+    IdGraph<Neo4jGraph> graph = gUri.createNewIdGraph(true);
     //		Neo4jGraph neo = graph.getBaseGraph();
     //		AutoIndexer<Node> autoIndexer = neo.getRawGraph().index().getNodeAutoIndexer(); // TODO: check if config took effect
     //		System.out.println(autoIndexer);

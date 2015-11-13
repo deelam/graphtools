@@ -3,7 +3,7 @@
  */
 package net.deelam.graphtools;
 
-import org.apache.commons.configuration.Configuration;
+import java.io.IOException;
 
 import com.tinkerpop.blueprints.KeyIndexableGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
@@ -13,5 +13,24 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
  *
  */
 public interface IdGraphFactory {
-  public <T extends KeyIndexableGraph> IdGraph<T> open(Configuration conf);
+  /**
+   * Open existing or create a new graph
+   * @param gUri
+   * @return
+   */
+  public <T extends KeyIndexableGraph> IdGraph<T> open(GraphUri gUri);
+
+  /**
+   * Delete graph if it exists
+   * @param gUri
+   * @throws IOException 
+   */
+  public void delete(GraphUri gUri) throws IOException;
+
+  /**
+   * 
+   * @param gUri
+   * @return whether graph exists
+   */
+  public boolean exists(GraphUri gUri);  
 }

@@ -3,12 +3,12 @@ package net.deelam.graphtools;
 import java.io.File;
 import java.io.IOException;
 
-import net.deelam.graphtools.GraphUri;
+import net.deelam.graphtools.graphfactories.IdGraphFactoryTinker;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.tinkerpop.blueprints.impls.tg.TinkerGraph;
@@ -16,8 +16,9 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 public class GraphUriTest {
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeClass
+  public static void setUp() throws Exception {
+    IdGraphFactoryTinker.register();
     //		new File("testGraphs").mkdir();
   }
 
@@ -27,16 +28,16 @@ public class GraphUriTest {
   }
 
   @Test
-  public void testInMemGraph() {
+  public void testInMemGraph() throws IOException {
     GraphUri gUri = new GraphUri("tinker:");
-    IdGraph<TinkerGraph> graph = gUri.openIdGraph();
+    IdGraph<TinkerGraph> graph = gUri.createNewIdGraph(true);
     graph.shutdown();
   }
 
   @Test
-  public void testInMemGraph2() {
+  public void testInMemGraph2() throws IOException {
     GraphUri gUri = new GraphUri("tinker:/");
-    IdGraph<TinkerGraph> graph = gUri.openIdGraph();
+    IdGraph<TinkerGraph> graph = gUri.createNewIdGraph(true);
     graph.shutdown();
   }
   
@@ -48,9 +49,9 @@ public class GraphUriTest {
   }
   
   @Test
-  public void testSavedGraph1() {
+  public void testSavedGraph1() throws IOException {
     GraphUri gUri = new GraphUri("tinker:///./target/tGraph");
-    IdGraph<TinkerGraph> graph = gUri.openIdGraph();
+    IdGraph<TinkerGraph> graph = gUri.createNewIdGraph(true);
     graph.shutdown();
   }
 
@@ -85,7 +86,7 @@ public class GraphUriTest {
     FileUtils.deleteDirectory(new File("target/tGraphMLReuse")); // make sure graph doesn't exist
 
     GraphUri gUri = new GraphUri("tinker:///./target/tGraphMLReuse?fileType=graphml");
-    IdGraph<TinkerGraph> graph = gUri.openIdGraph();
+    IdGraph<TinkerGraph> graph = gUri.createNewIdGraph(true);
 
     try {
       gUri.openIdGraph(); // should not be able to access new graph

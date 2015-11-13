@@ -31,15 +31,17 @@ public class NodeIndexerTest {
 
   @Test
   public void test() throws IOException, ConfigurationException, ParseException {
-//    FileUtils.deleteDirectory(new File("target/us500test"));
+//    FileUtils.deleteDirectory(new File("target/us500index"));
     
-    NodeIndexer indexer = new NodeIndexer();
-    indexer.registerEntityIndexer(PersonIndexer.ENTITY_TYPE, new PersonIndexer());
-    indexer.registerEntityIndexer(LocationIndexer.ENTITY_TYPE, new LocationIndexer());
-    
-    indexer.indexGraph(graph, "us500test");
-    indexer.list("firstNameSorted", "STRING", "firstName");
-    indexer.list("zipSorted", "INT", "zip");
+    try(NodeIndexer indexer = new NodeIndexer(null)){
+      indexer.registerEntityIndexer(PersonIndexer.ENTITY_TYPE, new PersonIndexer());
+      indexer.registerEntityIndexer(LocationIndexer.ENTITY_TYPE, new LocationIndexer());
+      
+      indexer.indexGraph(graph, "us500test");
+      indexer.indexGraph(graph, "us500test2");
+      indexer.list("firstNameSorted", "STRING", "firstName", 20);
+      indexer.list("zipSorted", "INT", "zip",20 );
+    }
   }
 
 }

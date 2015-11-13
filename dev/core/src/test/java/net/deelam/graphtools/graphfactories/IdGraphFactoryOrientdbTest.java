@@ -1,7 +1,6 @@
 package net.deelam.graphtools.graphfactories;
 
 import java.io.IOException;
-import java.net.URI;
 
 import net.deelam.graphtools.GraphUri;
 
@@ -21,16 +20,16 @@ public class IdGraphFactoryOrientdbTest {
   }
 
   @Test
-  public void testOrientInMemDB() {
+  public void testOrientInMemDB() throws IOException {
     GraphUri gUri = new GraphUri("orientdb:memory:myODb");
-    IdGraph<OrientGraph> graph = gUri.openIdGraph();
+    IdGraph<OrientGraph> graph = gUri.createNewIdGraph(true);
     graph.shutdown();
   }
 
   @Test
-  public void testOrientAbsoluteLocalDB() {
+  public void testOrientAbsoluteLocalDB() throws IOException {
     GraphUri gUri = new GraphUri("orientdb:plocal:/tmp/target/myPLocalODb");
-    IdGraph<OrientGraph> graph = gUri.openIdGraph();
+    IdGraph<OrientGraph> graph = gUri.createNewIdGraph(true);
     graph.shutdown();
   }
 
@@ -69,11 +68,11 @@ public class IdGraphFactoryOrientdbTest {
   }
 
   @Test
-  public void testOrientUsingUriQueryDiffPwd() {
+  public void testOrientUsingUriQueryDiffPwd() throws IOException {
     {
       GraphUri gUri =
           new GraphUri("orientdb:plocal:./target/myOwnODb");
-      IdGraph<OrientGraph> graph = gUri.openIdGraph();
+      IdGraph<OrientGraph> graph = gUri.createNewIdGraph(true);
       graph.shutdown();
     }
     {

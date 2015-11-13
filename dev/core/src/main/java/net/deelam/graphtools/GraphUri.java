@@ -3,7 +3,9 @@
  */
 package net.deelam.graphtools;
 
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.FileAlreadyExistsException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -12,14 +14,13 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.graphtools.graphfactories.IdGraphFactoryTinker;
 
 import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.commons.configuration.Configuration;
 
 import com.google.common.base.Preconditions;
 import com.tinkerpop.blueprints.KeyIndexableGraph;
-import com.tinkerpop.blueprints.impls.tg.TinkerGraph;
-import com.tinkerpop.blueprints.impls.tg.TinkerGraph.FileType;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
@@ -37,8 +38,7 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 @ToString
 @Slf4j
 public class GraphUri {
-  public static final String BASE_URI = "_uri";
-  public static final String URI_PATH = "_uriPath";
+  private static final String URI_PATH = "_uriPath";
   public static final String URI_SCHEMA_PART = "_uriSchemaSpecificPart";
 
   //@Getter
@@ -54,37 +54,52 @@ public class GraphUri {
     Preconditions.checkState(colonIndx>0, "Expecting something like 'tinker:'");
     scheme=uri.substring(0,colonIndx);
     baseUri=URI.create(uri.substring(colonIndx+1));
-    conf = config;
+    this.config = config;
   }
 
   @Getter
-  private Configuration conf;
+  private Configuration config;
 
+  /**
+   * Open existing or create a new graph
+   * @return
+   */
   @SuppressWarnings("rawtypes")
   public IdGraph openIdGraph() {
-/*    IdGraphFactory factory = graphFtry.get(scheme);
-    Preconditions.checkNotNull(factory, "Unknown schema: " + scheme);
-    if (conf == null)
-      conf = new BaseConfiguration();
-    parseUriPath(baseUri);
-    conf.setProperty(BASE_URI, baseUri);
-    conf.setProperty(URI_SCHEMA_PART, baseUri.getSchemeSpecificPart());
-    parseQuery(baseUri.toString());
-    IdGraph<?> graph = factory.open(conf);
-    log.info("Opened graph=" + graph);*/
+    return openIdGraph(KeyIndexableGraph.class);
+  }
+  
+  /**
+   * Create a new empty graph, deleting any existing graph if deleteExisting=true
+   * @return
+   * @throws IOException
+   */
+  @SuppressWarnings("rawtypes")
+  public IdGraph createNewIdGraph(boolean deleteExisting) throws IOException {
+    IdGraphFactory factory = graphFtry.get(scheme);
+    if(factory.exists(this)){
+      if(deleteExisting)
+        factory.delete(this);
+      else
+        throw new FileAlreadyExistsException("Graph exists at: "+getUriPath());
+    }
     return openIdGraph(KeyIndexableGraph.class);
   }
 
+  /**
+   * Open existing or create a new graph
+   * @param baseGraphClass
+   * @return
+   */
   public <T extends KeyIndexableGraph> IdGraph<T> openIdGraph(Class<T> baseGraphClass) {
     IdGraphFactory factory = graphFtry.get(scheme);
     Preconditions.checkNotNull(factory, "Unknown schema: " + scheme);
-    if (conf == null)
-      conf = new BaseConfiguration();
+    if (config == null)
+      config = new BaseConfiguration();
     parseUriPath(baseUri);
-    conf.setProperty(BASE_URI, baseUri);
-    conf.setProperty(URI_SCHEMA_PART, baseUri.getSchemeSpecificPart());
+    config.setProperty(URI_SCHEMA_PART, baseUri.getSchemeSpecificPart());
     parseQuery(baseUri.toString());
-    IdGraph<T> graph = factory.open(conf);
+    IdGraph<T> graph = factory.open(this);
     log.info("Opened graph=" + graph);
     return graph;
   }
@@ -104,7 +119,7 @@ public class GraphUri {
     // check if path is relative
     if (path.length() > 1 && path.charAt(1) == '.')
       path = path.substring(1); // remove first char, which is '/'
-    conf.setProperty(URI_PATH, path);
+    config.setProperty(URI_PATH, path);
   }
 
   private void parseQuery(String uriStr) {
@@ -115,41 +130,22 @@ public class GraphUri {
     if (queryStr != null) {
       for (String kv : queryStr.split("&")) {
         String[] pair = kv.split("=");
-        conf.setProperty(pair[0], pair[1]);
+        config.setProperty(pair[0], pair[1]);
       }
     }
   }
 
-  private static Map<String, IdGraphFactory> graphFtry = new HashMap<>();
+  private static Map<String, IdGraphFactory> graphFtry = new HashMap<>(5);
 
   public static void register(String scheme, IdGraphFactory factory) {
     graphFtry.put(scheme, factory);
   }
 
-  static {
-    register("tinker", new IdGraphFactory() {
-      @Override
-      public IdGraph<?> open(Configuration conf) {
-        // check desired output format
-        FileType fileType = TinkerGraph.FileType.JAVA;
-        String fileTypeStr = conf.getString("fileType");
-        if (fileTypeStr != null) {
-          fileType = TinkerGraph.FileType.valueOf(fileTypeStr.toUpperCase());
-        }
-
-        String path = conf.getString(URI_PATH);
-        // open graph
-        IdGraph<?> graph;
-        if (path == null || path.length()==0 || path.equals("/")) {
-          log.debug("Opening Tinker graph in memory");
-          graph = new IdGraph<>(new TinkerGraph());
-        } else {
-          log.debug("Opening Tinker graph at path=" + path);
-          graph = new IdGraph<>(new TinkerGraph(path, fileType));
-        }
-        return graph;
-      }
-    });
+  public URI getUri() {
+    return baseUri;
+  }
+  public String getUriPath() {
+    return getConfig().getString(URI_PATH);
   }
 
 }

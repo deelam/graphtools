@@ -233,7 +233,7 @@ public final class GraphUtils {
     Vertex mdV = graph.getVertex(METADATA_VERTEXID);
     if(mdV==null){
       mdV=graph.addVertex(METADATA_VERTEXID);
-      mdV.setProperty(TIMESTAMP_PROP, new Date());
+      mdV.setProperty(TIMESTAMP_PROP, new Date().toString());
       mdV.setProperty(GRAPHURI_PROP, gUri.toString());
 //      mdV.setProperty(VERTEXTYPES_PROP, gUri.getVertexTypes());
 //      mdV.setProperty(EDGELABELS_PROP, gUri.getEdgeLabels());

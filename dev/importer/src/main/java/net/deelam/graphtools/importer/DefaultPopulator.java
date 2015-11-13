@@ -1,20 +1,17 @@
 package net.deelam.graphtools.importer;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.util.Collection;
-import java.util.Date;
 import java.util.Map.Entry;
 
-import net.deelam.graphtools.GraphRecord;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.graphtools.GraphRecord;
+import net.deelam.graphtools.GraphRecordEdge;
 
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Element;
-import com.tinkerpop.blueprints.Graph;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
@@ -47,65 +44,61 @@ public class DefaultPopulator implements Populator {
     // TODO: sort and merge
 
     // add to graph
-    for (GraphRecord v : gRecords) {
-      Vertex newV = importVertex(graph, v);
-      copyProperties(v, newV);
-      importEdges(graph, Direction.OUT, newV, v);
-      importEdges(graph, Direction.IN, newV, v);
+    for (GraphRecord gr : gRecords) {
+      Vertex newV = importVertex(graph, gr);
+      importEdges(graph, Direction.OUT, newV, gr);
+      importEdges(graph, Direction.IN, newV, gr);
     }
   }
 
 
-  private void importEdges(Graph graph, Direction direction, Vertex newV, Vertex vertex) {
-    for (Edge e : vertex.getEdges(direction)) {
-      Vertex oppV = e.getVertex(direction.opposite());
-      Vertex newOpp = importVertex(graph, oppV);
-      importEdge(graph, e, direction, newV, newOpp);
+  private void importEdges(IdGraph<?> graph, Direction direction, Vertex newV, GraphRecord gr) {
+    for (Edge e : gr.getEdges(direction)) {
+      GraphRecord oppV = (GraphRecord) e.getVertex(direction.opposite());
+      Vertex newOppV = importVertex(graph, oppV);
+      importEdge(graph, (GraphRecordEdge) e, direction, newV, newOppV);
     }
   }
 
-  public static Vertex importVertex(Graph graph, Vertex v) {
-    return importVertex(graph, v, v.getId());
-  }
-
-  public static Vertex importVertex(Graph graph, Vertex v, Object id) {
+  public static Vertex importVertex(IdGraph<?> graph, GraphRecord gr) {
+    String id = gr.getStringId();
     Vertex newV = graph.getVertex(id);
     if (newV == null) {
       newV = graph.addVertex(id);
-      copyProperties(v, newV);
-      String origId = v.getProperty(IdGraph.ID);
-      if (origId == null) {
-        origId = v.getProperty("__origId");
-      }
-      if (origId == null) {
-        origId = (String) v.getId();
-      }
-      newV.setProperty("__origId", origId);
     }
+    copyProperties(gr, newV);
     return newV;
   }
 
-  public static Edge importEdge(Graph graph, Edge e, Direction direction, Vertex v1inGraph,
-      Vertex v2inGraph) {
-    final String edgeId = e.getId().toString();
+  public static Edge importEdge(IdGraph<?> graph, GraphRecordEdge grE, Direction direction,
+      Vertex v1inGraph, Vertex v2inGraph) {
+    String edgeId = grE.getStringId();
     Edge newEdge = graph.getEdge(edgeId);
     if (newEdge == null) {
       if (direction == Direction.OUT)
-        newEdge = graph.addEdge(edgeId, v1inGraph, v2inGraph, e.getLabel());
+        newEdge = graph.addEdge(edgeId, v1inGraph, v2inGraph, grE.getLabel());
       else
-        newEdge = graph.addEdge(edgeId, v2inGraph, v1inGraph, e.getLabel());
-      copyProperties(e, newEdge);
+        newEdge = graph.addEdge(edgeId, v2inGraph, v1inGraph, grE.getLabel());
     } else {
-      checkArgument(newEdge.getVertex(direction).equals(v1inGraph), "Expecting " + v1inGraph
-          + " but got " + newEdge.getVertex(direction) + " for edge " + edgeId);
-      checkArgument(newEdge.getVertex(direction.opposite()).equals(v2inGraph));
+      if (!newEdge.getLabel().equals(grE.getLabel()))
+        throw new IllegalArgumentException("Expecting " + grE.getLabel() + " but got "
+            + newEdge.getLabel());
+      if (!newEdge.getVertex(direction).equals(v1inGraph))
+        throw new IllegalArgumentException("Expecting " + v1inGraph + " but got "
+            + newEdge.getVertex(direction) + " for edge " + edgeId);
+      if (!newEdge.getVertex(direction.opposite()).equals(v2inGraph))
+        throw new IllegalArgumentException("Expecting " + v2inGraph + " but got "
+            + newEdge.getVertex(direction.opposite()) + " for edge " + edgeId);
     }
+    copyProperties(grE, newEdge);
     return newEdge;
   }
 
-  static final String SET_SUFFIX = "_.SET_";
+  static final String SET_SUFFIX = DefaultGraphRecordMerger.SET_SUFFIX;
 
   public static void copyProperties(Element fromE, Element toE) {
+    DefaultGraphRecordMerger.mergeProperties(fromE, toE);
+    /*
     for (String key : fromE.getPropertyKeys()) {
       if (key.equals(IdGraph.ID))
         continue;
@@ -122,11 +115,11 @@ public class DefaultPopulator implements Populator {
       Object fromValue = fromE.getProperty(key);
       if (fromValue == null) {
       } else if (toValue == null) {
-//        if (fromValue instanceof Date) {
-//          log.warn("Converting from Date to String: " + fromValue+"  and setting new property "+key+"_millis");
-//          toE.setProperty(key+"_millis", ((Date)fromValue).getTime());
-//          fromValue = fromValue.toString();
-//        }
+    //        if (fromValue instanceof Date) {
+    //          log.warn("Converting from Date to String: " + fromValue+"  and setting new property "+key+"_millis");
+    //          toE.setProperty(key+"_millis", ((Date)fromValue).getTime());
+    //          fromValue = fromValue.toString();
+    //        }
         toE.setProperty(key, fromValue);
       } else if (toValue.equals(fromValue)) { // nothing to do
       } else { // toValue and fromValue are not null and not equal
@@ -147,6 +140,6 @@ public class DefaultPopulator implements Populator {
             fromValue);
         toE.setProperty(sPropertyKey, toValue.toString() + ";" + fromValue.toString());
       }
-    }
+    }*/
   }
 }

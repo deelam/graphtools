@@ -54,6 +54,7 @@ public class GraphUri {
     scheme=uri.substring(0,colonIndx);
     baseUri=URI.create(uri.substring(colonIndx+1));
     this.config = config;
+    parseUriPath(baseUri);
   }
 
   @Getter
@@ -96,7 +97,6 @@ public class GraphUri {
     Preconditions.checkNotNull(factory, "Unknown schema: " + scheme);
     if (config == null)
       config = new BaseConfiguration();
-    parseUriPath(baseUri);
     config.setProperty(URI_SCHEMA_PART, baseUri.getSchemeSpecificPart());
     parseQuery(baseUri.toString());
     IdGraph<T> graph = factory.open(this);

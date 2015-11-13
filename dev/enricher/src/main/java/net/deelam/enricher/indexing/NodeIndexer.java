@@ -110,7 +110,7 @@ public class NodeIndexer implements AutoCloseable{
       TopFieldDocs hits = searcher.search(queryAll, Integer.MAX_VALUE, new Sort(sortFieldInst));
 
       System.out.println("Found " + hits.totalHits + " hits.");
-      limit=(limit<0)?hits.totalHits:limit;
+      limit=(limit<0)?hits.totalHits:Math.min(limit,hits.totalHits);
       for (int i = 0; i < limit; ++i) {
         int docId = hits.scoreDocs[i].doc;
         Document d = searcher.doc(docId);

@@ -22,12 +22,16 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import com.orientechnologies.orient.core.intent.OIntentMassiveInsert;
+import com.tinkerpop.blueprints.impls.orient.OrientGraph;
+import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory;
+import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
  * @author deelam
  */
-@Ignore
+//@Ignore
 public class ImportingSpeedTest {
 
   static ImporterManager mgr = new ImporterManager();
@@ -54,22 +58,20 @@ public class ImportingSpeedTest {
         new CompanyContactsCsvParser()), importer3);
 
     if(!false){
-      importer1.setCommitThreshold(10000);
-      importer2.setBufferThreshold(10000);
-      importer3.setBufferThreshold(10000);
+      importer1.setCommitThreshold(Integer.MAX_VALUE);
+      importer2.setBufferThreshold(Integer.MAX_VALUE);
+      importer3.setBufferThreshold(100000000);
     }
 
   }
 
+  File csvFile = new File(getClass().getResource("/us-50000.csv").getFile());
+  StopWatch sw=new StopWatch();
+  
   @Test
-  public void importCsvFileTest() throws IOException, URISyntaxException {
-    File csvFile = new File(getClass().getResource("/us-50000.csv").getFile());
-
-    StopWatch sw=new StopWatch();
-    
-    /// Tinker
-    
-    sw.start();
+  public void tinkerImportTest() throws IOException, URISyntaxException {
+    /// Tinker    
+    sw.reset();sw.start();
     {
       IdGraph<?> graph = new GraphUri("tinker:./target/us500test?fileType=graphml")
         .createNewIdGraph(true);
@@ -86,34 +88,74 @@ public class ImportingSpeedTest {
       graph.shutdown();
     }
     System.err.println("Tinker graphml Consolidating: "+sw);
-
+  }
+  
+  @Test
+  public void orientImportTest() throws IOException, URISyntaxException {
     /// Orient
-    
-    {
-    IdGraph<?> graph = new GraphUri("orientdb:plocal:./target/orient-us500test")
-    .createNewIdGraph(true);
-    graph.shutdown();
-    }
-    
     sw.reset();
-    {
+    if(!false){
       IdGraph<?> graph = new GraphUri("orientdb:plocal:./target/orient-us500test")
       .createNewIdGraph(true);
+      OrientGraph oGraph = ((OrientGraph) graph.getBaseGraph());
+      oGraph.createEdgeType("hasDevice");
+      oGraph.createEdgeType("inState");
+      oGraph.createEdgeType("employeeAt");
       sw.start();
-//      mgr.importFile("companyContactsCsvConsolidating", csvFile, graph);
+      mgr.importFile("companyContactsCsvConsolidating", csvFile, graph);
       graph.shutdown();
     }
-    System.err.println("OrientDB graphml Consolidating: "+sw);
+    System.err.println("OrientDB Consolidating: "+sw);
   
     sw.reset();
-    {
-      IdGraph<?> graph = new GraphUri("orientdb:plocal:./target/orient-us500test")
-        .createNewIdGraph(true);
+    if(!false){
+      FileUtils.deleteDirectory(new File("./target/orientNoTx-us500test"));
+      OrientGraphFactory factory = new OrientGraphFactory("plocal:./target/orientNoTx-us500test", "admin", "admin");
+      factory.declareIntent(new OIntentMassiveInsert());
+      OrientGraphNoTx noGraph = factory.getNoTx();
+      noGraph.createEdgeType("hasDevice");
+      noGraph.createEdgeType("inState");
+      noGraph.createEdgeType("employeeAt");
+
+      IdGraph<?> graph = new IdGraph<>(noGraph);
       sw.start();
       mgr.importFile("companyContactsCsv", csvFile, graph);
       graph.shutdown();
     }
-    System.err.println("OrientDB graphml: "+sw);
+    System.err.println("OrientDB NoTx: "+sw);
+    
+    sw.reset();
+    {
+      IdGraph<?> graph = new GraphUri("orientdb:plocal:./target/orient-us500test")
+        .createNewIdGraph(true);
+      OrientGraph oGraph = ((OrientGraph) graph.getBaseGraph());
+      //oGraph.getRawGraph().declareIntent(new OIntentMassiveInsert());
+      oGraph.createEdgeType("hasDevice");
+      oGraph.createEdgeType("inState");
+      oGraph.createEdgeType("employeeAt");
+
+      sw.start();
+      mgr.importFile("companyContactsCsv", csvFile, graph);
+      graph.shutdown();
+    }
+    System.err.println("OrientDB: "+sw);
+  }
+
+  @Test
+  public void createEdgeTypeBug() throws IOException, URISyntaxException {
+    // Submitted possible bug at https://github.com/orientechnologies/orientdb/issues/5317
+    FileUtils.deleteDirectory(new File("./target/orient-us500test2"));
+    OrientGraph graph = new OrientGraph("plocal:./target/orient-us500test2");
+    graph.createVertexType("hasDevice");
+    graph.shutdown(true);
+    
+    FileUtils.deleteDirectory(new File("./target/orient-us500test2"));
+    OrientGraph graph2 = new OrientGraph("plocal:./target/orient-us500test2");
+    graph2.createVertexType("hasDevice");
+    graph2.shutdown();
+  }
+  @Test
+  public void neo4jImportTest() throws IOException, URISyntaxException {
 
     /// Neo4j
     
@@ -125,7 +167,7 @@ public class ImportingSpeedTest {
       mgr.importFile("companyContactsCsv", csvFile, graph);
       graph.shutdown();
     }
-    System.err.println("Neo4j graphml: "+sw);
+    System.err.println("Neo4j: "+sw);
 
     sw.reset();
     {
@@ -135,6 +177,6 @@ public class ImportingSpeedTest {
 //      mgr.importFile("companyContactsCsvConsolidating", csvFile, graph);
       graph.shutdown();
     }
-    System.err.println("Neo4j graphml Consolidating: "+sw);
+    System.err.println("Neo4j Consolidating: "+sw);
   }
 }

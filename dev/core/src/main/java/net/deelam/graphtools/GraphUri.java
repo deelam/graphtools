@@ -3,6 +3,7 @@
  */
 package net.deelam.graphtools;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileAlreadyExistsException;
@@ -69,6 +70,17 @@ public class GraphUri {
     return openIdGraph(KeyIndexableGraph.class);
   }
   
+  @SuppressWarnings("rawtypes")
+  public IdGraph openExistingIdGraph() throws FileNotFoundException {
+    IdGraphFactory factory = graphFtry.get(scheme);
+    Preconditions.checkNotNull(factory, "Unknown schema: " + scheme);
+    if(factory.exists(this)){
+      return openIdGraph(KeyIndexableGraph.class);
+    } else {
+      throw new FileNotFoundException("Graph not found at "+getUriPath());
+    }
+  }
+  
   /**
    * Create a new empty graph, deleting any existing graph if deleteExisting=true
    * @return
@@ -77,6 +89,7 @@ public class GraphUri {
   @SuppressWarnings("rawtypes")
   public IdGraph createNewIdGraph(boolean deleteExisting) throws IOException {
     IdGraphFactory factory = graphFtry.get(scheme);
+    Preconditions.checkNotNull(factory, "Unknown schema: " + scheme);
     if(factory.exists(this)){
       if(deleteExisting)
         factory.delete(this);

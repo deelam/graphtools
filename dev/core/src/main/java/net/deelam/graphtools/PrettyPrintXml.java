@@ -3,7 +3,9 @@ package net.deelam.graphtools;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.io.Writer;
@@ -27,10 +29,17 @@ public final class PrettyPrintXml {
       System.exit(1);
     }
     
-    try (InputStream inFile = new FileInputStream(new File(args[0]))) {
+    String inFilename=args[0];
+    String outFilename=null;
+    if(args.length > 1)
+      outFilename=args[1];
+    
+    prettyPrint(inFilename, outFilename);
+  }
 
-      try (Writer out =
-          (args.length > 1) ? new BufferedWriter(new FileWriter(args[1])) : new StringWriter()) {
+  public static void prettyPrint(String inFilename, String outFilename) throws Exception, IOException, FileNotFoundException {
+    try (InputStream inFile = new FileInputStream(new File(inFilename))) {
+      try (Writer out = (outFilename==null)? new StringWriter(): new BufferedWriter(new FileWriter(outFilename))) {
         prettyPrint(inFile, out);
         if (out instanceof StringWriter)
           System.out.println(out.toString());

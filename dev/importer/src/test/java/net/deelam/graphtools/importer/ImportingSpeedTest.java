@@ -31,7 +31,7 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 /**
  * @author deelam
  */
-//@Ignore
+@Ignore
 public class ImportingSpeedTest {
 
   static ImporterManager mgr = new ImporterManager();

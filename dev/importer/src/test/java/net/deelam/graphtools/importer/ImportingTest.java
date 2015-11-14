@@ -8,15 +8,20 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 
 import net.deelam.graphtools.GraphUri;
+import net.deelam.graphtools.PrettyPrintXml;
+import net.deelam.graphtools.graphfactories.IdGraphFactoryOrientdb;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryTinker;
 import net.deelam.graphtools.importer.csv.CsvBeanSourceDataFactory;
 import net.deelam.graphtools.importer.domain.CompanyContactBean;
 import net.deelam.graphtools.importer.domain.CompanyContactsCsvParser;
 import net.deelam.graphtools.importer.domain.CompanyContactsEncoder;
 
+import org.apache.commons.lang.time.StopWatch;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.tinkerpop.blueprints.impls.orient.OrientGraph;
+import com.tinkerpop.blueprints.util.io.graphml.GraphMLWriter;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
@@ -29,9 +34,17 @@ public class ImportingTest {
   @BeforeClass
   public static void setup() throws IOException {
     IdGraphFactoryTinker.register();
+    IdGraphFactoryOrientdb.register();
     mgr.register("companyContactsCsv", new CsvBeanSourceDataFactory<CompanyContactBean>(
         new CompanyContactsCsvParser()), new DefaultImporter<CompanyContactBean>(
         new CompanyContactsEncoder(), new DefaultPopulator("telephoneCsv")));
+    
+    
+    ConsolidatingImporter<CompanyContactBean> importer3 = new ConsolidatingImporter<CompanyContactBean>(
+        new CompanyContactsEncoder(), new DefaultGraphRecordMerger(), new DefaultPopulator("telephoneCsv"));
+      mgr.register("companyContactsCsvConsolidating", new CsvBeanSourceDataFactory<CompanyContactBean>(
+          new CompanyContactsCsvParser()), importer3);
+      importer3.setBufferThreshold(100000000);
   }
 
   @Test
@@ -44,6 +57,26 @@ public class ImportingTest {
     mgr.importFile("companyContactsCsv", csvFile, graph);
     
     // close graph
+    graph.shutdown();
+  }
+  
+  @Test
+  public void orientImportTest() throws Exception {
+    StopWatch sw=new StopWatch();
+    
+    IdGraph<?> graph = new GraphUri("orientdb:plocal:./target/orient-us500test")
+    .createNewIdGraph(true);
+    OrientGraph oGraph = ((OrientGraph) graph.getBaseGraph());
+    oGraph.createEdgeType("hasDevice");
+    oGraph.createEdgeType("inState");
+    oGraph.createEdgeType("employeeAt");
+    sw.start();
+    File csvFile = new File(getClass().getResource("/us-500.csv").getFile());
+    mgr.importFile("companyContactsCsvConsolidating", csvFile, graph);
+    
+//    GraphMLWriter.outputGraph(graph, "orient-us500test.graphml");
+//    PrettyPrintXml.prettyPrint("orient-us500test.graphml", "orient-us500test-pp.graphml");
+
     graph.shutdown();
   }
 }

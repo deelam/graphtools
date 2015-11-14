@@ -80,6 +80,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 		<artifactId>graphtools-importer</artifactId>
 		<scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.orientechnologies</groupId>
+      <artifactId>orientdb-graphdb</artifactId>
+      <version>2.1.5</version>
+      <scope>test</scope>
+    </dependency>
 
   </dependencies>
 </project>

@@ -12,13 +12,18 @@ import java.io.Writer;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
+import org.xml.sax.SAXException;
 
 
 public final class PrettyPrintXml {
@@ -37,17 +42,21 @@ public final class PrettyPrintXml {
     prettyPrint(inFilename, outFilename);
   }
 
-  public static void prettyPrint(String inFilename, String outFilename) throws Exception, IOException, FileNotFoundException {
+  public static void prettyPrint(String inFilename, String outFilename) throws IOException, FileNotFoundException {
     try (InputStream inFile = new FileInputStream(new File(inFilename))) {
       try (Writer out = (outFilename==null)? new StringWriter(): new BufferedWriter(new FileWriter(outFilename))) {
         prettyPrint(inFile, out);
         if (out instanceof StringWriter)
           System.out.println(out.toString());
+      } catch (ParserConfigurationException | SAXException | TransformerFactoryConfigurationError
+          | TransformerException e) {
+        throw new IOException(e);
       }
     }
   }
 
-  public static final void prettyPrint(InputStream inputStream, Writer writer) throws Exception {
+  public static final void prettyPrint(InputStream inputStream, Writer writer) throws 
+  ParserConfigurationException, SAXException, IOException, TransformerFactoryConfigurationError, TransformerException {
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     dbf.setValidating(false);
     DocumentBuilder db = dbf.newDocumentBuilder();

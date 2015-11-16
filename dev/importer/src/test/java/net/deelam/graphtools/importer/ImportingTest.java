@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
+import net.deelam.graphtools.GraphExporter;
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.PrettyPrintXml;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryOrientdb;
@@ -74,8 +75,7 @@ public class ImportingTest {
     File csvFile = new File(getClass().getResource("/us-500.csv").getFile());
     mgr.importFile("companyContactsCsvConsolidating", csvFile, graph);
     
-//    GraphMLWriter.outputGraph(graph, "orient-us500test.graphml");
-//    PrettyPrintXml.prettyPrint("orient-us500test.graphml", "orient-us500test-pp.graphml");
+    //GraphExporter.exportGraphml(graph, "orient-us500test.graphml", true);
 
     graph.shutdown();
   }

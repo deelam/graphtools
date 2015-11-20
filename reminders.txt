@@ -1,0 +1,22 @@
+
+
+ Create release version
+
+    mvn versions:set -DnewVersion=1.2.3
+    mvn clean deploy -P deployment
+    git commit -am "create release version 1.2.3" 
+
+Push and tag release version
+
+    git push origin master
+    mvn scm:tag # creates and pushes a git tag where tagname is based on configuration set in pom 
+
+Now create the next snapshot version so that subsequent changes are not being made to a release version
+
+    mvn versions:set -DnewVersion=1.2.4-SNAPSHOT
+    mvn deploy # make a jar available in Maven repo so others can retrieve it
+    git commit -am "advance to snapshot version 1.2.4-SNAPSHOT"
+    git push origin master
+    (optional) find . -iname '*.versionsBackup' | xargs rm # delete all pom.xml backup files created by mvn versions 
+
+

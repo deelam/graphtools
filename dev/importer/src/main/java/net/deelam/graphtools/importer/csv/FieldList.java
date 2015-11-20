@@ -58,7 +58,6 @@ public class FieldList extends ArrayList<Pair<String, ? extends CellProcessor>> 
 
     } catch (NoSuchFieldException | SecurityException e) {
       log.error("Unable to infer CellProcessor given: " + fieldName, e);
-      e.printStackTrace();
     }
 
     if (optional) {

@@ -45,7 +45,7 @@ public class DefaultImporter<B> implements Importer<B> {
       while ((inRecord = sourceData.getNextRecord()) != null) {
         log.debug("-------------- row={}", inRecord);
         Collection<GraphRecord> gRecords = grBuilder.build(inRecord);
-        //log.debug(gRecords.toString());
+        log.debug("graphRecords=", gRecords);
         gRecCounter += gRecords.size();
         populator.populateGraph(graph, gRecords);
         if (gRecCounter > commitThreshold) {

@@ -1,6 +1,3 @@
-/**
- * 
- */
 package net.deelam.graphtools.importer;
 
 import java.io.File;

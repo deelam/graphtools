@@ -130,7 +130,16 @@ public class GraphUri {
 
   private void parseUriPath(URI uri) {
     String path = uri.getPath();
-    if(path==null) return;
+    if(path==null){
+      if(uri.getScheme()==null)
+        return;
+      else{ // try to get path after removing scheme
+        String ssp = uri.getSchemeSpecificPart();
+        path=URI.create(ssp).getPath();
+        if(path==null)
+          return;
+      }
+    }
     Preconditions.checkNotNull(path);
     // check if path is relative
     if (path.length() > 1 && path.charAt(1) == '.')

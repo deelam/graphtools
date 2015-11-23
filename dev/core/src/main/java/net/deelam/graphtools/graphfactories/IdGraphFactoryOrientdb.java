@@ -85,7 +85,7 @@ public class IdGraphFactoryOrientdb implements IdGraphFactory {
   public void delete(GraphUri gUri) throws IOException {
     DB_TYPE dbType = getDBType(gUri);
     if(dbType==DB_TYPE.plocal){
-      File pathFile = new File(gUri.getUri().getSchemeSpecificPart());
+      File pathFile = new File(gUri.getUriPath());
       log.info("Deleting OrientDB at {}",pathFile);
       FileUtils.deleteDirectory(pathFile);
     }
@@ -95,7 +95,7 @@ public class IdGraphFactoryOrientdb implements IdGraphFactory {
   public boolean exists(GraphUri gUri) {
     DB_TYPE dbType = getDBType(gUri);
     if(dbType==DB_TYPE.plocal){
-      File pathFile = new File(gUri.getUri().getSchemeSpecificPart());
+      File pathFile = new File(gUri.getUriPath());
       return pathFile.exists();
     }else{
       return false; // FIXME: check remote

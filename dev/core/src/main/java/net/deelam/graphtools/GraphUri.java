@@ -6,6 +6,7 @@ package net.deelam.graphtools;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.FileAlreadyExistsException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -49,7 +50,13 @@ public class GraphUri {
     this(uri, new BaseConfiguration());
   }
 
+  String origUri;
+  public String asString() throws URISyntaxException {
+    return origUri;
+  }
+
   public GraphUri(String uri, Configuration config) {
+    origUri=uri;
     int colonIndx = uri.indexOf(':');
     Preconditions.checkState(colonIndx>0, "Expecting something like 'tinker:'");
     scheme=uri.substring(0,colonIndx);
@@ -142,7 +149,7 @@ public class GraphUri {
     }
     Preconditions.checkNotNull(path);
     // check if path is relative
-    if (path.length() > 1 && path.charAt(1) == '.')
+    if (path.length() > 1 && path.startsWith("/."))
       path = path.substring(1); // remove first char, which is '/'
     config.setProperty(URI_PATH, path);
   }

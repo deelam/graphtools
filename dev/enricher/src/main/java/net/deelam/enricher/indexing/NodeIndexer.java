@@ -57,6 +57,7 @@ public class NodeIndexer implements AutoCloseable{
 
   public void indexGraph(Graph graph, String inputGraphname) throws IOException {
     //    The same analyzer should be used for indexing and searching
+    PerFieldAnalyzerWrapper analyzers = new PerFieldAnalyzerWrapper(new StandardAnalyzer(), analyzerMap);
     IndexWriterConfig config = new IndexWriterConfig(analyzers); //new config for each writer
     int count = 0;
     try (IndexWriter writer = new IndexWriter(dir, config)) {
@@ -75,10 +76,11 @@ public class NodeIndexer implements AutoCloseable{
 
   public void registerEntityIndexer(String entityType, EntityIndexer indexer) {
     eIndexers.put(entityType, indexer);
+    
+    analyzerMap.putAll(indexer.createAnalyzers());
   }
   
   private Map<String, Analyzer> analyzerMap=new HashMap<>();
-  private PerFieldAnalyzerWrapper analyzers = new PerFieldAnalyzerWrapper(new StandardAnalyzer(), analyzerMap);
   public void addAnalyzer(String fieldName, Analyzer anlyzr){
     analyzerMap.put(fieldName, anlyzr);
   }
@@ -90,10 +92,15 @@ public class NodeIndexer implements AutoCloseable{
       return false;
 
     EntityIndexer indexer = eIndexers.get(type);
-    if (indexer == null)
+    if (indexer == null){
+      log.warn("No indexer for type={}", type);
       return false;
+    }
 
     doc = indexer.index(v);
+    if(doc==null)
+      return false;
+      
     doc.add(new StringField(SRC_GRAPH_FIELD, inputGraphname, Field.Store.YES));
     doc.add(new StringField(NODE_ID_FIELD, v.getId().toString(), Field.Store.YES));
     writer.addDocument(doc);

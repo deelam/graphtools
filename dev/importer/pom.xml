@@ -10,6 +10,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <artifactId>graphtools-importer</artifactId>
   <packaging>bundle</packaging>
   <name>GraphTools Importer</name>
+  <properties>
+    <bundle.import_package>
+      javassist.util.proxy, <!-- needed by frames; must manually import -->
+      *
+    </bundle.import_package>
+  </properties>
   <profiles>
     <profile>
       <activation>
@@ -21,10 +27,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         <bundle.embedDependency>
           <!--why embed? artifactId=super-csv;scope=compile|runtime;type=!pom;inline=false-->
         </bundle.embedDependency>
-        <bundle.import_package>
-          javassist.util.proxy, <!-- needed by frames; must manually import -->
-          *
-        </bundle.import_package>
       </properties>
     </profile>
   </profiles>

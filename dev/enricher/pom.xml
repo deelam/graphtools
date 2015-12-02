@@ -12,6 +12,10 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <name>GraphTools Enricher</name>
   <properties>
     <lucene.ver>5.3.1</lucene.ver>
+    <bundle.import_package>
+      javassist.util.proxy, <!-- needed by frames; must manually import -->
+      *
+    </bundle.import_package>
   </properties>
   <profiles>
     <profile>
@@ -20,13 +24,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
           <name>osgiBundling</name>
         </property>
       </activation>
-      <properties>
-        <bundle.embedDependency>artifactId=
-          ;scope=compile|runtime;type=!pom;inline=false</bundle.embedDependency>
-        <bundle.import_package>
-          javassist.util.proxy, <!-- needed by frames; must manually import -->
-          *
-        </bundle.import_package>
+      <properties><!--
+        <bundle.embedDependency>artifactId=;scope=compile|runtime;type=!pom;inline=false</bundle.embedDependency>-->
       </properties>
     </profile>
   </profiles>
@@ -56,13 +55,13 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <artifactId>lucene-analyzers-common</artifactId>
       <version>${lucene.ver}</version>
     </dependency>
-    
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-analyzers-phonetic</artifactId>
       <version>${lucene.ver}</version>
     </dependency>
-<!-- TODO: should leverage this -->    
+
+<!-- TODO: should leverage these -->    
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-expressions</artifactId>

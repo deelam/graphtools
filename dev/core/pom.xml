@@ -10,6 +10,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <artifactId>graphtools-core</artifactId>
   <packaging>bundle</packaging>
   <name>GraphTools Core</name>
+  <properties>
+    <bundle.import_package>
+      com.tinkerpop.blueprints.impls.*;resolution:=optional, 
+      *
+    </bundle.import_package>
+  </properties>
   <profiles>
     <profile>
       <activation>
@@ -19,10 +25,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       </activation>
       <properties>
         <!-- <bundle.embedDependency>*;scope=compile|runtime;type=!pom;inline=false</bundle.embedDependency> -->
-        <bundle.import_package>
-          com.tinkerpop.blueprints.impls.*;resolution:=optional, 
-          *
-        </bundle.import_package>
       </properties>
     </profile>
   </profiles>

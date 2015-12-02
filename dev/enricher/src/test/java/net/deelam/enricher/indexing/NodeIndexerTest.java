@@ -9,6 +9,7 @@ import net.deelam.graphtools.graphfactories.IdGraphFactoryTinker;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.store.RAMDirectory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -40,7 +41,7 @@ public class NodeIndexerTest {
   public void test() throws IOException, ConfigurationException, ParseException {
 //    FileUtils.deleteDirectory(new File("target/us500index"));
     
-    try(NodeIndexer indexer = new NodeIndexer(null)){
+    try(NodeIndexer indexer = new NodeIndexer(new RAMDirectory())){
       indexer.registerEntityIndexer(PersonIndexer.ENTITY_TYPE, new PersonIndexer());
       indexer.registerEntityIndexer(LocationIndexer.ENTITY_TYPE, new LocationIndexer());
       

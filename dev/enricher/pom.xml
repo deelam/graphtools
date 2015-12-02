@@ -57,12 +57,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <version>${lucene.ver}</version>
     </dependency>
     
-<!-- TODO: should leverage this -->    
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-analyzers-phonetic</artifactId>
       <version>${lucene.ver}</version>
     </dependency>
+<!-- TODO: should leverage this -->    
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-expressions</artifactId>

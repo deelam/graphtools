@@ -10,6 +10,7 @@ import net.deelam.graphtools.graphfactories.IdGraphFactoryOrientdb;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.store.RAMDirectory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -44,7 +45,7 @@ public class OrientNodeIndexerTest {
 
   @Test
   public void test() throws IOException, ConfigurationException, ParseException {
-    try(NodeIndexer indexer = new NodeIndexer(null)){
+    try(NodeIndexer indexer = new NodeIndexer(new RAMDirectory())){
       indexer.registerEntityIndexer(PersonIndexer.ENTITY_TYPE, new PersonIndexer());
       indexer.registerEntityIndexer(LocationIndexer.ENTITY_TYPE, new LocationIndexer());
       

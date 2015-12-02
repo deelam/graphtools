@@ -18,8 +18,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         </property>
       </activation>
       <properties>
-        <bundle.embedDependency>artifactId=super-csv
-          ;scope=compile|runtime;type=!pom;inline=false</bundle.embedDependency>
+        <bundle.embedDependency>
+          <!--why embed? artifactId=super-csv;scope=compile|runtime;type=!pom;inline=false-->
+        </bundle.embedDependency>
         <bundle.import_package>
           javassist.util.proxy, <!-- needed by frames; must manually import -->
           *

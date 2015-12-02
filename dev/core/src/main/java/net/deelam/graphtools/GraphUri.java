@@ -39,10 +39,19 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 @ToString
 @Slf4j
 public class GraphUri {
+  
+  public static void main(String[] args) {
+    GraphUri graphU = new GraphUri("titan:tablename");
+    System.out.println(graphU.getScheme()+" "+graphU.getUri()+" "+graphU.getUriPath());
+    
+    graphU = new GraphUri("graphml:./tablename.graphml");
+    System.out.println(graphU.getScheme()+" "+graphU.getUri()+" "+graphU.getUriPath());
+  }
+  
   private static final String URI_PATH = "_uriPath";
   public static final String URI_SCHEMA_PART = "_uriSchemaSpecificPart";
 
-  //@Getter
+  @Getter
   private final String scheme;
   private final URI baseUri;
 

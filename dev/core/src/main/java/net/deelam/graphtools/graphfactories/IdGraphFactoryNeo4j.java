@@ -62,7 +62,7 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
 
   @Override
   public void delete(GraphUri gUri) throws IOException {
-    File pathFile = new File(gUri.getUri().toString());
+    File pathFile = new File(gUri.getUriPath());
     if(pathFile.exists()){
       log.info("Deleting Neo4j DB at {}",pathFile);
       FileUtils.deleteDirectory(pathFile);
@@ -71,7 +71,7 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
 
   @Override
   public boolean exists(GraphUri gUri) {
-    File pathFile = new File(gUri.getUri().toString());
+    File pathFile = new File(gUri.getUriPath());
     return pathFile.exists();
   }
 

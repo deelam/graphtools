@@ -59,6 +59,12 @@ public class IdGraphFactoryOrientdb implements IdGraphFactory {
     }
     return graph;
   }
+  
+  public void shutdown(IdGraph<?> graph){
+    OrientGraph oGraph=(OrientGraph) graph.getBaseGraph();
+    oGraph.getRawGraph().getStorage().close(true, false); // hotfix: https://github.com/orientechnologies/orientdb/issues/5317#event-467569228
+    graph.shutdown();
+  }
 
   private void setDefaultAuthentication(Configuration conf) {
     String username = conf.getString(CONFIG_PREFIX+"username");

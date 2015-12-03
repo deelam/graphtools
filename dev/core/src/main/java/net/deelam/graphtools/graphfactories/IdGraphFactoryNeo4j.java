@@ -54,6 +54,10 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
     return graph;
   }
 
+  public void shutdown(IdGraph<?> graph){
+    graph.shutdown();
+  }
+  
   private void checkPath(String path) {
     if (path == null || path.equals("/")) {
       throw new IllegalArgumentException("Provide a path like so: 'neo4j://./myDB'");

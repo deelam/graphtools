@@ -116,6 +116,11 @@ public class GraphUri {
     return graph;
   }
   
+  public void shutdown(IdGraph<?> graph){
+    log.info("Shutting down graph: {}",graph);
+    factory.shutdown(graph);
+  }
+  
   public boolean delete() throws IOException{
     if(factory.exists(this)){
       factory.delete(this);

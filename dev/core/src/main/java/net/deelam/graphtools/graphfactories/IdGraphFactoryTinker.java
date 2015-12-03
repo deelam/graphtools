@@ -40,6 +40,10 @@ public final class IdGraphFactoryTinker implements IdGraphFactory {
     }
     return graph;
   }
+  
+  public void shutdown(IdGraph<?> graph){
+    graph.shutdown();
+  }
 
   private static FileType getFileSaveType(GraphUri gUri) {
     // check for secondary scheme

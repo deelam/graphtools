@@ -32,5 +32,7 @@ public interface IdGraphFactory {
    * @param gUri
    * @return whether graph exists
    */
-  public boolean exists(GraphUri gUri);  
+  public boolean exists(GraphUri gUri);
+
+  public void shutdown(IdGraph<?> graph);  
 }

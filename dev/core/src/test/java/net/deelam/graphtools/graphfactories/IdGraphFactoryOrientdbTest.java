@@ -2,6 +2,7 @@ package net.deelam.graphtools.graphfactories;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
 import java.io.IOException;
 
 import net.deelam.graphtools.GraphTransaction;
@@ -9,6 +10,7 @@ import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.GraphUtils;
 
 import org.apache.commons.configuration.BaseConfiguration;
+import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -161,5 +163,43 @@ public class IdGraphFactoryOrientdbTest {
     }
     graph.shutdown();
   }
+  
+  @Test
+  public void testGraphReuse() throws IOException {
+    FileUtils.deleteDirectory(new File("./target/orient-us500test2"));
+    OrientGraph graph = new OrientGraph("plocal:./target/orient-us500test2");
+    graph.addVertex("A");
+    graph.addVertex("A"); // Id is ignored
+    
+    assertEquals(2, Iterables.size(graph.getVertices()));
+    
+   // hotfix: https://github.com/orientechnologies/orientdb/issues/5317#event-467569228
+    //fix: graph.getRawGraph().getStorage().close(true, false); 
+    graph.shutdown();
 
+    FileUtils.deleteDirectory(new File("./target/orient-us500test2"));
+    OrientGraph graph2 = new OrientGraph("plocal:./target/orient-us500test2");
+    //bug in OrientGraph.shutdown(), change expectation from 2 to 0 when fixed  
+    assertEquals(2, Iterables.size(graph2.getVertices()));
+    graph2.shutdown();
+  }
+
+  @Test
+  public void testGraphUriReuse() throws IOException {
+    GraphUri gUri = new GraphUri("orientdb:plocal:./target/myODb4");
+    IdGraph graph = gUri.createNewIdGraph(true);
+    
+    Vertex a2 = graph.addVertex("A2");
+    a2.setProperty("prop2", "value2");
+    Vertex b2 = graph.addVertex("B2");
+    graph.addEdge("E", a2, b2, "edgey2");
+    assertEquals(3, Iterables.size(graph.getVertices()));
+    gUri.shutdown(graph);// OrientGraph.shutdown() is buggy; must use gUri.shutdown(graph) until get hotfix: https://github.com/orientechnologies/orientdb/issues/5317#event-467569228
+    
+    IdGraph graph2 = gUri.createNewIdGraph(true);
+    assertEquals(1, Iterables.size(graph2.getVertices()));
+    System.out.println(GraphUtils.toString(graph2));
+    gUri.shutdown(graph2);
+  }
+  
 }

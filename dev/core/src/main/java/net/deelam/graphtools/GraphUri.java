@@ -54,6 +54,7 @@ public class GraphUri {
   @Getter
   private final String scheme;
   private final URI baseUri;
+  private IdGraphFactory factory;
 
   public GraphUri(String uri) {
     this(uri, new BaseConfiguration());
@@ -69,6 +70,9 @@ public class GraphUri {
     int colonIndx = uri.indexOf(':');
     Preconditions.checkState(colonIndx>0, "Expecting something like 'tinker:'");
     scheme=uri.substring(0,colonIndx);
+    factory = graphFtry.get(scheme);
+    Preconditions.checkNotNull(factory, "Unknown schema: " + scheme);
+    
     baseUri=URI.create(uri.substring(colonIndx+1));
     this.config = config;
     parseUriPath(baseUri);
@@ -88,8 +92,6 @@ public class GraphUri {
   
   @SuppressWarnings("rawtypes")
   public IdGraph openExistingIdGraph() throws FileNotFoundException {
-    IdGraphFactory factory = graphFtry.get(scheme);
-    Preconditions.checkNotNull(factory, "Unknown schema: " + scheme);
     if(factory.exists(this)){
       return openIdGraph(KeyIndexableGraph.class);
     } else {
@@ -104,8 +106,6 @@ public class GraphUri {
    */
   @SuppressWarnings("rawtypes")
   public IdGraph createNewIdGraph(boolean deleteExisting) throws IOException {
-    IdGraphFactory factory = graphFtry.get(scheme);
-    Preconditions.checkNotNull(factory, "Unknown schema: " + scheme);
     if(factory.exists(this)){
       if(deleteExisting)
         factory.delete(this);
@@ -115,6 +115,15 @@ public class GraphUri {
     IdGraph<KeyIndexableGraph> graph = openIdGraph(KeyIndexableGraph.class);
     return graph;
   }
+  
+  public boolean delete() throws IOException{
+    if(factory.exists(this)){
+      factory.delete(this);
+      return true;
+    } else {
+      return false;
+    }
+  }
 
   /**
    * Open existing or create a new graph
@@ -122,8 +131,6 @@ public class GraphUri {
    * @return
    */
   public <T extends KeyIndexableGraph> IdGraph<T> openIdGraph(Class<T> baseGraphClass) {
-    IdGraphFactory factory = graphFtry.get(scheme);
-    Preconditions.checkNotNull(factory, "Unknown schema: " + scheme);
     if (config == null)
       config = new BaseConfiguration();
     config.setProperty(URI_SCHEMA_PART, baseUri.getSchemeSpecificPart());

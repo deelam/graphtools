@@ -2,12 +2,14 @@ package net.deelam.graphtools.graphfactories;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 
 import org.apache.commons.io.FileUtils;
 
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.IdGraphFactory;
+import net.deelam.graphtools.graphfactories.IdGraphFactoryOrientdb.DB_TYPE;
 
 import com.tinkerpop.blueprints.impls.tg.TinkerGraph;
 import com.tinkerpop.blueprints.impls.tg.TinkerGraph.FileType;
@@ -40,12 +42,21 @@ public final class IdGraphFactoryTinker implements IdGraphFactory {
   }
 
   private static FileType getFileSaveType(GraphUri gUri) {
-    String path = gUri.getUriPath();
-    if (path == null || path.length()<1 || path.equals("/")) { // in-memory
-      return null;
+    // check for secondary scheme
+    URI uri = gUri.getUri();
+    String fileTypeStr = uri.getScheme();
+
+    String path;
+    if (fileTypeStr == null) {
+      path = gUri.getUriPath();
+      if (path == null || path.length() < 1 || path.equals("/")) { // in-memory
+        return null;
+      }
+      fileTypeStr = gUri.getConfig().getString("fileType");
     }
-    FileType fileType = TinkerGraph.FileType.JAVA;
-    String fileTypeStr = gUri.getConfig().getString("fileType");
+
+    // not in-memory; storing to disk
+    FileType fileType = TinkerGraph.FileType.JAVA; // default type
     if (fileTypeStr != null) {
       fileType = TinkerGraph.FileType.valueOf(fileTypeStr.toUpperCase());
     }

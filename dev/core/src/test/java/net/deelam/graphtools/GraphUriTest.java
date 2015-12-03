@@ -70,6 +70,13 @@ public class GraphUriTest {
   }
 
   @Test
+  public void testSavedGraphmlScheme() {
+    GraphUri gUri = new GraphUri("tinker:graphml:./target/tGraphML");
+    IdGraph<TinkerGraph> graph = gUri.openIdGraph();
+    graph.shutdown();
+  }
+  
+  @Test
   public void testTwoSavedGraphs() {
     GraphUri gUri = new GraphUri("tinker:./target/tGraphML?fileType=graphml");
     IdGraph<TinkerGraph> graph = gUri.openIdGraph();

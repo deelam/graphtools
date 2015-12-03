@@ -25,6 +25,7 @@ public class GraphTransactionTest {
 
   @Before
   public void setUp() throws Exception {
+    GraphTransaction.checkTransactionsClosed();
     //System.out.println("Resetting");
     FileUtils.deleteDirectory(new File("target/transGraph"));
     counter = 0;

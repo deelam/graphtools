@@ -94,7 +94,7 @@ public class GraphTransaction {
    *     rollback is delayed until the top-level transaction is committed or rolledback.
    */
   public static boolean rollback(int tx) {
-    updateNestingDepth(tx);
+    decrementNestingDepth(tx);
 
     if (!rollbackCalled.get().get()) {
       rollbackCalled.get().set(true);
@@ -108,7 +108,7 @@ public class GraphTransaction {
     }
   }
 
-  private static void updateNestingDepth(int depth) {
+  private static void decrementNestingDepth(int depth) {
     if (depth < nestingCounter.get().intValue()) {
       log.warn(
           "Transaction depth mismatch: expected {} but got {}.  This can occur if you called rollback.  Readjusting depth.\n"
@@ -116,7 +116,11 @@ public class GraphTransaction {
               .intValue(), depth);
       nestingCounter.get().setValue(depth - 1);
     } else {
-      nestingCounter.get().decrement();
+      MutableInt nestingDepth = nestingCounter.get();
+      if(nestingDepth.intValue()==0)
+        log.warn("Not decrementing transaction depth since it's already 0.  Might want to investigate the reason for this.", new Throwable());
+      else
+        nestingDepth.decrement();
     }
   }
 
@@ -125,13 +129,14 @@ public class GraphTransaction {
    * @return if top-level transaction was closed without rollback. False means (1) transaction was nested and is still open, or (2) rollback was called.
    */
   public static boolean commit(int tx) {
-    updateNestingDepth(tx);
+    decrementNestingDepth(tx);
 
     if (isOuterMostTransaction()) {
       return endTransaction();
     } else {
-      log.trace("Depth={}, Not yet committing transaction on graph: {}", nestingCounter.get(),
+      log.warn("Depth={}, Not yet committing transaction on graph: {}", nestingCounter.get(),
           graphHolder.get());
+      log.warn("This occurs here: ", new Throwable());
       return false;
     }
   }

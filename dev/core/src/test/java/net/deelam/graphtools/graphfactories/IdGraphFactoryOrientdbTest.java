@@ -24,6 +24,7 @@ public class IdGraphFactoryOrientdbTest {
 
   @BeforeClass
   public static void setUp() throws Exception {
+    GraphTransaction.checkTransactionsClosed();
     IdGraphFactoryOrientdb.register();
   }
 
@@ -107,31 +108,48 @@ public class IdGraphFactoryOrientdbTest {
       graph.addEdge("E", a, b, "edgey");
       GraphTransaction.commit(tx);
 
-    tx = GraphTransaction.begin(graph2);
+      int tx2 = GraphTransaction.begin(graph2);
       try {
         Vertex a2 = graph2.addVertex("A2");
         a2.setProperty("prop2", "value2");
         a2.setProperty("prop", a.getProperty("prop"));
         Vertex b2 = graph2.addVertex("B2");
 
-        try {
-          graph2.addEdge("E", a, b, "edgey2");
-          GraphTransaction.commit(tx);
-          fail("exception should be thrown since nodes a and b are not in graph2");
-        } catch (RuntimeException re) {
+        graph2.addEdge("E", a, b, "edgey2");
+        GraphTransaction.commit(tx2);
+        fail("exception should be thrown since nodes a and b are not in graph2");
+      } catch (RuntimeException re) {
+        GraphTransaction.rollback(tx2); // this should occur
+      }
+
+      // retry with correct vertices
+      tx2 = GraphTransaction.begin(graph2);
+      try {
+        Vertex a2, b2;
+        if(false){
+        // TODO: report that OrientGraph doesn't rollback added nodes
+//        a2 = graph2.addVertex("A2");
+//        a2.setProperty("prop2", "value2");
+//        a2.setProperty("prop", a.getProperty("prop"));
+//        b2 = graph2.addVertex("B2");
+        }else{
+          // workaround: just get the nodes
+          a2 = graph2.getVertex("A2");
+          b2 = graph2.getVertex("B2");
         }
         
         graph2.addEdge("E", a2, b2, "edgey2");
-        GraphTransaction.commit(tx);
+        GraphTransaction.commit(tx2);
 
       } catch (RuntimeException re) {
-        GraphTransaction.rollback(tx);
+        GraphTransaction.rollback(tx2);
         throw re;
       }
     } catch (RuntimeException re) {
       GraphTransaction.rollback(tx);
       throw re;
     }
+    GraphTransaction.checkTransactionsClosed();
     
     assertEquals(3, Iterables.size(graph.getVertices()));
     assertEquals(1, Iterables.size(graph.getEdges()));

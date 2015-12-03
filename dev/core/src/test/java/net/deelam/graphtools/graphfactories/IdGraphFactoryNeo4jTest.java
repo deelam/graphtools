@@ -22,6 +22,7 @@ public class IdGraphFactoryNeo4jTest {
 
   @BeforeClass
   public static void setUp() throws Exception {
+    GraphTransaction.checkTransactionsClosed();
     IdGraphFactoryNeo4j.register();
   }
 
@@ -82,7 +83,7 @@ public class IdGraphFactoryNeo4jTest {
       graph.addEdge("E", a, b, "edgey");
       GraphTransaction.commit(tx);
 
-      tx = GraphTransaction.begin(graph2);
+      int tx2 = GraphTransaction.begin(graph2);
       try {
         Vertex a2 = graph2.addVertex("A2");
         a2.setProperty("prop2", "value2");
@@ -96,15 +97,16 @@ public class IdGraphFactoryNeo4jTest {
         }
         
         graph2.addEdge("E", a2, b2, "edgey2");
-        GraphTransaction.commit(tx);
+        GraphTransaction.commit(tx2);
       } catch (RuntimeException re) {
-        GraphTransaction.rollback(tx);
+        GraphTransaction.rollback(tx2);
         throw re;
       }
     } catch (RuntimeException re) {
       GraphTransaction.rollback(tx);
       throw re;
     }
+    GraphTransaction.checkTransactionsClosed();
 
     assertEquals(3, Iterables.size(graph.getVertices()));
     assertEquals(1, Iterables.size(graph.getEdges()));

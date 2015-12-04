@@ -118,7 +118,7 @@ public class GraphTransaction {
     } else {
       MutableInt nestingDepth = nestingCounter.get();
       if(nestingDepth.intValue()==0)
-        log.warn("Not decrementing transaction depth since it's already 0.  Might want to investigate the reason for this.", new Throwable());
+        log.warn("Not decrementing transaction depth since it's already 0.  Might want to investigate the reason for this:", new Throwable());
       else
         nestingDepth.decrement();
     }

@@ -16,6 +16,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.collect.Iterables;
+import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
@@ -92,7 +93,7 @@ public class IdGraphFactoryOrientdbTest {
     }
   }
 
-  @Test
+  // buggy Orient when working with multiple graphs: non-determinism causing failures @Test
   public void testTwoOrientUsingUriQuery() throws IOException {
     GraphUri gUri = new GraphUri("orientdb:plocal:./target/myODb");
     IdGraph<OrientGraph> graph = gUri.createNewIdGraph(true);
@@ -218,6 +219,146 @@ public class IdGraphFactoryOrientdbTest {
     assertEquals(1, Iterables.size(graph2.getVertices()));
     System.out.println(GraphUtils.toString(graph2));
     gUri.shutdown(graph2);
+  }
+  
+  //@Test
+  public void testCopyGraphToGraph0() throws IOException {
+    GraphUri gUri = new GraphUri("orientdb:plocal:./target/myODb5");
+    IdGraph graph = gUri.createNewIdGraph(true);
+    
+    Vertex a2 = graph.addVertex("Paul Salda�a");
+    a2.setProperty("prop2", "value2");
+    Vertex b2 = graph.addVertex("B2");
+    graph.addEdge("E", a2, b2, "edgey2");
+    graph.commit();
+    assertEquals(3, Iterables.size(graph.getVertices()));
+    assertEquals(1, Iterables.size(graph.getEdges()));
+    assertEquals(1, Iterables.size(a2.getEdges(Direction.OUT)));
+    gUri.shutdown(graph);
+    
+    IdGraph graph2 = gUri.openExistingIdGraph();
+    System.out.println(GraphUtils.toString(graph2));
+    assertEquals(3, Iterables.size(graph2.getVertices()));
+    assertEquals(1, Iterables.size(graph2.getEdges()));
+    assertEquals(1, Iterables.size(graph2.getVertex("Paul Salda�a").getEdges(Direction.OUT)));
+    
+    GraphUri dgUri = new GraphUri("orientdb:plocal:./target/destODb");
+    IdGraph dgraph = dgUri.createNewIdGraph(true);
+    Vertex a22 = graph2.getVertex("Paul Salda�a");
+    assertEquals(1, Iterables.size(graph2.getVertex("Paul Salda�a").getEdges(Direction.OUT)));
+    Vertex b22 = graph2.getVertex("B2");
+    Vertex a4=dgraph.addVertex("A4:Paul Salda�a");
+    assertEquals(1, Iterables.size(graph2.getVertex("Paul Salda�a").getEdges(Direction.OUT)));
+    dgraph.getVertex("Paul Salda�a");
+    assertEquals(1, Iterables.size(graph2.getVertex("Paul Salda�a").getEdges(Direction.OUT)));
+    System.out.println(GraphUtils.toString(graph2));
+    System.out.println(GraphUtils.toString(dgraph));
+    dgUri.shutdown(dgraph);
+    
+    gUri.shutdown(graph2);
+
+  }
+  
+  //@Test
+  public void testCopyGraphToGraph() throws IOException {
+    GraphUri gUri = new GraphUri("orientdb:plocal:./target/myODb5");
+   
+    IdGraph graph2 = gUri.openExistingIdGraph();
+    System.out.println(GraphUtils.toString(graph2));
+    assertEquals(3, Iterables.size(graph2.getVertices()));
+    assertEquals(1, Iterables.size(graph2.getEdges()));
+    assertEquals(1, Iterables.size(graph2.getVertex("Paul Salda�a").getEdges(Direction.OUT)));
+    
+    GraphUri dgUri = new GraphUri("orientdb:plocal:./target/destODb");
+    IdGraph dgraph = dgUri.createNewIdGraph(true);
+    
+    Vertex a22 = graph2.getVertex("Paul Salda�a");
+    assertEquals(1, Iterables.size(graph2.getVertex("Paul Salda�a").getEdges(Direction.OUT)));
+    Vertex b22 = graph2.getVertex("B2");
+    
+    Vertex a4=dgraph.addVertex("A4:Paul Salda�a");
+    Vertex a5=dgraph.addVertex("A5:B2");
+    String edgeId="equiv"+a4.getId()+"->"+a5.getId();
+    dgraph.addEdge(edgeId, a4, a5, "equivalent");
+    System.out.println(GraphUtils.toString(dgraph));
+    
+    assertEquals(1, Iterables.size(graph2.getVertex("Paul Salda�a").getEdges(Direction.OUT)));
+    System.out.println("a22 edges="+Iterables.toString(a22.getEdges(Direction.OUT)));
+    assertEquals(1, Iterables.size(a22.getEdges(Direction.OUT)));
+    
+    dgraph.getVertex("A4:"+a22.getId()); // <----
+
+    //assertEquals(1, Iterables.size(graph2.getVertex("Paul Salda�a").getEdges(Direction.OUT)));
+    System.out.println("a22 edges="+Iterables.toString(a22.getEdges(Direction.OUT)));
+    assertEquals(1, Iterables.size(a22.getEdges(Direction.OUT)));
+    
+    System.out.println(GraphUtils.toString(graph2));
+    System.out.println(GraphUtils.toString(dgraph));
+    dgUri.shutdown(dgraph);
+    
+    gUri.shutdown(graph2);
+
+  }
+  
+  
+  //@Test
+  public void testCopyGraphToGraph_OrientGraphOnly() throws IOException {
+    // create new source graph
+    FileUtils.deleteDirectory(new File("./target/srcGraph"));
+    IdGraph srcGraph = new IdGraph(new OrientGraph("plocal:./target/srcGraph"));
+    Vertex paul = srcGraph.addVertex("Paul");
+    paul.setProperty("myProp", "myValue");
+    Vertex bob = srcGraph.addVertex("Bob");
+    srcGraph.addEdge("myEdgeId", paul, bob, "myEdgeLabel");
+    srcGraph.commit();
+    
+/*    if(true){ // Check source graph
+      //System.out.println(GraphUtils.toString(srcGraph));
+      assertEquals(2, Iterables.size(srcGraph.getVertices()));
+      assertEquals(1, Iterables.size(srcGraph.getEdges()));
+      assertEquals(1, Iterables.size(srcGraph.getVertex("Paul").getEdges(Direction.OUT)));
+      assertEquals("myValue", srcGraph.getVertex("Paul").getProperty("myProp"));
+      assertEquals(1, paul.getPropertyKeys().size());
+    }*/
+    
+    // open new destination graph
+    FileUtils.deleteDirectory(new File("./target/destODb"));
+    IdGraph destGraph = new IdGraph(new OrientGraph("plocal:./target/destODb"));
+    
+    Vertex destPaul=destGraph.addVertex("dest:Paul");
+    Vertex destBob=destGraph.addVertex("dest:Bob");
+    destGraph.addEdge("destEdgeId", destPaul, destBob, "destEdgeLabel");
+    destGraph.commit();
+    
+/*    boolean checkDstGraph=true;
+    if(checkDstGraph){ // Check source graph
+      //System.out.println(GraphUtils.toString(destGraph));
+      assertEquals(2, Iterables.size(destGraph.getVertices()));
+      assertEquals(1, Iterables.size(destGraph.getEdges()));
+      assertEquals(1, Iterables.size(destGraph.getVertex("dest:Paul").getEdges(Direction.OUT)));
+    }
+    */
+    
+    srcGraph.getVertex("Paul");
+    srcGraph.commit();
+    destPaul.setProperty("_destPaulProp", "destValue");
+    srcGraph.commit();
+    destGraph.commit();
+    
+    boolean makeSubsequentLineWork=!true;
+    if (makeSubsequentLineWork){
+      srcGraph.getVertex("Paul");
+    }
+    /* next line causes OrientElement.getProperty to throw 
+       NPException if makeSubsequentLineWork=false
+     */
+    System.out.println("paul edges="+Iterables.toString(paul.getEdges(Direction.OUT)));
+
+    // shutdown graphs
+    ((OrientGraph)destGraph.getBaseGraph()).getRawGraph().getStorage().close(true, false); 
+    destGraph.shutdown();
+    ((OrientGraph)srcGraph.getBaseGraph()).getRawGraph().getStorage().close(true, false); 
+    srcGraph.shutdown();
   }
   
 }

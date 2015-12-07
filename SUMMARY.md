@@ -1,4 +1,4 @@
 # Summary
 
-* GraphTools
+* [GraphTools](doc/graphtools.md)
 

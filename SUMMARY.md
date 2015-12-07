@@ -1,6 +1,6 @@
 # Summary
 
 * [Introduction](README.md)
-* [GraphTools](doc/graphtools.md)
+* [Core Components](doc/core.md)
 * [Importer](doc/importer.md)
 

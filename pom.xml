@@ -31,10 +31,11 @@
   <distributionManagement>
     <snapshotRepository>
       <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+      <url>${distribSnapshotUrl}</url>
     </snapshotRepository>
   </distributionManagement>
   <properties>
+    <distribSnapshotUrl>https://oss.sonatype.org/content/repositories/snapshots</distribSnapshotUrl>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <blueprints.ver>2.6.0</blueprints.ver>
   </properties>

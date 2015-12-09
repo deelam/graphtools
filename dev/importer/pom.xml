@@ -49,6 +49,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <groupId>com.tinkerpop</groupId>
       <artifactId>frames</artifactId>
     </dependency>
+<dependency>
+	<groupId>io.fastjson</groupId>
+	<artifactId>boon</artifactId>
+	<version>0.33</version>
+</dependency>
 
 
   <!-- For testing -->

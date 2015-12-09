@@ -66,6 +66,7 @@ public class GraphUri {
   }
 
   public GraphUri(String uri, Configuration config) {
+    Preconditions.checkNotNull(uri, "uri parameter cannot be null");
     origUri=uri;
     int colonIndx = uri.indexOf(':');
     Preconditions.checkState(colonIndx>0, "Expecting something like 'tinker:'");
@@ -88,6 +89,10 @@ public class GraphUri {
   @SuppressWarnings("rawtypes")
   public IdGraph openIdGraph() {
     return openIdGraph(KeyIndexableGraph.class);
+  }
+  
+  public boolean exists(){
+    return factory.exists(this);
   }
   
   @SuppressWarnings("rawtypes")

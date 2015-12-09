@@ -5,9 +5,9 @@ import java.util.Map.Entry;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphRecord;
 import net.deelam.graphtools.GraphRecordEdge;
+import net.deelam.graphtools.GraphRecordMerger;
 
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
@@ -16,7 +16,7 @@ import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 @RequiredArgsConstructor
-@Slf4j
+//@Slf4j
 public class DefaultPopulator implements Populator {
 
   @Getter
@@ -59,7 +59,7 @@ public class DefaultPopulator implements Populator {
     }
   }
 
-  public static Vertex importVertex(IdGraph<?> graph, GraphRecord gr) {
+  public Vertex importVertex(IdGraph<?> graph, GraphRecord gr) {
     String id = gr.getStringId();
     Vertex newV = graph.getVertex(id);
     if (newV == null) {
@@ -69,7 +69,7 @@ public class DefaultPopulator implements Populator {
     return newV;
   }
 
-  public static Edge importEdge(IdGraph<?> graph, GraphRecordEdge grE, Direction direction,
+  public Edge importEdge(IdGraph<?> graph, GraphRecordEdge grE, Direction direction,
       Vertex v1inGraph, Vertex v2inGraph) {
     String edgeId = grE.getStringId();
     Edge newEdge = graph.getEdge(edgeId);
@@ -95,50 +95,8 @@ public class DefaultPopulator implements Populator {
 
   static final String SET_SUFFIX = DefaultGraphRecordMerger.SET_SUFFIX;
 
-  public static void copyProperties(Element fromE, Element toE) {
-    DefaultGraphRecordMerger.mergeProperties(fromE, toE);
-    /*
-    for (String key : fromE.getPropertyKeys()) {
-      if (key.equals(IdGraph.ID))
-        continue;
-      if (key.endsWith(SET_SUFFIX)) { // ignore
-        switch (key) {
-          default:
-            log.warn("Ignoring property: " + fromE + " " + key + "=" + fromE.getProperty(key));
-            continue;
-        }
-      }
-
-      //					System.out.println("  setting property=" + pkey);
-      Object toValue = toE.getProperty(key);
-      Object fromValue = fromE.getProperty(key);
-      if (fromValue == null) {
-      } else if (toValue == null) {
-    //        if (fromValue instanceof Date) {
-    //          log.warn("Converting from Date to String: " + fromValue+"  and setting new property "+key+"_millis");
-    //          toE.setProperty(key+"_millis", ((Date)fromValue).getTime());
-    //          fromValue = fromValue.toString();
-    //        }
-        toE.setProperty(key, fromValue);
-      } else if (toValue.equals(fromValue)) { // nothing to do
-      } else { // toValue and fromValue are not null and not equal
-
-        //				// Try https://github.com/thinkaurelius/titan/wiki/Datatype-and-Attribute-Serializer-Configuration
-        //				// check special SET property
-        String sPropertyKey = key + SET_SUFFIX;
-        //				Set<Object> valueSet=toE.getProperty(sPropertyKey);
-        //				if(valueSet == null){
-        //					valueSet=new HashSet<>();
-        //					toE.setProperty(sPropertyKey, valueSet);
-        //					valueSet.add(fromValue);
-        //				}
-        //				valueSet.add(toValue);
-        //				log.warn("Ignoring property due to multiple values: "+key + " valueSet={}", valueSet);
-        // TODO: 0: all values are in the sPropertyKey as a String; need to make it accessible via key
-        log.warn("Appending property values for '{}' origValue={} newValue={}", key, toValue,
-            fromValue);
-        toE.setProperty(sPropertyKey, toValue.toString() + ";" + fromValue.toString());
-      }
-    }*/
+  GraphRecordMerger grMerger=new DefaultGraphRecordMerger();
+  public void copyProperties(Element fromE, Element toE) {
+    grMerger.mergeProperties(fromE, toE);
   }
 }

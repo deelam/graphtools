@@ -1,8 +1,9 @@
 package net.deelam.enricher.indexing;
 
 import java.io.IOException;
-import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import lombok.extern.slf4j.Slf4j;
@@ -19,8 +20,6 @@ import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.*;
 import org.apache.lucene.search.SortField.Type;
 import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.BytesRef;
 
 import com.tinkerpop.blueprints.Graph;
@@ -35,7 +34,7 @@ public class NodeIndexer implements AutoCloseable {
   private Directory dir;
 
   public NodeIndexer(Directory dir) throws IOException {
-    this.dir=dir;
+    this.dir = dir;
   }
 
   @Override
@@ -61,11 +60,10 @@ public class NodeIndexer implements AutoCloseable {
     log.info("Indexed " + count + " relevant nodes.");
   }
 
-  Map<String, EntityIndexer> eIndexers = new HashMap<>();
+  List<EntityIndexer> eIndexers = new ArrayList<>();
 
-  public void registerEntityIndexer(String entityType, EntityIndexer indexer) {
-    eIndexers.put(entityType, indexer);
-
+  public void registerEntityIndexer(EntityIndexer indexer) {
+    eIndexers.add(indexer);
     analyzerMap.putAll(indexer.createAnalyzers());
   }
 
@@ -81,15 +79,15 @@ public class NodeIndexer implements AutoCloseable {
     if (type == null)
       return false;
 
-    EntityIndexer indexer = eIndexers.get(type);
-    if (indexer == null) {
-      log.warn("No indexer for type={}", type);
-      return false;
+    //      EntityIndexer indexer = eIndexers.get(type);
+    //      if (indexer == null) {
+    //        log.warn("No indexer for type={}", type);
+    //        return false;
+    //      }
+    doc = new Document();
+    for (EntityIndexer indexer : eIndexers) {
+      indexer.index(v, doc);
     }
-
-    doc = indexer.index(v);
-    if (doc == null)
-      return false;
 
     doc.add(new StringField(SRC_GRAPH_FIELD, inputGraphname, Field.Store.YES));
     doc.add(new StringField(NODE_ID_FIELD, v.getId().toString(), Field.Store.YES));

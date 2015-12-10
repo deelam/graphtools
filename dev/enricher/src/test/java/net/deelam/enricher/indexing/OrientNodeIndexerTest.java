@@ -46,8 +46,8 @@ public class OrientNodeIndexerTest {
   @Test
   public void test() throws IOException, ConfigurationException, ParseException {
     try(NodeIndexer indexer = new NodeIndexer(new RAMDirectory())){
-      indexer.registerEntityIndexer(PersonIndexer.ENTITY_TYPE, new PersonIndexer());
-      indexer.registerEntityIndexer(LocationIndexer.ENTITY_TYPE, new LocationIndexer());
+      indexer.registerEntityIndexer(new PersonIndexer());
+      indexer.registerEntityIndexer(new LocationIndexer());
       
       indexer.indexGraph(graph, "us500test");
       indexer.indexGraph(graph, "us500test2");

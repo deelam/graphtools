@@ -6,6 +6,7 @@ package net.deelam.graphtools.importer;
 import java.io.IOException;
 import java.util.Collection;
 
+import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphRecord;
@@ -21,8 +22,11 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 @Slf4j
 public class DefaultImporter<B> implements Importer<B> {
 
+  @Getter
   private final Encoder<B> encoder;
+  @Getter
   private final Populator populator;
+  @Getter
   private final GraphRecordBuilder<B> grBuilder;
 
   @Setter

@@ -95,8 +95,10 @@ public class DefaultPopulator implements Populator {
 
   static final String SET_SUFFIX = DefaultGraphRecordMerger.SET_SUFFIX;
 
-  GraphRecordMerger grMerger=new DefaultGraphRecordMerger();
+  @Getter
+  final GraphRecordMerger graphRecordMerger;
+  
   public void copyProperties(Element fromE, Element toE) {
-    grMerger.mergeProperties(fromE, toE);
+    graphRecordMerger.mergeProperties(fromE, toE);
   }
 }

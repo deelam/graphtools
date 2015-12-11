@@ -121,11 +121,6 @@ public class GraphUri {
     return graph;
   }
   
-  public void shutdown(IdGraph<?> graph){
-    log.info("Shutting down graph: {}",graph);
-    factory.shutdown(graph);
-  }
-  
   public boolean delete() throws IOException{
     if(factory.exists(this)){
       factory.delete(this);
@@ -133,6 +128,21 @@ public class GraphUri {
     } else {
       return false;
     }
+  }
+
+  @Getter
+  private IdGraph graph;
+  public void shutdown(){
+    if(graph!=null){
+      shutdown(graph);
+    } else {
+      new IllegalArgumentException("Call shutdown(graph) instead since you didn't open the graph using this class.");
+    }
+  }
+  
+  public void shutdown(IdGraph<?> graph){
+    log.info("Shutting down graph: {}",graph);
+    factory.shutdown(graph);
   }
 
   /**
@@ -145,7 +155,7 @@ public class GraphUri {
       config = new BaseConfiguration();
     config.setProperty(URI_SCHEMA_PART, baseUri.getSchemeSpecificPart());
     parseQuery(baseUri.toString());
-    IdGraph<T> graph = factory.open(this);
+    graph = factory.open(this);
     log.info("Opened graph=" + graph);
     {
       GraphUtils.addMetaDataNode(this, graph);

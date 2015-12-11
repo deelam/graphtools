@@ -3,8 +3,12 @@
  */
 package net.deelam.graphtools.importer;
 
+import java.lang.reflect.Array;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Set;
+
+import lombok.Getter;
 
 import org.boon.core.value.ValueList;
 import org.boon.json.JsonFactory;
@@ -35,7 +39,7 @@ public class JsonPropertyMerger implements PropertyMerger {
 
       Object toValue = toE.getProperty(key);
       if (toValue == null) {
-        toE.setProperty(key, fromValue);
+        setElementProperty(toE, key, fromValue);
         continue;
       }
 
@@ -47,7 +51,44 @@ public class JsonPropertyMerger implements PropertyMerger {
     }
   }
 
+  @Getter
+  private final Set<Class<?>> validPropertyClasses = new HashSet<>();
+  {
+    // this list is created from Neo4j's PropertyStore class
+    validPropertyClasses.add(String.class);
+    validPropertyClasses.add(Integer.class);
+    validPropertyClasses.add(Boolean.class);
+    validPropertyClasses.add(Float.class);
+    validPropertyClasses.add(Long.class);
+    validPropertyClasses.add(Double.class);
+    validPropertyClasses.add(Byte.class);
+    validPropertyClasses.add(Character.class);
+    validPropertyClasses.add(Short.class);
+  }
+
+  // for Graphs (like Neo4j) that can only store primitives
+  private void setElementProperty(Element elem, String key, Object value) {
+    Object leafValue;
+    if(value.getClass().isArray()){
+      if(Array.getLength(value)==0){
+        elem.setProperty(key, value);
+        return;
+      }else{
+        leafValue=Array.get(value, 0);
+      }
+    }else{
+      leafValue=value;
+    }
+    
+    if (validPropertyClasses.contains(leafValue.getClass())){
+      elem.setProperty(key, value);
+    } else { // save as Json
+      elem.setProperty(key, mapper.toJson(value));
+    }
+  }
+
   private ObjectMapper mapper = JsonFactory.create();
+
   public void mergeProperty(Element fromE, Element toE, String key, Object fromValue) {
     // toValue and fromValue are not null and not equal
     /* Possible cases:
@@ -69,26 +110,26 @@ public class JsonPropertyMerger implements PropertyMerger {
     } else {
       valueList = (ValueList) mapper.parser().parse(valueSetStr);
     }
-    
+
     /// check if fromValue is already in toValueList
-    boolean toValueChanged=false;
+    boolean toValueChanged = false;
     if (fromValue.equals(SET_VALUE)) {
-      String fromListStr=fromE.getProperty(setPropertyKey);
+      String fromListStr = fromE.getProperty(setPropertyKey);
       ValueList fromValueList = (ValueList) mapper.parser().parse(fromListStr);
-      for(Object fVal:fromValueList){
-        if(!valueList.contains(fVal)){
+      for (Object fVal : fromValueList) {
+        if (!valueList.contains(fVal)) {
           valueList.add(fVal); // hopefully, fromValue is the same type as other elements in the set
-          toValueChanged=true;
+          toValueChanged = true;
         }
       }
     } else {
-      if(!valueList.contains(fromValue)){
+      if (!valueList.contains(fromValue)) {
         valueList.add(fromValue); // hopefully, fromValue is the same type as other elements in the set
-        toValueChanged=true;
+        toValueChanged = true;
       }
     }
-    
-    if(toValueChanged)
+
+    if (toValueChanged)
       toE.setProperty(setPropertyKey, mapper.toJson(valueList));
   }
 

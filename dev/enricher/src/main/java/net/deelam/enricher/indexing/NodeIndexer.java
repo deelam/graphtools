@@ -94,8 +94,11 @@ public class NodeIndexer implements AutoCloseable {
     writer.addDocument(doc);
     return true;
   }
+  
+  /// TODO: move to QueryIndex or test class
 
-  public void list(String sortField, String fieldType, String printField, int limit)
+  // queryAll FieldValueQuery value in sortField using IndexSearcher; returns TopDocs
+  public void listBySortedField(String sortField, String fieldType, String printField, int limit)
       throws IOException, ParseException {
     try (IndexReader reader = DirectoryReader.open(dir)) {
       IndexSearcher searcher = new IndexSearcher(reader);
@@ -131,37 +134,18 @@ public class NodeIndexer implements AutoCloseable {
     return sortFieldInst;
   }
 
-  public void listTerm(String sortField, String fieldType, String printField, int limit)
-      throws IOException, ParseException {
-    try (IndexReader reader = DirectoryReader.open(dir)) {
-      IndexSearcher searcher = new IndexSearcher(reader);
-      SortField sortFieldInst = getSortField(sortField, fieldType);
-
-      Query queryAll = new TermQuery(new Term(sortField)); //FieldValueQuery(sortField); //new MatchAllDocsQuery();
-      TopDocs hits = searcher.search(queryAll, Integer.MAX_VALUE /*, new Sort(sortFieldInst)*/);
-
-      System.out.println("Found " + hits.totalHits + " hits.");
-      limit = (limit < 0) ? hits.totalHits : Math.min(limit, hits.totalHits);
-      for (int i = 0; i < limit; ++i) {
-        int docId = hits.scoreDocs[i].doc;
-        Document d = searcher.doc(docId);
-        System.out.println((i + 1) + ". " + d.get(printField) + " " + d.get(SRC_GRAPH_FIELD) + "["
-            + d.get(NODE_ID_FIELD) + "]");
-      }
-    }
-  }
-
-  public void listTermEnum(String tokenField, String printField, int limit) throws IOException, ParseException {
+  // enumerates through all terms in termField, submitting each term via TermQuery to IndexSearcher
+  public void listGroupedByTermValues(String termField, String printField, int limit) throws IOException, ParseException {
     try (IndexReader reader = DirectoryReader.open(dir)) {
 
       Fields fields = MultiFields.getFields(reader);
-      Terms terms = fields.terms(tokenField);
+      Terms terms = fields.terms(termField);
 
       TermsEnum termsEnum = terms.iterator();
       BytesRef text;
       while ((text = termsEnum.next()) != null) {
-        System.out.println("field=" + tokenField + "; text=" + text.utf8ToString());
-        TermQuery tq = new TermQuery(new Term(tokenField, text));
+        System.out.println("field=" + termField + "; text=" + text.utf8ToString());
+        TermQuery tq = new TermQuery(new Term(termField, text));
         IndexSearcher searcher = new IndexSearcher(reader);
         TopDocs hits = searcher.search(tq, limit);
 
@@ -179,33 +163,7 @@ public class NodeIndexer implements AutoCloseable {
     }
   }
 
-  public void listTermEnum3(String tokenField, String printField, int limit) throws IOException, ParseException {
-    try (IndexReader reader = DirectoryReader.open(dir)) {
-      Fields fields = MultiFields.getFields(reader);
-      Terms terms = fields.terms(tokenField);
-
-      TermsEnum termsEnum = terms.iterator();
-      BytesRef text;
-      while ((text = termsEnum.next()) != null) {
-        System.out.println("field=" + tokenField + "; text=" + text.utf8ToString());
-        TermQuery tq = new TermQuery(new Term(tokenField, text));
-        IndexSearcher searcher = new IndexSearcher(reader);
-        TopDocs hits = searcher.search(tq, limit);
-        if (hits.totalHits > 1) {
-          System.out.println("Found " + hits.totalHits + " hits.");
-          int _limit = (limit < 0) ? hits.totalHits : Math.min(limit, hits.totalHits);
-          for (int i = 0; i < _limit; ++i) {
-            int docId = hits.scoreDocs[i].doc;
-            Document d = searcher.doc(docId);
-            System.out.println((i + 1) + ". " + d.get(printField) + " " + d.get(SRC_GRAPH_FIELD) + "["
-                + d.get(NODE_ID_FIELD) + "]");
-          }
-        }
-      }
-    }
-  }
-
-  public void listTermEnum2(String sortField, String fieldType, String printField, int limit)
+  public void listTermsInAllFields()
       throws IOException, ParseException {
     try (IndexReader reader = DirectoryReader.open(dir)) {
       Fields fields = MultiFields.getFields(reader);

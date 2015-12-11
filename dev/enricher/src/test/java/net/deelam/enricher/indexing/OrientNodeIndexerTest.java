@@ -51,8 +51,8 @@ public class OrientNodeIndexerTest {
       
       indexer.indexGraph(graph, "us500test");
       indexer.indexGraph(graph, "us500test2");
-      indexer.list("firstNameSorted", "STRING", "firstName", 20);
-      indexer.list("zipSorted", "INT", "zip",20 );
+      indexer.listBySortedField("firstNameSorted", "STRING", "firstName", 20);
+      indexer.listBySortedField("zipSorted", "INT", "zip",20 );
     }
   }
 

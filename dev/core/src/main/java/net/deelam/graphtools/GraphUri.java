@@ -141,7 +141,7 @@ public class GraphUri {
   }
   
   public void shutdown(IdGraph<?> graph){
-    log.info("Shutting down graph: {}",graph);
+    log.info("Shutting down graph={}",graph);
     factory.shutdown(graph);
   }
 
@@ -156,7 +156,7 @@ public class GraphUri {
     config.setProperty(URI_SCHEMA_PART, baseUri.getSchemeSpecificPart());
     parseQuery(baseUri.toString());
     graph = factory.open(this);
-    log.info("Opened graph=" + graph);
+    log.info("Opened graph={}", graph);
     {
       GraphUtils.addMetaDataNode(this, graph);
     }

@@ -30,31 +30,24 @@ By combining these tools, we can scalably import data in various formats and sto
                                                    +------------+
 </pre>
 
-Problem characteristics
+## Problem characteristics
 * There is no single graph schema to rule them all (for different datatypes, domains, and usecases).
 * Interpretation of sourceData is not trivial -- requires domain knowledge.  Hence, we enable those experts to map the sourceData into a graph representation, which is more easily interpretable.
 * Even when given a graph representation of the data, it needs to be translated into a graph schema that is at least compatible (if not consistent) with other graphs.
 * It may not be efficient or reasonable to merge graphs, which duplicate data from the original graphs.  So, we want to minimize copying data when possible.
 
-## Level 0 Tools
+## GraphTools
 
-
-
-## Level 1 Tools
-### Translator
-Used to filter node or edge types, collapse graph paths, or transform a graph into another graph.
-* ```List<GraphRecord> translate(GraphRecord)```
-
-### Enricher (append-only)
-* void enrich(graph)
-
-### Modifier (write and delete) (Level 1)
-* void modify(graph)
-
-### OLTP
-Once in a graph database, use other tools to random access.
-
-## Level 2 Tools
+The tools are categorized into the following levels:
+* Level 0 Tools: 
+ * data importer to build graphs
+ * exporter to different graph file formats
+* Level 1 Tools: 
+ * (read-only transform) graph translator to filter node or edge types, collapse graph paths, or transform a graph into another graph; 
+ * (append-only) graph enricher to add data to a graph 
+ * (read-write) graph modifier to write and delete graph data
+* Level 2 Tools
+ * 
 
 
 

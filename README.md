@@ -54,5 +54,6 @@ The tools are categorized into the following levels:
  * superimpose
 
 
+For details of these tools, check the [Table of Contents](SUMMARY.md).
 
 

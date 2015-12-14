@@ -39,14 +39,15 @@ By combining these tools, we can scalably import data in various formats and sto
 ## GraphTools
 
 The tools are categorized into the following levels:
-* Level 0 Tools: 
+* [Level 0 Tools](doc/level0tools.md): 
+ * create and delete a graph database
  * data importer to build graphs
  * exporter to different graph file formats
-* Level 1 Tools: 
+* [Level 1 Tools](doc/level1tools.md)
  * (read-only transform) graph translator to filter node or edge types, collapse graph paths, or transform a graph into another graph; 
  * (append-only) graph enricher to add data to a graph 
  * (read-write) graph modifier to write and delete graph data
-* Level 2 Tools
+* [Level 2 Tools](doc/level2tools.md)
  * merge
  * disambiguate
  * superimpose

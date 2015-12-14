@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 
 import net.deelam.graphtools.GraphUri;
+import net.deelam.graphtools.JsonPropertyMerger;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryNeo4j;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryOrientdb;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryTinker;

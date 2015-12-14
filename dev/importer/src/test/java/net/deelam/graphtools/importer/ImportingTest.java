@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 
 import net.deelam.graphtools.GraphUri;
+import net.deelam.graphtools.JavaSetPropertyMerger;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryOrientdb;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryTinker;
 import net.deelam.graphtools.importer.csv.CsvBeanSourceDataFactory;

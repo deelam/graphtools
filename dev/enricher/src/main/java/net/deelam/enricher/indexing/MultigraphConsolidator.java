@@ -11,8 +11,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphUri;
-import net.deelam.graphtools.importer.JsonPropertyMerger;
-import net.deelam.graphtools.importer.PropertyMerger;
+import net.deelam.graphtools.JsonPropertyMerger;
+import net.deelam.graphtools.PropertyMerger;
 
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;

@@ -1,4 +1,4 @@
-package net.deelam.graphtools.importer;
+package net.deelam.graphtools;
 
 import com.tinkerpop.blueprints.Element;
 

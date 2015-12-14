@@ -9,9 +9,7 @@ import java.util.Map.Entry;
 import javax.inject.Inject;
 
 import lombok.Setter;
-import net.deelam.graphtools.GraphRecord;
-import net.deelam.graphtools.GraphRecordEdge;
-import net.deelam.graphtools.GraphRecordMerger;
+import net.deelam.graphtools.*;
 
 import com.google.common.base.Preconditions;
 import com.tinkerpop.blueprints.Edge;

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package net.deelam.graphtools.importer;
+package net.deelam.graphtools;
 
 import java.util.HashSet;
 import java.util.Set;

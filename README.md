@@ -47,7 +47,9 @@ The tools are categorized into the following levels:
  * (append-only) graph enricher to add data to a graph 
  * (read-write) graph modifier to write and delete graph data
 * Level 2 Tools
- * 
+ * merge
+ * disambiguate
+ * superimpose
 
 
 

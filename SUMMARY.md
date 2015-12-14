@@ -1,6 +1,6 @@
 # Summary
 
 * [Introduction](README.md)
-* [Core Components](doc/core.md)
+* [Building Blocks](doc/bblocks.md)
 * [Importer](doc/importer.md)
 

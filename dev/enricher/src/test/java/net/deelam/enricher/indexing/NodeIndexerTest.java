@@ -51,5 +51,10 @@ public class NodeIndexerTest {
       indexer.listBySortedField("zipSorted", "INT", "zip",20 );
     }
   }
+  
+  @Test
+  public void testWithIdMapper() throws IOException, ConfigurationException, ParseException {
+    
+  }  
 
 }

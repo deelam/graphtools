@@ -1,4 +1,4 @@
-# Core Components
+# Building Blocks
 
 ## GraphRecord
 An input (or output) dataset is modeled as containing individual records to facilitate distributed processing.  Similarly, a GraphRecord is an individual record from a graph.

@@ -55,7 +55,7 @@ Leverages existing exporting utilities provided by Bluepints.
 ## Level 1 Tools
 ### Translator
 Used to filter node or edge types, collapse graph paths, or transform a graph into another graph.
-* List\<GraphRecord> translate(GraphRecord)
+* List<GraphRecord> translate(GraphRecord)
 
 ### Enricher (append-only)
 * void enrich(graph)

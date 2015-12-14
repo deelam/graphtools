@@ -6,6 +6,9 @@ package net.deelam.graphtools.importer;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.inject.Inject;
+
+import lombok.Setter;
 import net.deelam.graphtools.GraphRecord;
 import net.deelam.graphtools.GraphRecordEdge;
 import net.deelam.graphtools.GraphRecordMerger;
@@ -31,8 +34,19 @@ public class DefaultGraphRecordMerger implements GraphRecordMerger {
   static final String SET_VALUE = "[multivalued]";
   static final String SET_SUFFIX = "__SET";
 
-  private PropertyMerger propertyMerger=new JavaSetPropertyMerger();
+  @Setter
+  private PropertyMerger propertyMerger;
   
+  public DefaultGraphRecordMerger() {
+    this.propertyMerger = new JavaSetPropertyMerger();
+  }
+
+  @Inject
+  public DefaultGraphRecordMerger(PropertyMerger propertyMerger) {
+    this.propertyMerger = propertyMerger;
+  }
+
+
   public void mergeProperties(Element fromE, Element toE) {
     propertyMerger.mergeProperties(fromE, toE);
   }

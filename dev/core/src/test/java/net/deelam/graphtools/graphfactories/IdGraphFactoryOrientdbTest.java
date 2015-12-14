@@ -213,12 +213,12 @@ public class IdGraphFactoryOrientdbTest {
     Vertex b2 = graph.addVertex("B2");
     graph.addEdge("E", a2, b2, "edgey2");
     assertEquals(3, Iterables.size(graph.getVertices()));
-    gUri.shutdown(graph);// OrientGraph.shutdown() is buggy; must use gUri.shutdown(graph) until get hotfix: https://github.com/orientechnologies/orientdb/issues/5317#event-467569228
+    gUri.shutdown();// OrientGraph.shutdown() is buggy; must use gUri.shutdown() until get hotfix: https://github.com/orientechnologies/orientdb/issues/5317#event-467569228
     
     IdGraph graph2 = gUri.createNewIdGraph(true);
     assertEquals(1, Iterables.size(graph2.getVertices()));
     System.out.println(GraphUtils.toString(graph2));
-    gUri.shutdown(graph2);
+    gUri.shutdown();
   }
   
   //@Test
@@ -234,7 +234,7 @@ public class IdGraphFactoryOrientdbTest {
     assertEquals(3, Iterables.size(graph.getVertices()));
     assertEquals(1, Iterables.size(graph.getEdges()));
     assertEquals(1, Iterables.size(a2.getEdges(Direction.OUT)));
-    gUri.shutdown(graph);
+    gUri.shutdown();
     
     IdGraph graph2 = gUri.openExistingIdGraph();
     System.out.println(GraphUtils.toString(graph2));
@@ -253,9 +253,9 @@ public class IdGraphFactoryOrientdbTest {
     assertEquals(1, Iterables.size(graph2.getVertex("Paul Salda�a").getEdges(Direction.OUT)));
     System.out.println(GraphUtils.toString(graph2));
     System.out.println(GraphUtils.toString(dgraph));
-    dgUri.shutdown(dgraph);
+    dgUri.shutdown();
     
-    gUri.shutdown(graph2);
+    gUri.shutdown();
 
   }
   
@@ -294,9 +294,9 @@ public class IdGraphFactoryOrientdbTest {
     
     System.out.println(GraphUtils.toString(graph2));
     System.out.println(GraphUtils.toString(dgraph));
-    dgUri.shutdown(dgraph);
+    dgUri.shutdown();
     
-    gUri.shutdown(graph2);
+    gUri.shutdown();
 
   }
   

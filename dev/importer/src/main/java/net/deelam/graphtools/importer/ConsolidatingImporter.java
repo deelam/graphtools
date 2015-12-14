@@ -8,6 +8,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.inject.Inject;
+
+import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphRecord;
@@ -25,18 +28,20 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 @Slf4j
 public class ConsolidatingImporter<B> implements Importer<B> {
 
+  @Getter
   private final Encoder<B> encoder;
-  private final GraphRecordMerger merger;
+  @Getter
   private final Populator populator;
+  @Getter
   private final GraphRecordBuilder<B> grBuilder;
 
   @Setter
   private int bufferThreshold=1000;
   
-  public ConsolidatingImporter(Encoder<B> encoder, GraphRecordMerger merger, Populator populator) {
+  @Inject
+  public ConsolidatingImporter(Encoder<B> encoder, Populator populator) {
     super();
     this.encoder = encoder;
-    this.merger=merger;
     this.populator = populator;
     grBuilder=new GraphRecordBuilder<>(encoder);
   }
@@ -86,7 +91,7 @@ public class ConsolidatingImporter<B> implements Importer<B> {
       if(existingGR==null){
         gRecordsBuffered.put(gr.getStringId(),gr);
       } else {
-        merger.merge(gr, existingGR);
+        populator.getGraphRecordMerger().merge(gr, existingGR);
       }
     }
   }

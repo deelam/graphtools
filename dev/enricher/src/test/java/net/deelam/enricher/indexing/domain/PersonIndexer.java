@@ -1,6 +1,7 @@
 package net.deelam.enricher.indexing.domain;
 
 import net.deelam.enricher.indexing.EntityIndexer;
+import net.deelam.graphtools.GraphRecord;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -17,7 +18,12 @@ public class PersonIndexer extends EntityIndexer {
   public static final String ENTITY_TYPE = "PERSON";
   
   @Override
-  public void index(Vertex v, Document doc) {
+  protected boolean isIndexable(Vertex v) {
+    return GraphRecord.getType(v).equals(ENTITY_TYPE);
+  }
+  
+  @Override
+  public void doIndex(Vertex v, Document doc) {
     Person p = new Person(v);
     // use a string field if we don't want it tokenized
     doc.add(new StringField("type", ENTITY_TYPE, Field.Store.YES));

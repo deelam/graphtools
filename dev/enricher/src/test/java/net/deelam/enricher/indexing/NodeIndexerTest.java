@@ -42,14 +42,19 @@ public class NodeIndexerTest {
 //    FileUtils.deleteDirectory(new File("target/us500index"));
     
     try(NodeIndexer indexer = new NodeIndexer(new RAMDirectory())){
-      indexer.registerEntityIndexer(PersonIndexer.ENTITY_TYPE, new PersonIndexer());
-      indexer.registerEntityIndexer(LocationIndexer.ENTITY_TYPE, new LocationIndexer());
+      indexer.registerEntityIndexer(new PersonIndexer());
+      indexer.registerEntityIndexer(new LocationIndexer());
       
       indexer.indexGraph(graph, "us500test");
       indexer.indexGraph(graph, "us500test2");
-      indexer.list("firstNameSorted", "STRING", "firstName", 20);
-      indexer.list("zipSorted", "INT", "zip",20 );
+      indexer.listBySortedField("firstNameSorted", "STRING", "firstName", 20);
+      indexer.listBySortedField("zipSorted", "INT", "zip",20 );
     }
   }
+  
+  @Test
+  public void testWithIdMapper() throws IOException, ConfigurationException, ParseException {
+    
+  }  
 
 }

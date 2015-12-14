@@ -43,17 +43,20 @@ public class ImportingSpeedTest {
     IdGraphFactoryOrientdb.register();
     
     DefaultImporter<CompanyContactBean> importer1 = new DefaultImporter<CompanyContactBean>(
-      new CompanyContactsEncoder(), new DefaultPopulator("telephoneCsv"));
+      new CompanyContactsEncoder(), 
+      new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())));
     mgr.register("companyContactsCsv", new CsvBeanSourceDataFactory<CompanyContactBean>(
         new CompanyContactsCsvParser()), importer1);
     
     BufferedImporter<CompanyContactBean> importer2 = new BufferedImporter<CompanyContactBean>(
-      new CompanyContactsEncoder(), new DefaultPopulator("telephoneCsv"));
+      new CompanyContactsEncoder(), 
+      new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())));
     mgr.register("companyContactsCsvBuffered", new CsvBeanSourceDataFactory<CompanyContactBean>(
         new CompanyContactsCsvParser()), importer2);
 
     ConsolidatingImporter<CompanyContactBean> importer3 = new ConsolidatingImporter<CompanyContactBean>(
-      new CompanyContactsEncoder(), new DefaultGraphRecordMerger(), new DefaultPopulator("telephoneCsv"));
+      new CompanyContactsEncoder(),  
+      new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())));
     mgr.register("companyContactsCsvConsolidating", new CsvBeanSourceDataFactory<CompanyContactBean>(
         new CompanyContactsCsvParser()), importer3);
 

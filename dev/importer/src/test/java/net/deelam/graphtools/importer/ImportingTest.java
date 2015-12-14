@@ -4,9 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
-import net.deelam.graphtools.GraphExporter;
 import net.deelam.graphtools.GraphUri;
-import net.deelam.graphtools.PrettyPrintXml;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryOrientdb;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryTinker;
 import net.deelam.graphtools.importer.csv.CsvBeanSourceDataFactory;
@@ -19,7 +17,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.tinkerpop.blueprints.impls.orient.OrientGraph;
-import com.tinkerpop.blueprints.util.io.graphml.GraphMLWriter;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
@@ -33,16 +30,23 @@ public class ImportingTest {
   public static void setup() throws IOException {
     IdGraphFactoryTinker.register();
     IdGraphFactoryOrientdb.register();
-    mgr.register("companyContactsCsv", new CsvBeanSourceDataFactory<CompanyContactBean>(
-        new CompanyContactsCsvParser()), new DefaultImporter<CompanyContactBean>(
-        new CompanyContactsEncoder(), new DefaultPopulator("telephoneCsv")));
-    
-    
-    ConsolidatingImporter<CompanyContactBean> importer3 = new ConsolidatingImporter<CompanyContactBean>(
-        new CompanyContactsEncoder(), new DefaultGraphRecordMerger(), new DefaultPopulator("telephoneCsv"));
-      mgr.register("companyContactsCsvConsolidating", new CsvBeanSourceDataFactory<CompanyContactBean>(
-          new CompanyContactsCsvParser()), importer3);
-      importer3.setBufferThreshold(100000000);
+    mgr.register("companyContactsCsv",
+        new CsvBeanSourceDataFactory<CompanyContactBean>(new CompanyContactsCsvParser()),
+        new DefaultImporter<CompanyContactBean>(
+            new CompanyContactsEncoder(),
+            new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JavaSetPropertyMerger()))
+        ));
+
+
+    ConsolidatingImporter<CompanyContactBean> importer3 =
+        new ConsolidatingImporter<CompanyContactBean>(
+            new CompanyContactsEncoder(),
+            new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JavaSetPropertyMerger()))
+            );
+
+    mgr.register("companyContactsCsvConsolidating", new CsvBeanSourceDataFactory<CompanyContactBean>(
+        new CompanyContactsCsvParser()), importer3);
+    importer3.setBufferThreshold(100000000);
   }
 
   @Test
@@ -51,19 +55,19 @@ public class ImportingTest {
 
     // create new graph
     IdGraph<?> graph = new GraphUri("tinker:///./target/us500test?fileType=graphml")
-      .createNewIdGraph(true);
+        .createNewIdGraph(true);
     mgr.importFile("companyContactsCsv", csvFile, graph);
-    
+
     // close graph
     graph.shutdown();
   }
-  
+
   @Test
   public void orientImportTest() throws Exception {
-    StopWatch sw=new StopWatch();
-    
+    StopWatch sw = new StopWatch();
+
     IdGraph<?> graph = new GraphUri("orientdb:plocal:./target/orient-us500test")
-    .createNewIdGraph(true);
+        .createNewIdGraph(true);
     OrientGraph oGraph = ((OrientGraph) graph.getBaseGraph());
     oGraph.createEdgeType("hasDevice");
     oGraph.createEdgeType("inState");
@@ -71,7 +75,7 @@ public class ImportingTest {
     sw.start();
     File csvFile = new File(getClass().getResource("/us-500.csv").getFile());
     mgr.importFile("companyContactsCsvConsolidating", csvFile, graph);
-    
+
     //GraphExporter.exportGraphml(graph, "orient-us500test.graphml", true);
 
     graph.shutdown();

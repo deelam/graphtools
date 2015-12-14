@@ -3,8 +3,13 @@
  */
 package net.deelam.graphtools.importer;
 
+import java.lang.reflect.Array;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Set;
+
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import org.boon.core.value.ValueList;
 import org.boon.json.JsonFactory;
@@ -16,9 +21,10 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 /**
  * @author deelam
  */
-//@Slf4j
+@Slf4j
 public class JsonPropertyMerger implements PropertyMerger {
 
+  static final String VALUE_CLASS_SUFFIX = "__jsonClass";
   static final String SET_VALUE = "[multivalued]";
   static final String SET_SUFFIX = "__jsonSET";
 
@@ -35,7 +41,7 @@ public class JsonPropertyMerger implements PropertyMerger {
 
       Object toValue = toE.getProperty(key);
       if (toValue == null) {
-        toE.setProperty(key, fromValue);
+        setElementProperty(toE, key, fromValue);
         continue;
       }
 
@@ -43,12 +49,66 @@ public class JsonPropertyMerger implements PropertyMerger {
         continue;
       }
 
-      mergeProperty(fromE, toE, key, fromValue);
+      try {
+        mergeProperty(fromE, toE, key, fromValue);
+      } catch (ClassNotFoundException e) {
+        log.warn("Could not merge property values for key="+key, e);
+      }
     }
   }
 
+  @Getter
+  private final Set<Class<?>> validPropertyClasses = new HashSet<>();
+  {
+    // this list is created from Neo4j's PropertyStore class
+    validPropertyClasses.add(String.class);
+    validPropertyClasses.add(Integer.class);
+    validPropertyClasses.add(Boolean.class);
+    validPropertyClasses.add(Float.class);
+    validPropertyClasses.add(Long.class);
+    validPropertyClasses.add(Double.class);
+    validPropertyClasses.add(Byte.class);
+    validPropertyClasses.add(Character.class);
+    validPropertyClasses.add(Short.class);
+  }
+
+  // for Graphs (like Neo4j) that can only store primitives
+  private void setElementProperty(Element elem, String key, Object value) {
+    Object leafValue;
+    if(value.getClass().isArray()){
+      if(Array.getLength(value)==0){
+        elem.setProperty(key, value);
+        return;
+      }else{
+        leafValue=Array.get(value, 0);
+      }
+    }else{
+      leafValue=value;
+    }
+    
+    if (validPropertyClasses.contains(leafValue.getClass())){
+      elem.setProperty(key, value);
+    } else { // save as Json
+      elem.setProperty(key, mapper.toJson(value));
+      setPropertyValueClass(elem, key, value);
+    }
+  }
+
+  private void setPropertyValueClass(Element elem, String key, Object value) {
+    final String compClassPropKey = key + VALUE_CLASS_SUFFIX;
+    elem.setProperty(compClassPropKey, value.getClass().getCanonicalName());
+  }
+  private Class<?> getPropertyValueClass(Element elem, String key) throws ClassNotFoundException {
+    final String compClassPropKey = key + VALUE_CLASS_SUFFIX;
+    String classStr=elem.getProperty(compClassPropKey);
+    if(classStr==null)
+      return null;
+    return Class.forName(classStr);
+  }
+
   private ObjectMapper mapper = JsonFactory.create();
-  public void mergeProperty(Element fromE, Element toE, String key, Object fromValue) {
+
+  public void mergeProperty(Element fromE, Element toE, String key, Object fromValue) throws ClassNotFoundException {
     // toValue and fromValue are not null and not equal
     /* Possible cases:
      * fromValue=val toValue=val     ==> toValue=SET_VALUE  toValue__SET=Set<?>
@@ -58,41 +118,52 @@ public class JsonPropertyMerger implements PropertyMerger {
      */
 
     // check special SET_SUFFIX property and create a Set if needed
-    String setPropertyKey = key + SET_SUFFIX;
-    String valueSetStr = toE.getProperty(setPropertyKey);
+    final String valSetPropKey = key + SET_SUFFIX;
+    final String valueSetStr = toE.getProperty(valSetPropKey);
     ValueList valueList;
+    
+    Class<?> compClass=getPropertyValueClass(toE, key);
+    
     if (valueSetStr == null) {
       valueList = new ValueList(false);
       Object existingVal = toE.getProperty(key);
       valueList.add(existingVal);
       toE.setProperty(key, SET_VALUE);
+      
+      if(compClass==null)
+        setPropertyValueClass(toE, key, existingVal);
+      
     } else {
-      valueList = (ValueList) mapper.parser().parse(valueSetStr);
+      valueList = (ValueList) mapper.parser().parseList(compClass, valueSetStr);
     }
-    
+
     /// check if fromValue is already in toValueList
-    boolean toValueChanged=false;
+    boolean toValueChanged = false;
     if (fromValue.equals(SET_VALUE)) {
-      String fromListStr=fromE.getProperty(setPropertyKey);
+      String fromListStr = fromE.getProperty(valSetPropKey);
       ValueList fromValueList = (ValueList) mapper.parser().parse(fromListStr);
-      for(Object fVal:fromValueList){
-        if(!valueList.contains(fVal)){
+      for (Object fVal : fromValueList) {
+        if (!valueList.contains(fVal)) {
+          if(!compClass.equals(fVal.getClass()))
+            log.warn("existingClass={} newValueClass={}", compClass, fVal.getClass());
           valueList.add(fVal); // hopefully, fromValue is the same type as other elements in the set
-          toValueChanged=true;
+          toValueChanged = true;
         }
       }
     } else {
-      if(!valueList.contains(fromValue)){
+      if (!valueList.contains(fromValue)) {
+        if(!compClass.equals(fromValue.getClass()))
+          log.warn("existingClass={} newValueClass={}", compClass, fromValue.getClass());
         valueList.add(fromValue); // hopefully, fromValue is the same type as other elements in the set
-        toValueChanged=true;
+        toValueChanged = true;
       }
     }
-    
-    if(toValueChanged)
-      toE.setProperty(setPropertyKey, mapper.toJson(valueList));
+
+    if (toValueChanged)
+      toE.setProperty(valSetPropKey, mapper.toJson(valueList));
   }
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws ClassNotFoundException {
     ObjectMapper mapper = JsonFactory.create();
     //    String jsonArray = "[0,1,2,3,4,5,6,7,8,7]";
     //    Integer[] intArray = mapper.parser().parseIntArray( jsonArray );
@@ -100,7 +171,12 @@ public class JsonPropertyMerger implements PropertyMerger {
     {
       String json = mapper.toJson("Hi");
       System.out.println(json);
-      System.out.println(mapper.parser().parse(json).getClass());
+      System.out.println(mapper.parser().parse(String.class, json).getClass());
+    }
+    {
+      String json = mapper.toJson(Integer.valueOf(1).getClass().getCanonicalName());
+      System.out.println(json);
+      System.out.println(Class.forName(mapper.parser().parseString(json)));
     }
     {
       String json = mapper.toJson(1);

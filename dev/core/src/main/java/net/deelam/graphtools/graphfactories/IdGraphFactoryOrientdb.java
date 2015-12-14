@@ -60,7 +60,7 @@ public class IdGraphFactoryOrientdb implements IdGraphFactory {
     return graph;
   }
   
-  public void shutdown(IdGraph<?> graph){
+  public void shutdown(GraphUri gUri, IdGraph<?> graph){
     OrientGraph oGraph=(OrientGraph) graph.getBaseGraph();
     oGraph.getRawGraph().getStorage().close(true, false); // hotfix: https://github.com/orientechnologies/orientdb/issues/5317#event-467569228
     graph.shutdown();

@@ -43,9 +43,11 @@ public class MultigraphConsolidator implements AutoCloseable {
   private final Map<String, IdGraph<?>> graphs = new HashMap<>();
 
   @Override
-  public void close() {
+  public void close() throws Exception {
     log.debug("Shutting down: {}", equivGraph);
     equivGraph.shutdown();
+    if(graphIdMapper!=null)
+      graphIdMapper.close();
     for (IdGraph<?> g : new HashSet<>(graphs.values())) {
       g.shutdown();
     }

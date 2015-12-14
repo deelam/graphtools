@@ -142,7 +142,11 @@ public class GraphUri {
   
   public void shutdown(IdGraph<?> graph){
     log.info("Shutting down graph={}",graph);
-    factory.shutdown(graph);
+    try {
+      factory.shutdown(this, graph);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**

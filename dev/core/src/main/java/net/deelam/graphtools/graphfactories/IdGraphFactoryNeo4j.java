@@ -54,7 +54,7 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
     return graph;
   }
 
-  public void shutdown(IdGraph<?> graph){
+  public void shutdown(GraphUri gUri, IdGraph<?> graph){
     graph.shutdown();
   }
   

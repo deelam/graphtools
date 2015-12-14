@@ -34,5 +34,5 @@ public interface IdGraphFactory {
    */
   public boolean exists(GraphUri gUri);
 
-  public void shutdown(IdGraph<?> graph);  
+  public void shutdown(GraphUri gUri, IdGraph<?> graph) throws IOException;  
 }

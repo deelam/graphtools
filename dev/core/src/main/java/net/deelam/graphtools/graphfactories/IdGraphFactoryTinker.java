@@ -1,6 +1,7 @@
 package net.deelam.graphtools.graphfactories;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 
@@ -9,6 +10,7 @@ import org.apache.commons.io.FileUtils;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.IdGraphFactory;
+import net.deelam.graphtools.PrettyPrintXml;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryOrientdb.DB_TYPE;
 
 import com.tinkerpop.blueprints.impls.tg.TinkerGraph;
@@ -16,7 +18,7 @@ import com.tinkerpop.blueprints.impls.tg.TinkerGraph.FileType;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 @Slf4j
-public final class IdGraphFactoryTinker implements IdGraphFactory {
+public class IdGraphFactoryTinker implements IdGraphFactory {
   
   public static void register() {
     GraphUri.register("tinker", new IdGraphFactoryTinker());
@@ -41,14 +43,20 @@ public final class IdGraphFactoryTinker implements IdGraphFactory {
     return graph;
   }
   
-  public void shutdown(IdGraph<?> graph){
+  public void shutdown(GraphUri gUri, IdGraph<?> graph) throws IOException{
     graph.shutdown();
+    
+    if(prettify && getFileSaveType(gUri) == TinkerGraph.FileType.GRAPHML){
+      String graphmlFile = gUri.getUriPath()+"/tinkergraph.xml";
+      PrettyPrintXml.prettyPrint(graphmlFile, gUri.getUriPath() + ".graphml");
+    }
   }
 
-  private static FileType getFileSaveType(GraphUri gUri) {
+  private boolean prettify=false;
+  private FileType getFileSaveType(GraphUri gUri) {
     // check for secondary scheme
     URI uri = gUri.getUri();
-    String fileTypeStr = uri.getScheme();
+    String fileTypeStr = uri.getScheme(); // enables "tinker:graphml:./target/tGraphML"s
 
     String path;
     if (fileTypeStr == null) {
@@ -62,7 +70,12 @@ public final class IdGraphFactoryTinker implements IdGraphFactory {
     // not in-memory; storing to disk
     FileType fileType = TinkerGraph.FileType.JAVA; // default type
     if (fileTypeStr != null) {
-      fileType = TinkerGraph.FileType.valueOf(fileTypeStr.toUpperCase());
+      if(fileTypeStr.equalsIgnoreCase("prettyGraphml")){
+        prettify=true;
+        fileType = TinkerGraph.FileType.GRAPHML;
+      }else{
+        fileType = TinkerGraph.FileType.valueOf(fileTypeStr.toUpperCase());
+      }
     }
     return fileType;
   }

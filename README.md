@@ -1,11 +1,11 @@
 # graphtools
-Toolsuite of small, reusable tools to operate on graphs
+Tool suite of small, reusable tools to operate on graphs
 
 ## Big Picture
 These tools are meant to 
 * import data into graph representation
 * export graphs into other formats
-* facilitate use of "Big Data" tools (e.g., Hadoop, Spark, Titan) 
+* ease use of "Big Data" tools (e.g., Hadoop, Spark, Titan) 
 * transform one graph representation into another graph with a different schema
 * reduce boilerplate infrastructure code to expediate development
 
@@ -32,7 +32,7 @@ By combining these tools, we can scalably import data in various formats and sto
 
 ## Problem characteristics
 * There is no single graph schema to rule them all (for different datatypes, domains, and usecases).
-* Interpretation of sourceData is not trivial -- requires domain knowledge.  Hence, we enable those experts to map the sourceData into a graph representation, which is more easily interpretable.
+* Interpretation of sourceData is not trivial -- requires domain knowledge.  Hence, we enable those experts to map the sourceData into a graph representation, which is more easily interpreted.
 * Even when given a graph representation of the data, it needs to be translated into a graph schema that is at least compatible (if not consistent) with other graphs.
 * It may not be efficient or reasonable to merge graphs, which duplicate data from the original graphs.  So, we want to minimize copying data when possible.
 

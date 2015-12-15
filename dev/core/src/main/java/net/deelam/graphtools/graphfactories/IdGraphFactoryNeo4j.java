@@ -79,4 +79,11 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
     return pathFile.exists();
   }
 
+
+  @Override
+  public void copy(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException {
+    File srcFile = new File(srcGraphUri.getUriPath());
+    File destFile = new File(dstGraphUri.getUriPath());
+    FileUtils.copyDirectory(srcFile, destFile);
+  }
 }

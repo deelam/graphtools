@@ -28,11 +28,18 @@ public interface IdGraphFactory {
   public void delete(GraphUri gUri) throws IOException;
 
   /**
+   * copies graph to dstGraphUri
+   * @throws IOException 
+   */
+  public void copy(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException;
+  
+  /**
    * 
    * @param gUri
    * @return whether graph exists
    */
   public boolean exists(GraphUri gUri);
 
-  public void shutdown(GraphUri gUri, IdGraph<?> graph) throws IOException;  
+  public void shutdown(GraphUri gUri, IdGraph<?> graph) throws IOException;
+
 }

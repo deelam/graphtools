@@ -220,6 +220,10 @@ public class GraphUri {
     return getConfig().getString(URI_PATH);
   }
 
+  public void copyTo(GraphUri dstGraphUri) throws IOException {
+    factory.copy(this, dstGraphUri);
+  }
+
 // use GraphUtils.addMetaData() instead
 //  public String[] getVertexTypes() {
 //    String[] types=new String[0];

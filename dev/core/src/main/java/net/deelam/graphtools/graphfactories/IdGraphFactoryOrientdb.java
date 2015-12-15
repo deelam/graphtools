@@ -98,6 +98,13 @@ public class IdGraphFactoryOrientdb implements IdGraphFactory {
   }
 
   @Override
+  public void copy(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException {
+    File srcFile = new File(srcGraphUri.getUriPath());
+    File destFile = new File(dstGraphUri.getUriPath());
+    FileUtils.copyDirectory(srcFile, destFile);
+  }
+  
+  @Override
   public boolean exists(GraphUri gUri) {
     DB_TYPE dbType = getDBType(gUri);
     if(dbType==DB_TYPE.plocal){

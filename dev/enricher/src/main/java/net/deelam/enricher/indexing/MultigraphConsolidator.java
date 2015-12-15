@@ -48,7 +48,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   public void close() throws Exception {
     //log.debug("Shutting down: {}", graph);
     //graph.shutdown();
-    if(graphIdMapper!=null)
+    if (graphIdMapper != null)
       graphIdMapper.close();
     for (IdGraph<?> g : new HashSet<>(graphs.values())) {
       g.shutdown();
@@ -57,53 +57,60 @@ public class MultigraphConsolidator implements AutoCloseable {
 
   public MultigraphConsolidator(IdGraph<?> idGraph) throws IOException {
     this.graph = idGraph;
-    
-    srcGraphIdPropKey=GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
-    origIdPropKey=GraphUtils.getMetaData(graph, ORIGID_PROPKEY);
-    
-    String graphIdMapFile=GraphUtils.getMetaData(graph, GRAPHID_MAP_FILE);
-    if(graphIdMapFile!=null){
-      if(new File(graphIdMapFile).exists()){
+
+    srcGraphIdPropKey = GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
+    origIdPropKey = GraphUtils.getMetaData(graph, ORIGID_PROPKEY);
+
+    String graphIdMapFile = GraphUtils.getMetaData(graph, GRAPHID_MAP_FILE);
+    if (graphIdMapFile != null) {
+      if (new File(graphIdMapFile).exists()) {
         log.info("Using graphIdMapFile={}", graphIdMapFile);
-        graphIdMapper=new IdMapper(graphIdMapFile);
-      }else{
-        log.warn("Could not find graphIdMapFile={}.  Fix this or call setGraphIdMapper() to override with your own.", graphIdMapFile);
+        graphIdMapper = new IdMapper(graphIdMapFile);
+      } else {
+        log.warn("Could not find graphIdMapFile={}.  Fix this or call setGraphIdMapper() to override with your own.",
+            graphIdMapFile);
       }
     }
   }
 
   private static final String SRCGRAPHID_PROPKEY = "_SRCGRAPHID_PROPKEY_";
+  @Getter
   private String srcGraphIdPropKey;
+
   public void setSrcGraphIdPropKey(String srcGraphIdPropKey) {
     this.srcGraphIdPropKey = srcGraphIdPropKey;
     GraphUtils.setMetaData(graph, SRCGRAPHID_PROPKEY, srcGraphIdPropKey);
   }
 
-  public String getSrcGraphId(Vertex v){
+  public String getSrcGraphId(Vertex v) {
     String shortGraphId = v.getProperty(srcGraphIdPropKey);
     return graphIdMapper.longId(shortGraphId);
   }
-  
+
   private static final String ORIGID_PROPKEY = "_ORIGID_PROPKEY_";
+  @Getter
   private String origIdPropKey;
+
   public void setOrigIdPropKey(String origIdPropKey) {
     this.origIdPropKey = origIdPropKey;
     GraphUtils.setMetaData(graph, ORIGID_PROPKEY, origIdPropKey);
   }
-  
-  public String getOrigId(Vertex v){
+
+  public String getOrigId(Vertex v) {
     return v.getProperty(origIdPropKey);
   }
-  
-  private static final String GRAPHID_MAP_FILE="_GRAPHID_MAP_";
+
+  private static final String GRAPHID_MAP_FILE = "_GRAPHID_MAP_";
+  @Getter
   private IdMapper graphIdMapper = null;
+
   public void setGraphIdMapper(IdMapper graphIdMapper) {
     this.graphIdMapper = graphIdMapper;
     GraphUtils.setMetaData(graph, GRAPHID_MAP_FILE, graphIdMapper.getFilename());
   }
 
   private IdGraph<?> getGraph(String graphId) {
-    String shortGraphId=graphId;
+    String shortGraphId = graphId;
     if (graphIdMapper != null) {
       shortGraphId = graphIdMapper.shortId(graphId);
     }
@@ -130,7 +137,7 @@ public class MultigraphConsolidator implements AutoCloseable {
     Edge e = g.getEdge(edgeId);
     return e;
   }
-  
+
   public Vertex importVertex(String nodeId, String graphId) {
     Vertex v = getVertex(nodeId, graphId);
     checkNotNull(v, "Cannot find nodeId=" + nodeId + " in graph=" + graphId);
@@ -145,12 +152,12 @@ public class MultigraphConsolidator implements AutoCloseable {
     return importEdge(e, shortGraphId);
   }
 
-//  public void addEdge(String edgeId, Vertex nodeOut, Vertex nodeIn, String edgeLabel) {
-//    Edge equivEdge = equivGraph.getEdge(edgeId);
-//    if (equivEdge == null) {
-//      equivEdge = equivGraph.addEdge(edgeId, nodeOut, nodeIn, edgeLabel);
-//    }
-//  }
+  //  public void addEdge(String edgeId, Vertex nodeOut, Vertex nodeIn, String edgeLabel) {
+  //    Edge equivEdge = equivGraph.getEdge(edgeId);
+  //    if (equivEdge == null) {
+  //      equivEdge = equivGraph.addEdge(edgeId, nodeOut, nodeIn, edgeLabel);
+  //    }
+  //  }
 
   private PropertyMerger merger = new JsonPropertyMerger();
 
@@ -169,8 +176,8 @@ public class MultigraphConsolidator implements AutoCloseable {
     String newId = shortGraphId + ":" + e.getId();
     Edge newE = graph.getEdge(newId);
     if (newE == null) {
-      Vertex outV=importVertex(e.getVertex(Direction.OUT), shortGraphId);
-      Vertex inV=importVertex(e.getVertex(Direction.IN), shortGraphId);
+      Vertex outV = importVertex(e.getVertex(Direction.OUT), shortGraphId);
+      Vertex inV = importVertex(e.getVertex(Direction.IN), shortGraphId);
       newE = graph.addEdge(newId, outV, inV, e.getLabel());
       setNewProperties(e, shortGraphId, newE);
     }
@@ -180,9 +187,9 @@ public class MultigraphConsolidator implements AutoCloseable {
 
   private void setNewProperties(Element v, String shortGraphId, Element newV) {
     if(origIdPropKey!=null){
-      String origId = v.getProperty(IdGraph.ID); // If v instanceof IdElement, getProperty(IdGraph.ID) returns null
+      String origId = v.getProperty(origIdPropKey); // use original id if possible
       if (origId == null)
-        origId = v.getProperty(origIdPropKey);
+        origId = v.getProperty(IdGraph.ID); // If v instanceof IdElement, getProperty(IdGraph.ID) returns null
       if (origId == null)
         origId = (String) v.getId();
       

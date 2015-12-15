@@ -15,6 +15,7 @@ import net.deelam.graphtools.graphfactories.IdGraphFactoryOrientdb.DB_TYPE;
 
 import com.tinkerpop.blueprints.impls.tg.TinkerGraph;
 import com.tinkerpop.blueprints.impls.tg.TinkerGraph.FileType;
+import com.tinkerpop.blueprints.util.GraphHelper;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 @Slf4j
@@ -91,6 +92,20 @@ public class IdGraphFactoryTinker implements IdGraphFactory {
     FileUtils.deleteDirectory(pathFile);
   }
 
+  @Override
+  public void copy(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException {
+    FileType fileType = getFileSaveType(srcGraphUri);
+    if(fileType==null){ // in-memory
+      dstGraphUri.createNewIdGraph(false); // to be safe, don't overwrite dst
+      GraphHelper.copyGraph(srcGraphUri.getGraph(), dstGraphUri.getGraph());
+      return;
+    }
+    
+    File srcFile = new File(srcGraphUri.getUriPath());
+    File destFile = new File(dstGraphUri.getUriPath());
+    FileUtils.copyDirectory(srcFile, destFile);
+  }
+  
   @Override
   public boolean exists(GraphUri gUri) {
     FileType fileType = getFileSaveType(gUri);

@@ -10,6 +10,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Map;
 
+import lombok.Getter;
+
 import org.apache.commons.collections.BidiMap;
 import org.apache.commons.collections.bidimap.DualHashBidiMap;
 import org.apache.commons.collections.bidimap.UnmodifiableBidiMap;
@@ -24,12 +26,13 @@ import com.google.common.base.Preconditions;
  */
 public class IdMapper implements AutoCloseable {
 
+  @Getter
   final String filename;
   final BidiMap map = new DualHashBidiMap();
 
   public IdMapper(String filename) throws FileNotFoundException, IOException {
     this.filename = filename;
-    load();
+    loadMapFile();
   }
 
   public void put(String shortStrId, String longStrId) {
@@ -75,7 +78,7 @@ public class IdMapper implements AutoCloseable {
   private ObjectMapper mapper = JsonFactory.create();
   private static final String COUNTER_KEY = "__COUNTER__";
 
-  private void load() throws FileNotFoundException, IOException {
+  private void loadMapFile() throws FileNotFoundException, IOException {
     if (new File(filename).exists())
       try (FileReader reader = new FileReader(filename)) {
         Map<?, ?> jsonMap = mapper.parser().parse(Map.class, reader);

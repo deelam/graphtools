@@ -229,6 +229,17 @@ public final class GraphUtils {
   private static final String VERTEXTYPES_PROP = "_VERTEXTYPES_";
   private static final String EDGELABELS_PROP = "_EDGELABELS_";
 
+  public static Vertex addMetaData(IdGraph<?> graph, String propKey, Object propValue){
+    Vertex mdV = graph.getVertex(METADATA_VERTEXID);
+    mdV.setProperty(propKey, propValue);
+    return mdV;
+  }
+
+  public static <T> T getMetaData(IdGraph<?> graph, String propKey){
+    Vertex mdV = graph.getVertex(METADATA_VERTEXID);
+    return mdV.getProperty(propKey);
+  }
+  
   public static void addMetaDataNode(GraphUri gUri, IdGraph<?> graph){
     Vertex mdV = graph.getVertex(METADATA_VERTEXID);
     if(mdV==null){

@@ -1,16 +1,17 @@
 package net.deelam.enricher.indexing;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.*;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphUri;
+import net.deelam.graphtools.GraphUtils;
 import net.deelam.graphtools.JsonPropertyMerger;
 import net.deelam.graphtools.PropertyMerger;
 
@@ -23,7 +24,8 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 /**
  * Retrieves a node/edge by their ID from given graphId (both stored/provided by NodeIndexer),
  * and adds it to the outputGraph with a new id prefixed with the graphId.
- * The original id is saved under the origIdPropKey, which is settable.
+ * 
+ * If origIdPropKey is set, the original id is saved under the origIdPropKey.
  * 
  * If srcGraphPropKey is set, a property will be added to each node/edge with the graphId.
  * 
@@ -38,14 +40,14 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 public class MultigraphConsolidator implements AutoCloseable {
 
   @Getter
-  private IdGraph<?> equivGraph;
+  private IdGraph<?> graph;
 
   private final Map<String, IdGraph<?>> graphs = new HashMap<>();
 
   @Override
   public void close() throws Exception {
-    log.debug("Shutting down: {}", equivGraph);
-    equivGraph.shutdown();
+    //log.debug("Shutting down: {}", graph);
+    //graph.shutdown();
     if(graphIdMapper!=null)
       graphIdMapper.close();
     for (IdGraph<?> g : new HashSet<>(graphs.values())) {
@@ -53,27 +55,63 @@ public class MultigraphConsolidator implements AutoCloseable {
     }
   }
 
-  public MultigraphConsolidator(IdGraph<?> graph) throws IOException {
-    equivGraph = graph;
+  public MultigraphConsolidator(IdGraph<?> idGraph) throws IOException {
+    this.graph = idGraph;
+    
+    srcGraphIdPropKey=GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
+    origIdPropKey=GraphUtils.getMetaData(graph, ORIGID_PROPKEY);
+    
+    String graphIdMapFile=GraphUtils.getMetaData(graph, GRAPHID_MAP_FILE);
+    if(graphIdMapFile!=null){
+      if(new File(graphIdMapFile).exists()){
+        log.info("Using graphIdMapFile={}", graphIdMapFile);
+        graphIdMapper=new IdMapper(graphIdMapFile);
+      }else{
+        log.warn("Could not find graphIdMapFile={}.  Fix this or call setGraphIdMapper() to override with your own.", graphIdMapFile);
+      }
+    }
   }
 
-  /**
-   * If graphIdMapper is set, either the long or short graph ID can be used
-   */
-  @Setter
-  private IdMapper graphIdMapper = null;
+  private static final String SRCGRAPHID_PROPKEY = "_SRCGRAPHID_PROPKEY_";
+  private String srcGraphIdPropKey;
+  public void setSrcGraphIdPropKey(String srcGraphIdPropKey) {
+    this.srcGraphIdPropKey = srcGraphIdPropKey;
+    GraphUtils.addMetaData(graph, SRCGRAPHID_PROPKEY, srcGraphIdPropKey);
+  }
 
-  private IdGraph<?> getGraph(String graphUriStr) {
-    IdGraph<?> graph = graphs.get(graphUriStr);
+  public String getSrcGraphId(Vertex v){
+    String shortGraphId = v.getProperty(srcGraphIdPropKey);
+    return graphIdMapper.longId(shortGraphId);
+  }
+  
+  private static final String ORIGID_PROPKEY = "_ORIGID_PROPKEY_";
+  private String origIdPropKey;
+  public void setOrigIdPropKey(String origIdPropKey) {
+    this.origIdPropKey = origIdPropKey;
+    GraphUtils.addMetaData(graph, ORIGID_PROPKEY, origIdPropKey);
+  }
+  
+  public String getOrigId(Vertex v){
+    return v.getProperty(origIdPropKey);
+  }
+  
+  private static final String GRAPHID_MAP_FILE="_GRAPHID_MAP_";
+  private IdMapper graphIdMapper = null;
+  public void setGraphIdMapper(IdMapper graphIdMapper) {
+    this.graphIdMapper = graphIdMapper;
+    GraphUtils.addMetaData(graph, GRAPHID_MAP_FILE, graphIdMapper.getFilename());
+  }
+
+  private IdGraph<?> getGraph(String graphId) {
+    String shortGraphId=graphId;
+    if (graphIdMapper != null) {
+      shortGraphId = graphIdMapper.shortId(graphId);
+    }
+    IdGraph<?> graph = graphs.get(shortGraphId);
     if (graph == null) {
       try {
-        graph = new GraphUri(graphUriStr).openExistingIdGraph();
-        graphs.put(graphUriStr, graph);
-
-        if (graphIdMapper != null) {
-          String shortGraphUriStr = graphIdMapper.shortId(graphUriStr);
-          graphs.put(shortGraphUriStr, graph);
-        }
+        graph = new GraphUri(graphId).openExistingIdGraph();
+        graphs.put(shortGraphId, graph);
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -114,19 +152,13 @@ public class MultigraphConsolidator implements AutoCloseable {
 //    }
 //  }
 
-  @Setter
-  private String srcGraphIdPropKey = null;
-
-  @Setter
-  private String origIdPropKey = "__origId";
-  
   private PropertyMerger merger = new JsonPropertyMerger();
 
   private Vertex importVertex(Vertex v, String shortGraphId) {
     String newId = shortGraphId + ":" + v.getId();
-    Vertex newV = equivGraph.getVertex(newId);
+    Vertex newV = graph.getVertex(newId);
     if (newV == null) {
-      newV = equivGraph.addVertex(newId);
+      newV = graph.addVertex(newId);
       setNewProperties(v, shortGraphId, newV);
     }
     merger.mergeProperties(v, newV);
@@ -135,11 +167,11 @@ public class MultigraphConsolidator implements AutoCloseable {
 
   private Edge importEdge(Edge e, String shortGraphId) {
     String newId = shortGraphId + ":" + e.getId();
-    Edge newE = equivGraph.getEdge(newId);
+    Edge newE = graph.getEdge(newId);
     if (newE == null) {
       Vertex outV=importVertex(e.getVertex(Direction.OUT), shortGraphId);
       Vertex inV=importVertex(e.getVertex(Direction.IN), shortGraphId);
-      newE = equivGraph.addEdge(newId, outV, inV, e.getLabel());
+      newE = graph.addEdge(newId, outV, inV, e.getLabel());
       setNewProperties(e, shortGraphId, newE);
     }
     merger.mergeProperties(e, newE);
@@ -147,15 +179,49 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
 
   private void setNewProperties(Element v, String shortGraphId, Element newV) {
-    String origId = v.getProperty(IdGraph.ID);
-    if (origId == null)
-      origId = v.getProperty(origIdPropKey);
-    if (origId == null)
-      origId = (String) v.getId();
-    newV.setProperty(origIdPropKey, origId);
+    if(origIdPropKey!=null){
+      String origId = v.getProperty(IdGraph.ID); // If v instanceof IdElement, getProperty(IdGraph.ID) returns null
+      if (origId == null)
+        origId = v.getProperty(origIdPropKey);
+      if (origId == null)
+        origId = (String) v.getId();
+      
+      newV.setProperty(origIdPropKey, origId);
+    }
     
     if (srcGraphIdPropKey != null)
       newV.setProperty(srcGraphIdPropKey, shortGraphId);
   }
 
+  ///
+
+  public void addNeighborsOf(String nodeStringId, String graphId, int hops) {
+    Vertex v = getVertex(nodeStringId, graphId);
+    Vertex newV = importVertex(nodeStringId, graphId);
+    addNeighborsOf(v, newV, graphId, hops);
+  }
+
+  private void addNeighborsOf(Vertex parent, Vertex newParent, String graphId, int hops) {
+    // TODO: 2: improve traversal to stop when neighbor already visited at node.hops>hops
+    if (hops == 0)
+      return;
+    checkNotNull(parent);
+    log.debug("Adding neighbor {}: {}", hops, newParent);
+    for (Edge e : parent.getEdges(Direction.OUT)) {
+      Vertex v = e.getVertex(Direction.IN);
+      Vertex newV = importVertex((String) v.getId(), graphId);
+      importEdge((String) e.getId(), graphId);
+      //            GraphImportUtils.importEdge(equivGraph, e, graphId+":"+e.getId(), Direction.OUT, newParent, newV);
+
+      addNeighborsOf(v, newV, graphId, hops - 1);
+    }
+    for (Edge e : parent.getEdges(Direction.IN)) {
+      Vertex v = e.getVertex(Direction.OUT);
+      Vertex newV = importVertex((String) v.getId(), graphId);
+      importEdge((String) e.getId(), graphId);
+      //            GraphImportUtils.importEdge(equivGraph, e, graphId+":"+e.getId(), Direction.IN, newParent, newV);
+
+      addNeighborsOf(v, newV, graphId, hops - 1);
+    }
+  }
 }

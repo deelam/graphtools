@@ -226,10 +226,10 @@ public final class GraphUtils {
   private static final String METADATA_VERTEXID = "_GRAPH_METADATA_";
   private static final String TIMESTAMP_PROP = "_GRAPHURI_";
   private static final String GRAPHURI_PROP = "_GRAPHURI_";
-  private static final String VERTEXTYPES_PROP = "_VERTEXTYPES_";
-  private static final String EDGELABELS_PROP = "_EDGELABELS_";
+//  private static final String VERTEXTYPES_PROP = "_VERTEXTYPES_";
+//  private static final String EDGELABELS_PROP = "_EDGELABELS_";
 
-  public static Vertex addMetaData(IdGraph<?> graph, String propKey, Object propValue){
+  public static Vertex setMetaData(IdGraph<?> graph, String propKey, Object propValue){
     Vertex mdV = graph.getVertex(METADATA_VERTEXID);
     mdV.setProperty(propKey, propValue);
     return mdV;

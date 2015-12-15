@@ -76,7 +76,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   private String srcGraphIdPropKey;
   public void setSrcGraphIdPropKey(String srcGraphIdPropKey) {
     this.srcGraphIdPropKey = srcGraphIdPropKey;
-    GraphUtils.addMetaData(graph, SRCGRAPHID_PROPKEY, srcGraphIdPropKey);
+    GraphUtils.setMetaData(graph, SRCGRAPHID_PROPKEY, srcGraphIdPropKey);
   }
 
   public String getSrcGraphId(Vertex v){
@@ -88,7 +88,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   private String origIdPropKey;
   public void setOrigIdPropKey(String origIdPropKey) {
     this.origIdPropKey = origIdPropKey;
-    GraphUtils.addMetaData(graph, ORIGID_PROPKEY, origIdPropKey);
+    GraphUtils.setMetaData(graph, ORIGID_PROPKEY, origIdPropKey);
   }
   
   public String getOrigId(Vertex v){
@@ -99,7 +99,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   private IdMapper graphIdMapper = null;
   public void setGraphIdMapper(IdMapper graphIdMapper) {
     this.graphIdMapper = graphIdMapper;
-    GraphUtils.addMetaData(graph, GRAPHID_MAP_FILE, graphIdMapper.getFilename());
+    GraphUtils.setMetaData(graph, GRAPHID_MAP_FILE, graphIdMapper.getFilename());
   }
 
   private IdGraph<?> getGraph(String graphId) {

@@ -51,19 +51,6 @@ public class IdGraphFactoryOrientdbTest {
   }
 
   @Test
-  public void testOrientUsingConf() {
-    BaseConfiguration conf = new BaseConfiguration();
-    conf.setProperty("node_auto_indexing", "false"); // FIXME: insert Orient setting that can be checked
-
-    GraphUri gUri = new GraphUri("orientdb:memory:myODb", conf);
-    IdGraph<OrientGraph> graph = gUri.openIdGraph();
-    //		OrientGraph neo = graph.getBaseGraph();
-    //		AutoIndexer<Node> autoIndexer = neo.getRawGraph().index().getNodeAutoIndexer(); // TODO: check if config took effect
-    //		System.out.println(autoIndexer);
-    graph.shutdown();
-  }
-
-  @Test
   public void testOrientUsingUriQuery() {
     {
       GraphUri gUri = new GraphUri("orientdb:plocal:./target/myODb?username=admin&password=admin");

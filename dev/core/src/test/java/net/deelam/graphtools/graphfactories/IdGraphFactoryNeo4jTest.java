@@ -50,7 +50,7 @@ public class IdGraphFactoryNeo4jTest {
   @Test
   public void testNeo4jUsingConf() throws IOException {
     BaseConfiguration conf = new BaseConfiguration();
-    conf.setProperty("node_auto_indexing", "false"); // FIXME: insert neo4j setting that can be checked
+    conf.setProperty("node_auto_indexing", "false"); // TODO: insert neo4j setting that can be checked
 
     GraphUri gUri = new GraphUri("neo4j:./target/myDb", conf);
     IdGraph<Neo4jGraph> graph = gUri.createNewIdGraph(true);

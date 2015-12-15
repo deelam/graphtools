@@ -104,7 +104,7 @@ public class IdGraphFactoryOrientdb implements IdGraphFactory {
       File pathFile = new File(gUri.getUriPath());
       return pathFile.exists();
     }else{
-      return false; // FIXME: check remote
+      return false; // TODO: check remote
     }
   }
 

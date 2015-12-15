@@ -220,15 +220,16 @@ public class GraphUri {
     return getConfig().getString(URI_PATH);
   }
 
-  public String[] getVertexTypes() {
-    String[] types=new String[0];
-    // TODO Auto-generated method stub
-    return types;
-  }
-
-  public String[] getEdgeLabels() {
-    String[] labels=new String[0];
-    return labels;
-  }
+// use GraphUtils.addMetaData() instead
+//  public String[] getVertexTypes() {
+//    String[] types=new String[0];
+//    // getVertexTypes
+//    return types;
+//  }
+//
+//  public String[] getEdgeLabels() {
+//    String[] labels=new String[0];
+//    return labels;
+//  }
 
 }

@@ -6,6 +6,7 @@ package net.deelam.graphtools;
 import java.lang.reflect.Array;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import lombok.Getter;
@@ -120,7 +121,7 @@ public class JsonPropertyMerger implements PropertyMerger {
     // check special SET_SUFFIX property and create a Set if needed
     final String valSetPropKey = key + SET_SUFFIX;
     final String valueSetStr = toE.getProperty(valSetPropKey);
-    ValueList valueList;
+    List valueList;
     
     Class<?> compClass=getPropertyValueClass(toE, key);
     
@@ -130,11 +131,13 @@ public class JsonPropertyMerger implements PropertyMerger {
       valueList.add(existingVal);
       toE.setProperty(key, SET_VALUE);
       
-      if(compClass==null)
+      if(compClass==null){
         setPropertyValueClass(toE, key, existingVal);
+        compClass=existingVal.getClass();
+      }
       
     } else {
-      valueList = (ValueList) mapper.parser().parseList(compClass, valueSetStr);
+      valueList = (List) mapper.parser().parseList(compClass, valueSetStr);
     }
 
     /// check if fromValue is already in toValueList
@@ -150,7 +153,7 @@ public class JsonPropertyMerger implements PropertyMerger {
           toValueChanged = true;
         }
       }
-    } else {
+    } else { // fromValue is a single value
       if (!valueList.contains(fromValue)) {
         if(!compClass.equals(fromValue.getClass()))
           log.warn("existingClass={} newValueClass={}", compClass, fromValue.getClass());

@@ -19,6 +19,7 @@ import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.blueprints.util.ElementHelper;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
@@ -110,20 +111,53 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
 
   private IdGraph<?> getGraph(String graphId) {
-    String shortGraphId = graphId;
-    if (graphIdMapper != null) {
-      shortGraphId = graphIdMapper.shortId(graphId);
-    }
-    IdGraph<?> graph = graphs.get(shortGraphId);
+    IdGraph<?> graph = graphs.get(graphId); // for lookup efficiency
+    if (graph != null)
+      return graph;
+
+    String shortGraphId = getShortGraphId(graphId);
+    graph = graphs.get(shortGraphId);
     if (graph == null) {
       try {
         graph = new GraphUri(graphId).openExistingIdGraph();
-        graphs.put(shortGraphId, graph);
+        IdGraph<?> existingGraph = graphs.put(shortGraphId, graph);
+        if(existingGraph!=null){
+          log.warn("Overriding existing graph: {} with shortGraphId={}", graph, shortGraphId);
+        }
+        graphs.put(graphId, graph); // for lookup efficiency, so a shortGraphId is not created each time
       } catch (IOException e) {
         e.printStackTrace();
       }
     }
     return graph;
+  }
+
+  /**
+   * Some graph implementations cannot handle multiple connections,
+   * so this registers an existing graph connection to be used by this class 
+   */
+  public void registerGraph(GraphUri graphUri) {
+    String graphId=graphUri.asString();
+    String shortGraphId = getShortGraphId(graphId);
+    IdGraph<?> graph = graphs.get(shortGraphId);
+    if (graph == null) {
+      graph = graphUri.getGraph();
+      IdGraph<?> existingGraph = graphs.put(shortGraphId, graph);
+      if(existingGraph!=null){
+        log.warn("Overriding existing registered graph: {} with shortGraphId={}", graphUri, shortGraphId);
+      }
+      graphs.put(graphId, graph); // for lookup efficiency, so a shortGraphId is not created each time
+    } else {
+      log.warn("Graph already registered: {} with shortGraphId={}", graphUri, shortGraphId);
+    }
+  }
+
+  private String getShortGraphId(String graphId) {
+    String shortGraphId = graphId;
+    if (graphIdMapper != null) {
+      shortGraphId = graphIdMapper.shortId(graphId);
+    }
+    return shortGraphId;
   }
 
   public Vertex getVertex(String nodeId, String graphId) {
@@ -161,8 +195,9 @@ public class MultigraphConsolidator implements AutoCloseable {
 
   private PropertyMerger merger = new JsonPropertyMerger();
 
+  public boolean useOrigId=false; // used to import from another graph created by MultigraphConsolidator // TODO: design better useOrigId
   private Vertex importVertex(Vertex v, String shortGraphId) {
-    String newId = shortGraphId + ":" + v.getId();
+    String newId = (String) ((useOrigId)? v.getId() : shortGraphId + ":" + v.getId());
     Vertex newV = graph.getVertex(newId);
     if (newV == null) {
       newV = graph.addVertex(newId);
@@ -173,7 +208,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
 
   private Edge importEdge(Edge e, String shortGraphId) {
-    String newId = shortGraphId + ":" + e.getId();
+    String newId = (String) ((useOrigId)? e.getId() : shortGraphId + ":" + e.getId());
     Edge newE = graph.getEdge(newId);
     if (newE == null) {
       Vertex outV = importVertex(e.getVertex(Direction.OUT), shortGraphId);
@@ -186,16 +221,16 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
 
   private void setNewProperties(Element v, String shortGraphId, Element newV) {
-    if(origIdPropKey!=null){
+    if (origIdPropKey != null) {
       String origId = v.getProperty(origIdPropKey); // use original id if possible
       if (origId == null)
         origId = v.getProperty(IdGraph.ID); // If v instanceof IdElement, getProperty(IdGraph.ID) returns null
       if (origId == null)
         origId = (String) v.getId();
-      
+
       newV.setProperty(origIdPropKey, origId);
     }
-    
+
     if (srcGraphIdPropKey != null)
       newV.setProperty(srcGraphIdPropKey, shortGraphId);
   }
@@ -231,4 +266,18 @@ public class MultigraphConsolidator implements AutoCloseable {
       addNeighborsOf(v, newV, graphId, hops - 1);
     }
   }
+
+  ///
+
+  public void importGraph(String srcGraphId) {
+    IdGraph<?> from = getGraph(srcGraphId);
+    String shortGraphId = getShortGraphId(srcGraphId);
+    for (final Vertex fromVertex : from.getVertices()) {
+      importVertex(fromVertex, shortGraphId);
+    }
+    for (final Edge fromEdge : from.getEdges()) {
+      importEdge(fromEdge, shortGraphId);
+    }
+  }
+
 }

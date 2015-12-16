@@ -61,7 +61,7 @@ public class GraphUri {
   }
 
   String origUri;
-  public String asString() throws URISyntaxException {
+  public String asString() {
     return origUri;
   }
 
@@ -135,6 +135,7 @@ public class GraphUri {
   public void shutdown(){
     if(graph!=null){
       shutdown(graph);
+      graph=null;
     } else {
       new IllegalArgumentException("Call shutdown(graph) instead since you didn't open the graph using this class.");
     }

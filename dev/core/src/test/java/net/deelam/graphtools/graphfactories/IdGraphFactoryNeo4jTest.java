@@ -41,8 +41,9 @@ public class IdGraphFactoryNeo4jTest {
   }
 
   @Test
-  public void testNeo4jAbsoluteFileUri() {
+  public void testNeo4jAbsoluteFileUri() throws IOException {
     GraphUri gUri = new GraphUri("neo4j:file:/tmp/target/myDb");
+    gUri.delete();
     IdGraph<Neo4jGraph> graph = gUri.openIdGraph(Neo4jGraph.class);
     graph.shutdown();
   }

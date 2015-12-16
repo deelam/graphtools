@@ -8,9 +8,7 @@ import java.net.URI;
 import org.apache.commons.io.FileUtils;
 
 import lombok.extern.slf4j.Slf4j;
-import net.deelam.graphtools.GraphUri;
-import net.deelam.graphtools.IdGraphFactory;
-import net.deelam.graphtools.PrettyPrintXml;
+import net.deelam.graphtools.*;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryOrientdb.DB_TYPE;
 
 import com.tinkerpop.blueprints.impls.tg.TinkerGraph;
@@ -115,5 +113,9 @@ public class IdGraphFactoryTinker implements IdGraphFactory {
     File pathFile = new File(gUri.getUriPath());
     return pathFile.exists();
   }
-  
+
+  @Override
+  public PropertyMerger createPropertyMerger() {
+    return new JavaSetPropertyMerger();
+  }
 }

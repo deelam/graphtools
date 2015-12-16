@@ -144,7 +144,7 @@ public class JsonPropertyMerger implements PropertyMerger {
     boolean toValueChanged = false;
     if (fromValue.equals(SET_VALUE)) {
       String fromListStr = fromE.getProperty(valSetPropKey);
-      ValueList fromValueList = (ValueList) mapper.parser().parse(fromListStr);
+      List fromValueList = (List) mapper.parser().parseList(compClass, fromListStr);
       for (Object fVal : fromValueList) {
         if (!valueList.contains(fVal)) {
           if(!compClass.equals(fVal.getClass()))
@@ -204,7 +204,7 @@ public class JsonPropertyMerger implements PropertyMerger {
       valueSet.add("2");
       String inJson = mapper.toJson(valueSet);
       System.out.println(inJson);
-      ValueList list = (ValueList) mapper.parser().parse(inJson);
+      List list = (List) mapper.parser().parse(inJson);
       if (!list.contains("c"))
         list.add("c");
       if (!list.contains("c"))
@@ -217,7 +217,7 @@ public class JsonPropertyMerger implements PropertyMerger {
       valueSet.add(new Date());
       String inJson = mapper.toJson(valueSet);
       System.out.println(inJson);
-      ValueList list = (ValueList) mapper.parser().parse(inJson);
+      List list = (List) mapper.parser().parse(inJson);
       System.out.println(list.get(0).getClass());
     }
     {
@@ -225,7 +225,7 @@ public class JsonPropertyMerger implements PropertyMerger {
       valueSet.add(new JsonPropertyMerger());
       String inJson = mapper.toJson(valueSet);
       System.out.println(inJson);
-      ValueList list = (ValueList) mapper.parser().parse(inJson);
+      List list = (List) mapper.parser().parse(inJson);
       System.out.println(list.get(0).getClass());
     }
   }

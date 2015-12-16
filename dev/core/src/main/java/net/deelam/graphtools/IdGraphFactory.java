@@ -42,4 +42,6 @@ public interface IdGraphFactory {
 
   public void shutdown(GraphUri gUri, IdGraph<?> graph) throws IOException;
 
+  public PropertyMerger createPropertyMerger();
+
 }

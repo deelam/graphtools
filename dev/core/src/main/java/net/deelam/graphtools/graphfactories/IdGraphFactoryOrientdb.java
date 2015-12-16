@@ -10,6 +10,8 @@ import java.net.URI;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.IdGraphFactory;
+import net.deelam.graphtools.JavaSetPropertyMerger;
+import net.deelam.graphtools.PropertyMerger;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.io.FileUtils;
@@ -115,4 +117,8 @@ public class IdGraphFactoryOrientdb implements IdGraphFactory {
     }
   }
 
+  @Override
+  public PropertyMerger createPropertyMerger() {
+    return new JavaSetPropertyMerger();
+  }
 }

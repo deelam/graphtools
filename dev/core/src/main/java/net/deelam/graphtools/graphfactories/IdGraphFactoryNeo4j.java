@@ -9,11 +9,14 @@ import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.IdGraphFactory;
+import net.deelam.graphtools.JsonPropertyMerger;
+import net.deelam.graphtools.PropertyMerger;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.io.FileUtils;
 
 import com.google.common.collect.Iterators;
+import com.tinkerpop.blueprints.KeyIndexableGraph;
 import com.tinkerpop.blueprints.impls.neo4j.Neo4jGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
@@ -85,5 +88,10 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
     File srcFile = new File(srcGraphUri.getUriPath());
     File destFile = new File(dstGraphUri.getUriPath());
     FileUtils.copyDirectory(srcFile, destFile);
+  }
+
+  @Override
+  public PropertyMerger createPropertyMerger() {
+    return new JsonPropertyMerger();
   }
 }

@@ -225,6 +225,10 @@ public class GraphUri {
     factory.copy(this, dstGraphUri);
   }
 
+  public PropertyMerger createPropertyMerger() {
+    return factory.createPropertyMerger();
+  }
+
 // use GraphUtils.addMetaData() instead
 //  public String[] getVertexTypes() {
 //    String[] types=new String[0];

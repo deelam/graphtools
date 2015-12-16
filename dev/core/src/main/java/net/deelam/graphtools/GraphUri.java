@@ -132,6 +132,14 @@ public class GraphUri {
 
   @Getter
   private IdGraph graph;
+  
+  public IdGraph getOrOpenGraph() throws FileNotFoundException{
+    if(graph!=null)
+      return graph;
+    
+    return openExistingIdGraph();
+  }
+  
   public void shutdown(){
     if(graph!=null){
       shutdown(graph);

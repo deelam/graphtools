@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.google.common.collect.Iterables;
 import com.tinkerpop.blueprints.*;
+import com.tinkerpop.blueprints.util.ElementHelper;
 import com.tinkerpop.blueprints.util.wrappers.WrapperGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
@@ -158,7 +159,7 @@ public final class GraphUtils {
     }
     return sb.toString();
   }
-  
+
 
   // returns whether currGraph is nested at some depth within g
   public static boolean isWrappedWithin(Graph g, Graph currGraph) {
@@ -182,8 +183,8 @@ public final class GraphUtils {
     }
     return null;
   }
-  
-  
+
+
   /* 
    * WRITE operations
    */
@@ -216,67 +217,74 @@ public final class GraphUtils {
       throw re;
     }
   }
-  
+
   ///
 
   private static final String METADATA_VERTEXID = "_GRAPH_METADATA_";
   private static final String TIMESTAMP_PROP = "_GRAPHURI_";
   private static final String GRAPHURI_PROP = "_GRAPHURI_";
-//  private static final String VERTEXTYPES_PROP = "_VERTEXTYPES_";
-//  private static final String EDGELABELS_PROP = "_EDGELABELS_";
 
-  public static Vertex setMetaData(IdGraph<?> graph, String propKey, Object propValue){
+  //  private static final String VERTEXTYPES_PROP = "_VERTEXTYPES_";
+  //  private static final String EDGELABELS_PROP = "_EDGELABELS_";
+
+  public static Vertex setMetaData(IdGraph<?> graph, String propKey, Object propValue) {
     Vertex mdV = graph.getVertex(METADATA_VERTEXID);
     mdV.setProperty(propKey, propValue);
     return mdV;
   }
 
-  public static <T> T getMetaData(IdGraph<?> graph, String propKey){
+  public static <T> T getMetaData(IdGraph<?> graph, String propKey) {
     Vertex mdV = graph.getVertex(METADATA_VERTEXID);
     return mdV.getProperty(propKey);
   }
-  
-  public static void addMetaDataNode(GraphUri gUri, IdGraph<?> graph){
+
+  public static void addMetaDataNode(GraphUri gUri, IdGraph<?> graph) {
     Vertex mdV = graph.getVertex(METADATA_VERTEXID);
-    if(mdV==null){
-      mdV=graph.addVertex(METADATA_VERTEXID);
+    if (mdV == null) {
+      mdV = graph.addVertex(METADATA_VERTEXID);
       mdV.setProperty(TIMESTAMP_PROP, new Date().toString());
       mdV.setProperty(GRAPHURI_PROP, gUri.toString());
-//      mdV.setProperty(VERTEXTYPES_PROP, gUri.getVertexTypes());
-//      mdV.setProperty(EDGELABELS_PROP, gUri.getEdgeLabels());
+      //      mdV.setProperty(VERTEXTYPES_PROP, gUri.getVertexTypes());
+      //      mdV.setProperty(EDGELABELS_PROP, gUri.getEdgeLabels());
     }
   }
 
   ///
-  
+
   public static final Direction[] BOTHDIR = {Direction.OUT, Direction.IN};
 
   /**
    * Assumes both nodes are in the same graph.
-   * Remove original edges and node.
+   * Removes original edges and node.
    * @param propMerger to merge node and edge properties
    */
   public static void mergeNodesAndEdges(Vertex origV, Vertex targetV, Graph graph, PropertyMerger propMerger) {
     propMerger.mergeProperties(origV, targetV);
+    moveEdges(origV, targetV, graph);
+    graph.removeVertex(origV);
+  }
+
+  /**
+   * 
+   */
+  public static void moveEdges(Vertex origV, Vertex targetV, Graph graph) {
     for (Direction dir : BOTHDIR)
       for (Edge edge : origV.getEdges(dir)) {
         Vertex neighbor = edge.getVertex(dir.opposite());
-        
         // copy edge in memory before removing from graph
-        GraphRecordEdge inMemEdge=new GraphRecordEdge((String) edge.getId(), edge.getLabel(), 
+        GraphRecordEdge inMemEdge = new GraphRecordEdge((String) edge.getId(), edge.getLabel(),
             (String) targetV.getId(), (String) neighbor.getId());
-        propMerger.mergeProperties(edge, inMemEdge);
+        ElementHelper.copyProperties(edge, inMemEdge);
         graph.removeEdge(edge);
-        
+
         Edge eCopy;
-        if(dir==Direction.OUT){
-          eCopy=graph.addEdge(inMemEdge.getId(), targetV, neighbor, inMemEdge.getLabel());
-        }else{
-          eCopy=graph.addEdge(inMemEdge.getId(), neighbor, targetV, inMemEdge.getLabel());
+        if (dir == Direction.OUT) {
+          eCopy = graph.addEdge(inMemEdge.getId(), targetV, neighbor, inMemEdge.getLabel());
+        } else {
+          eCopy = graph.addEdge(inMemEdge.getId(), neighbor, targetV, inMemEdge.getLabel());
         }
-        propMerger.mergeProperties(inMemEdge, eCopy);
+        ElementHelper.copyProperties(inMemEdge, eCopy);
       }
-    graph.removeVertex(origV);
   }
-  
+
 }

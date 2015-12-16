@@ -56,8 +56,13 @@ public class MultigraphConsolidator implements AutoCloseable {
     }
   }
 
-  public MultigraphConsolidator(IdGraph<?> idGraph) throws IOException {
-    this.graph = idGraph;
+//  public MultigraphConsolidator(IdGraph<?> idGraph, PropertyMerger pmerger) throws IOException {
+//    
+//  }
+  
+  public MultigraphConsolidator(GraphUri graphUri) throws IOException {
+    this.graph = graphUri.getOrOpenGraph();
+    merger=graphUri.createPropertyMerger();
 
     srcGraphIdPropKey = GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
     origIdPropKey = GraphUtils.getMetaData(graph, ORIGID_PROPKEY);
@@ -194,7 +199,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   //    }
   //  }
 
-  private PropertyMerger merger = new JsonPropertyMerger();
+  private final PropertyMerger merger;
 
   public boolean useOrigId=false; // used to import from another graph created by MultigraphConsolidator // TODO: design better useOrigId
   private Vertex importVertex(Vertex v, String shortGraphId) {

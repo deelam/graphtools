@@ -25,7 +25,7 @@ public class IdMapperTest {
     String file = "target/graphUri.map";
     new File(file).delete();
     
-    IdMapper nm = new IdMapper(file);
+    IdMapper nm = IdMapper.newFromFile(file);
     String longStrId = "tinker:some/long/path/you/dont/want/to/store";
 
     String shortStrId = nm.getShortIdIfExists(longStrId);
@@ -85,7 +85,7 @@ public class IdMapperTest {
     
     /// reload from file
     
-    nm=new IdMapper(file);
+    nm=IdMapper.newFromFile(file);
     assertEquals(2, nm.getMap().size());
     {
       String myId = nm.shortId("123" + longStrId);

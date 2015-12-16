@@ -3,14 +3,12 @@
  */
 package net.deelam.enricher.indexing;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.util.Map;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.collections.BidiMap;
 import org.apache.commons.collections.bidimap.DualHashBidiMap;
@@ -24,16 +22,13 @@ import com.google.common.base.Preconditions;
  * @author dlam
  *
  */
+@NoArgsConstructor
+@Slf4j
 public class IdMapper implements AutoCloseable {
 
   @Getter
-  final String filename;
+  String filename = null;
   final BidiMap map = new DualHashBidiMap();
-
-  public IdMapper(String filename) throws FileNotFoundException, IOException {
-    this.filename = filename;
-    loadMapFile();
-  }
 
   public void put(String shortStrId, String longStrId) {
     map.put(shortStrId, longStrId);
@@ -75,23 +70,59 @@ public class IdMapper implements AutoCloseable {
     save();
   }
 
-  private ObjectMapper mapper = JsonFactory.create();
+  private static ObjectMapper jsonObjMapper = JsonFactory.create();
   private static final String COUNTER_KEY = "__COUNTER__";
 
   private void loadMapFile() throws FileNotFoundException, IOException {
     if (new File(filename).exists())
       try (FileReader reader = new FileReader(filename)) {
-        Map<?, ?> jsonMap = mapper.parser().parse(Map.class, reader);
+        Map<?, ?> jsonMap = jsonObjMapper.parser().parse(Map.class, reader);
         map.putAll(jsonMap);
         Integer jsonCounter = (Integer) map.remove(COUNTER_KEY);
         counter = jsonCounter.intValue();
       }
   }
 
-  private void save() throws IOException {
+  public static IdMapper newFromFile(String filename) throws FileNotFoundException, IOException {
+    IdMapper idMapper = new IdMapper();
+    if (new File(filename).exists())
+      try (FileReader reader = new FileReader(filename)) {
+        Map<?, ?> jsonMap = jsonObjMapper.parser().parse(Map.class, reader);
+
+        idMapper.map.putAll(jsonMap);
+        Integer jsonCounter = (Integer) idMapper.map.remove(COUNTER_KEY);
+        idMapper.counter = jsonCounter.intValue();
+
+        idMapper.filename = filename;
+        return idMapper;
+      }
+    else{
+      log.debug("Creating new IdMapper using file={}", filename);
+      idMapper.filename = filename;
+      return idMapper;
+    }
+  }
+
+  public static IdMapper newFromJson(String jsonStr) throws IOException {
+    try (Reader reader = new StringReader(jsonStr)) {
+      IdMapper idMapper = new IdMapper();
+      Map<?, ?> jsonMap = jsonObjMapper.parser().parse(Map.class, reader);
+      idMapper.map.putAll(jsonMap);
+      Integer jsonCounter = (Integer) idMapper.map.remove(COUNTER_KEY);
+      idMapper.counter = jsonCounter.intValue();
+      return idMapper;
+    }
+  }
+
+  public String toJson() {
     map.put(COUNTER_KEY, counter);
-    String jsonMap = mapper.toJson(map);
+    String jsonStr = jsonObjMapper.toJson(map);
     map.remove(COUNTER_KEY);
+    return jsonStr;
+  }
+
+  private void save() throws IOException {
+    String jsonMap = toJson();
     try (FileWriter writer = new FileWriter(filename, false)) {
       writer.write(jsonMap);
     }

@@ -66,7 +66,7 @@ public class MultigraphConsolidator implements AutoCloseable {
     if (graphIdMapFile != null) {
       if (new File(graphIdMapFile).exists()) {
         log.info("Using graphIdMapFile={}", graphIdMapFile);
-        graphIdMapper = new IdMapper(graphIdMapFile);
+        graphIdMapper = IdMapper.newFromFile(graphIdMapFile);
       } else {
         log.warn("Could not find graphIdMapFile={}.  Fix this or call setGraphIdMapper() to override with your own.",
             graphIdMapFile);
@@ -105,6 +105,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   @Getter
   private IdMapper graphIdMapper = null;
 
+  // TODO: save mapper in META_DATA node
   public void setGraphIdMapper(IdMapper graphIdMapper) {
     this.graphIdMapper = graphIdMapper;
     GraphUtils.setMetaData(graph, GRAPHID_MAP_FILE, graphIdMapper.getFilename());

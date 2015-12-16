@@ -1,19 +1,13 @@
 package net.deelam.graphtools;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.*;
 
 import java.util.Date;
 
 import lombok.extern.slf4j.Slf4j;
 
 import com.google.common.collect.Iterables;
-import com.tinkerpop.blueprints.Direction;
-import com.tinkerpop.blueprints.Edge;
-import com.tinkerpop.blueprints.Element;
-import com.tinkerpop.blueprints.Graph;
-import com.tinkerpop.blueprints.TransactionalGraph;
-import com.tinkerpop.blueprints.Vertex;
-import com.tinkerpop.blueprints.impls.tg.TinkerGraph;
+import com.tinkerpop.blueprints.*;
 import com.tinkerpop.blueprints.util.wrappers.WrapperGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
@@ -222,6 +216,8 @@ public final class GraphUtils {
       throw re;
     }
   }
+  
+  ///
 
   private static final String METADATA_VERTEXID = "_GRAPH_METADATA_";
   private static final String TIMESTAMP_PROP = "_GRAPHURI_";
@@ -249,6 +245,38 @@ public final class GraphUtils {
 //      mdV.setProperty(VERTEXTYPES_PROP, gUri.getVertexTypes());
 //      mdV.setProperty(EDGELABELS_PROP, gUri.getEdgeLabels());
     }
+  }
+
+  ///
+  
+  public static final Direction[] BOTHDIR = {Direction.OUT, Direction.IN};
+
+  /**
+   * Assumes both nodes are in the same graph.
+   * Remove original edges and node.
+   * @param propMerger to merge node and edge properties
+   */
+  public static void mergeNodesAndEdges(Vertex origV, Vertex targetV, Graph graph, PropertyMerger propMerger) {
+    propMerger.mergeProperties(origV, targetV);
+    for (Direction dir : BOTHDIR)
+      for (Edge edge : origV.getEdges(dir)) {
+        Vertex neighbor = edge.getVertex(dir.opposite());
+        
+        // copy edge in memory before removing from graph
+        GraphRecordEdge inMemEdge=new GraphRecordEdge((String) edge.getId(), edge.getLabel(), 
+            (String) targetV.getId(), (String) neighbor.getId());
+        propMerger.mergeProperties(edge, inMemEdge);
+        graph.removeEdge(edge);
+        
+        Edge eCopy;
+        if(dir==Direction.OUT){
+          eCopy=graph.addEdge(inMemEdge.getId(), targetV, neighbor, inMemEdge.getLabel());
+        }else{
+          eCopy=graph.addEdge(inMemEdge.getId(), neighbor, targetV, inMemEdge.getLabel());
+        }
+        propMerger.mergeProperties(inMemEdge, eCopy);
+      }
+    graph.removeVertex(origV);
   }
   
 }

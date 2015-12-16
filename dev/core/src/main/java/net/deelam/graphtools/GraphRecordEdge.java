@@ -32,7 +32,7 @@ public class GraphRecordEdge extends GraphRecordElement implements Edge, Seriali
     return new GraphRecordEdge(getStringId(), label, outVertexStringId, inVertexStringId);
   }
 
-  private GraphRecordEdge(String id, String label, String outVertex, String inVertex) {
+  public GraphRecordEdge(String id, String label, String outVertex, String inVertex) {
     super(id);
     this.label = label;
     outVertexStringId = outVertex;

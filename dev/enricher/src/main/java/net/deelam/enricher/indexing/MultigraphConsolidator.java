@@ -160,27 +160,27 @@ public class MultigraphConsolidator implements AutoCloseable {
     return shortGraphId;
   }
 
-  public Vertex getVertex(String nodeId, String graphId) {
+  public Vertex getExternalVertex(String nodeId, String graphId) {
     IdGraph<?> g = getGraph(graphId);
     Vertex v = g.getVertex(nodeId);
     return v;
   }
 
-  private Edge getEdge(String edgeId, String graphId) {
+  private Edge getExternalEdge(String edgeId, String graphId) {
     IdGraph<?> g = getGraph(graphId);
     Edge e = g.getEdge(edgeId);
     return e;
   }
 
   public Vertex importVertex(String nodeId, String graphId) {
-    Vertex v = getVertex(nodeId, graphId);
+    Vertex v = getExternalVertex(nodeId, graphId);
     checkNotNull(v, "Cannot find nodeId=" + nodeId + " in graph=" + graphId);
     String shortGraphId = (graphIdMapper == null) ? graphId : graphIdMapper.shortId(graphId);
     return importVertex(v, shortGraphId);
   }
 
   public Edge importEdge(String edgeId, String graphId) {
-    Edge e = getEdge(edgeId, graphId);
+    Edge e = getExternalEdge(edgeId, graphId);
     checkNotNull(e, "Cannot find edgeId=" + edgeId + " in graph=" + graphId);
     String shortGraphId = (graphIdMapper == null) ? graphId : graphIdMapper.shortId(graphId);
     return importEdge(e, shortGraphId);
@@ -205,6 +205,20 @@ public class MultigraphConsolidator implements AutoCloseable {
     }
     merger.mergeProperties(v, newV);
     return newV;
+  }
+
+  public Vertex getVertex(String nodeId, String graphId) {
+    String shortGraphId = (graphIdMapper == null) ? graphId : graphIdMapper.shortId(graphId);
+    String localId = shortGraphId + ":" + nodeId;
+    Vertex existingV = graph.getVertex(localId);
+    return existingV;
+  }
+
+  public Edge getEdge(String edgeId, String graphId) {
+    String shortGraphId = (graphIdMapper == null) ? graphId : graphIdMapper.shortId(graphId);
+    String localId = shortGraphId + ":" + edgeId;
+    Edge existingE = graph.getEdge(localId);
+    return existingE;
   }
 
   private Edge importEdge(Edge e, String shortGraphId) {
@@ -238,7 +252,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   ///
 
   public void addNeighborsOf(String nodeStringId, String graphId, int hops) {
-    Vertex v = getVertex(nodeStringId, graphId);
+    Vertex v = getExternalVertex(nodeStringId, graphId);
     Vertex newV = importVertex(nodeStringId, graphId);
     addNeighborsOf(v, newV, graphId, hops);
   }

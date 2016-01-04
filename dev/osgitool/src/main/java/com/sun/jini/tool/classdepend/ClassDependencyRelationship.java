@@ -17,10 +17,16 @@
  */
 package com.sun.jini.tool.classdepend;
 
+import java.io.IOException;
+import java.net.JarURLConnection;
+import java.net.URL;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.jar.JarFile;
+
+import lombok.Getter;
 
 /**
  * A container to store class dependency related information for later analysis.
@@ -29,11 +35,17 @@ import java.util.Set;
  */
 public class ClassDependencyRelationship {
 
-    private final Set dependants;   // classes that depend upon this class.
-    private final Set providers;    // classes that this class depends upon.
+    private final Set<ClassDependencyRelationship> dependants;   // classes that depend upon this class.
+    private final Set<ClassDependencyRelationship> providers;    // classes that this class depends upon.
+    @Getter
     private final String fullyQualifiedClassName;
     private final int hash;
     private final boolean rootClass;
+    
+    @Getter
+    private URL url;
+    @Getter
+    private String jarfile;
     
     ClassDependencyRelationship (String fullyQualifiedClassName, boolean rootClass){
         this.fullyQualifiedClassName = fullyQualifiedClassName;
@@ -116,5 +128,17 @@ public class ClassDependencyRelationship {
      */
     public boolean isRootClass() {
         return rootClass;
+    }
+
+    
+    public void setUrl(URL resource) {
+      if(resource==null) return;
+      url=resource; 
+      try {
+        JarURLConnection jarC = (JarURLConnection) url.openConnection();
+        jarfile=jarC.getJarFile().getName();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
     }
 }

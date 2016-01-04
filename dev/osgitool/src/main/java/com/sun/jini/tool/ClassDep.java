@@ -1272,7 +1272,9 @@ public class ClassDep {
      * Get the strings from our resource localization bundle.
      */
     private static synchronized String getString(String key) {
-	if (!resinit) {
+if(true)
+  return key;
+      if (!resinit) {
 	    resinit = true;
 	    try {
 		resources = ResourceBundle.getBundle

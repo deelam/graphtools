@@ -63,26 +63,26 @@ public class GraphUriTest {
   }
   
   @Test
-  public void testSavedGraphml() {
+  public void testSavedGraphml() throws IOException {
     GraphUri gUri = new GraphUri("tinker:./target/tGraphML?fileType=graphml");
-    IdGraph<TinkerGraph> graph = gUri.openIdGraph();
+    IdGraph<TinkerGraph> graph = gUri.createNewIdGraph(true);
     graph.shutdown();
   }
 
   @Test
-  public void testSavedGraphmlScheme() {
+  public void testSavedGraphmlScheme() throws IOException {
     GraphUri gUri = new GraphUri("tinker:graphml:./target/tGraphML");
-    IdGraph<TinkerGraph> graph = gUri.openIdGraph();
+    IdGraph<TinkerGraph> graph = gUri.createNewIdGraph(true);
     graph.shutdown();
   }
   
   @Test
-  public void testTwoSavedGraphs() {
+  public void testTwoSavedGraphs() throws IOException {
     GraphUri gUri = new GraphUri("tinker:./target/tGraphML?fileType=graphml");
-    IdGraph<TinkerGraph> graph = gUri.openIdGraph();
+    IdGraph<TinkerGraph> graph = gUri.createNewIdGraph(true);
 
     GraphUri gUri2 = new GraphUri("tinker:./target/tGraphML2?fileType=graphml");
-    IdGraph<TinkerGraph> graph2 = gUri2.openIdGraph();
+    IdGraph<TinkerGraph> graph2 = gUri2.createNewIdGraph(true);
 
     graph.shutdown();
     graph2.shutdown();

@@ -56,9 +56,9 @@ public class GraphUriTest {
   }
 
   @Test
-  public void testSavedGraph2() {
+  public void testSavedGraph2() throws IOException {
     GraphUri gUri = new GraphUri("tinker:/tmp/target/tGraph");
-    IdGraph<TinkerGraph> graph = gUri.openIdGraph();
+    IdGraph<TinkerGraph> graph = gUri.createNewIdGraph(true);
     graph.shutdown();
   }
   

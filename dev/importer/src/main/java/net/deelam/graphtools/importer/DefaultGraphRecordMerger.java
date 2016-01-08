@@ -23,7 +23,8 @@ public class DefaultGraphRecordMerger implements GraphRecordMerger {
 
   @Override
   public void merge(GraphRecord from, GraphRecord to) {
-    Preconditions.checkState(from.getType().equals(to.getType()), "Records have equal IDs but different types!");
+    if(from.getType()!=null && to.getType()!=null)
+      Preconditions.checkState(from.getType().equals(to.getType()), "Records have equal IDs but different types!");
     mergeProperties(from, to);
     merge(from.getOutEdges(), to.getOutEdges());
     merge(from.getInEdges(), to.getInEdges());

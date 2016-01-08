@@ -1,10 +1,14 @@
 package net.deelam.graphtools;
 
 import static com.google.common.base.Preconditions.*;
+
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.apache.commons.lang.mutable.MutableInt;
+
 import com.tinkerpop.blueprints.TransactionalGraph;
 
 /**
@@ -25,8 +29,25 @@ import com.tinkerpop.blueprints.TransactionalGraph;
 			throw re;
 		}
  </pre>
+ * Or if performing operations that do not fit in a single transaction, use incremental commitIfFull()
+ * <pre> // TODO: add unit test for this
+        int tx=GraphTransaction.begin(graph, 5000);
+        try{
+            for(Vertex v: graph.getVertices()){
+               doYourGraphOperations(v);
+               doNestedTransaction(v);  // Note: if rollback() is called, rolls back to last incremental commit()
+               GraphTransaction.commitIfFull(tx); // increments operationCount and calls commit() if meets 5000 threshold.
+            }
+            GraphTransaction.commit(tx);
+        }catch(ExpectedException re){
+            // expect exception be thrown
+            GraphTransaction.rollback(tx);
+            throw re;
+        }
+ </pre>
+
  * 
- * If doNestedTransaction() throws an uncaught exception (which means rollback() was not called),
+ * If doNestedTransaction() throws an uncaught exception (and rollback() may not have been called),
  * GraphTransaction will handle it properly given the tx parameter.
  * 
  * Supports nested transactions.
@@ -49,12 +70,36 @@ public class GraphTransaction {
     }
   };
 
-  protected static final ThreadLocal<AtomicBoolean> rollbackCalled =
-      new ThreadLocal<AtomicBoolean>() {
-        protected AtomicBoolean initialValue() {
-          return new AtomicBoolean(false);
-        };
-      };
+  protected static final ThreadLocal<AtomicBoolean> rollbackCalled = new ThreadLocal<AtomicBoolean>() {
+    protected AtomicBoolean initialValue() {
+      return new AtomicBoolean(false);
+    };
+  };
+
+  protected static final ThreadLocal<MutableInt> operationsCounter = new ThreadLocal<MutableInt>() {
+    protected MutableInt initialValue() {
+      return new MutableInt(0);
+    }
+  };
+
+  protected static final ThreadLocal<Integer> commitThreshold = new ThreadLocal<Integer>() {
+    protected Integer initialValue() {
+      return Integer.valueOf(-1);
+    }
+  };
+
+  /**
+   * @return depth of transaction.
+   */
+  public static int begin(TransactionalGraph currGraph, int threshold) {
+    if (!isOuterMostTransaction()) {
+      throw new IllegalStateException(
+          "Must not already be in a transaction since graph.commit() must be repeated called.");
+    }
+
+    commitThreshold.set(Integer.valueOf(threshold));
+    return begin(currGraph);
+  }
 
   /**
    * @return depth of transaction.
@@ -117,8 +162,10 @@ public class GraphTransaction {
       nestingCounter.get().setValue(depth - 1);
     } else {
       MutableInt nestingDepth = nestingCounter.get();
-      if(nestingDepth.intValue()==0)
-        log.warn("Not decrementing transaction depth since it's already 0.  Might want to investigate the reason for this:", new Throwable());
+      if (nestingDepth.intValue() == 0)
+        log.warn(
+            "Not decrementing transaction depth since it's already 0.  Might want to investigate the reason for this:",
+            new Throwable());
       else
         nestingDepth.decrement();
     }
@@ -141,6 +188,17 @@ public class GraphTransaction {
     }
   }
 
+  public static boolean commitIfFull(int tx) {
+    operationsCounter.get().increment();
+    if (operationsCounter.get().intValue() >= commitThreshold.get().intValue()) {
+      log.debug("Threshold {} reached; committing transaction on graph: {}", operationsCounter.get(), graphHolder.get());
+      graphHolder.get().commit();
+      operationsCounter.get().setValue(0);
+      return true;
+    }
+    return false;
+  }
+
   public static boolean isInTransaction() {
     return graphHolder.get() != null;
   }
@@ -156,6 +214,7 @@ public class GraphTransaction {
   private static boolean endTransaction() {
     /// remove all ThreadLocal variables so they can be GC'd
     nestingCounter.remove();
+    commitThreshold.remove();
     if (rollbackCalled.get().get()) {
       rollbackCalled.remove();
       log.warn("Rolling back outer-most transaction on graph: {}", graphHolder.get());

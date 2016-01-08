@@ -10,10 +10,7 @@ import java.util.Map;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.deelam.graphtools.GraphUri;
-import net.deelam.graphtools.GraphUtils;
-import net.deelam.graphtools.JsonPropertyMerger;
-import net.deelam.graphtools.PropertyMerger;
+import net.deelam.graphtools.*;
 
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
@@ -56,13 +53,13 @@ public class MultigraphConsolidator implements AutoCloseable {
     }
   }
 
-//  public MultigraphConsolidator(IdGraph<?> idGraph, PropertyMerger pmerger) throws IOException {
-//    
-//  }
-  
+  //  public MultigraphConsolidator(IdGraph<?> idGraph, PropertyMerger pmerger) throws IOException {
+  //    
+  //  }
+
   public MultigraphConsolidator(GraphUri graphUri) throws IOException {
     this.graph = graphUri.getOrOpenGraph();
-    merger=graphUri.createPropertyMerger();
+    merger = graphUri.createPropertyMerger();
 
     srcGraphIdPropKey = GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
     origIdPropKey = GraphUtils.getMetaData(graph, ORIGID_PROPKEY);
@@ -127,7 +124,7 @@ public class MultigraphConsolidator implements AutoCloseable {
       try {
         graph = new GraphUri(graphId).openExistingIdGraph();
         IdGraph<?> existingGraph = graphs.put(shortGraphId, graph);
-        if(existingGraph!=null){
+        if (existingGraph != null) {
           log.warn("Overriding existing graph: {} with shortGraphId={}", graph, shortGraphId);
         }
         graphs.put(graphId, graph); // for lookup efficiency, so a shortGraphId is not created each time
@@ -143,13 +140,13 @@ public class MultigraphConsolidator implements AutoCloseable {
    * so this registers an existing graph connection to be used by this class 
    */
   public void registerGraph(GraphUri graphUri) {
-    String graphId=graphUri.asString();
+    String graphId = graphUri.asString();
     String shortGraphId = getShortGraphId(graphId);
     IdGraph<?> graph = graphs.get(shortGraphId);
     if (graph == null) {
       graph = graphUri.getGraph();
       IdGraph<?> existingGraph = graphs.put(shortGraphId, graph);
-      if(existingGraph!=null){
+      if (existingGraph != null) {
         log.warn("Overriding existing registered graph: {} with shortGraphId={}", graphUri, shortGraphId);
       }
       graphs.put(graphId, graph); // for lookup efficiency, so a shortGraphId is not created each time
@@ -201,9 +198,10 @@ public class MultigraphConsolidator implements AutoCloseable {
 
   private final PropertyMerger merger;
 
-  public boolean useOrigId=false; // used to import from another graph created by MultigraphConsolidator // TODO: design better useOrigId
+  public boolean useOrigId = false; // used to import from another graph created by MultigraphConsolidator // TODO: design better useOrigId
+
   private Vertex importVertex(Vertex v, String shortGraphId) {
-    String newId = (String) ((useOrigId)? v.getId() : shortGraphId + ":" + v.getId());
+    String newId = (String) ((useOrigId) ? v.getId() : shortGraphId + ":" + v.getId());
     Vertex newV = graph.getVertex(newId);
     if (newV == null) {
       newV = graph.addVertex(newId);
@@ -228,7 +226,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
 
   private Edge importEdge(Edge e, String shortGraphId) {
-    String newId = (String) ((useOrigId)? e.getId() : shortGraphId + ":" + e.getId());
+    String newId = (String) ((useOrigId) ? e.getId() : shortGraphId + ":" + e.getId());
     Edge newE = graph.getEdge(newId);
     if (newE == null) {
       Vertex outV = importVertex(e.getVertex(Direction.OUT), shortGraphId);
@@ -292,11 +290,23 @@ public class MultigraphConsolidator implements AutoCloseable {
   public void importGraph(String srcGraphId) {
     IdGraph<?> from = getGraph(srcGraphId);
     String shortGraphId = getShortGraphId(srcGraphId);
-    for (final Vertex fromVertex : from.getVertices()) {
-      importVertex(fromVertex, shortGraphId);
-    }
-    for (final Edge fromEdge : from.getEdges()) {
-      importEdge(fromEdge, shortGraphId);
+
+    int tx = GraphTransaction.begin(graph, 50000); // TODO: 2: how frequently to GraphTransaction.commit()?
+    try {
+      for (final Vertex fromVertex : from.getVertices()) {
+        importVertex(fromVertex, shortGraphId);
+        GraphTransaction.commitIfFull(tx);
+      }
+      
+      for (final Edge fromEdge : from.getEdges()) {
+        importEdge(fromEdge, shortGraphId);
+        GraphTransaction.commitIfFull(tx);
+      }
+      
+      GraphTransaction.commit(tx);
+    } catch (RuntimeException re) {
+      GraphTransaction.rollback(tx);
+      throw re;
     }
   }
 

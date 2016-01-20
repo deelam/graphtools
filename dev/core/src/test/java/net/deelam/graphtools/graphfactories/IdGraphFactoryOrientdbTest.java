@@ -246,43 +246,50 @@ public class IdGraphFactoryOrientdbTest {
 
   }
   
-  //@Test
-  public void testCopyGraphToGraph() throws IOException {
+//  @Test
+  public void testOperatingOnTwoGraphs() throws IOException {
     GraphUri gUri = new GraphUri("orientdb:plocal:./target/myODb5");
-   
-    IdGraph graph2 = gUri.openExistingIdGraph();
-    System.out.println(GraphUtils.toString(graph2));
-    assertEquals(3, Iterables.size(graph2.getVertices()));
-    assertEquals(1, Iterables.size(graph2.getEdges()));
-    assertEquals(1, Iterables.size(graph2.getVertex("Paul Salda�a").getEdges(Direction.OUT)));
+    gUri.delete();
+    IdGraph //graph = gUri.createNewIdGraph(true);
+    graph1=new IdGraph(new OrientGraph("plocal:./target/myODb5"));
+    Vertex a2 = graph1.addVertex("Paul");
+    a2.setProperty("prop2", "value2");
+    Vertex b2 = graph1.addVertex("B2");
+    graph1.addEdge("E", a2, b2, "edgey2");
+    graph1.commit();
+//    assertEquals(3, Iterables.size(graph1.getVertices()));
+    assertEquals(1, Iterables.size(graph1.getEdges()));
+    assertEquals(1, Iterables.size(a2.getEdges(Direction.OUT)));
+//    System.out.println(GraphUtils.toString(graph));
+    assertEquals(1, Iterables.size(graph1.getVertex("Paul").getEdges(Direction.OUT)));
     
     GraphUri dgUri = new GraphUri("orientdb:plocal:./target/destODb");
-    IdGraph dgraph = dgUri.createNewIdGraph(true);
+    dgUri.delete();
+    IdGraph // dgraph = dgUri.createNewIdGraph(true);
+    graph2=new IdGraph(new OrientGraph("plocal:./target/destODb"));
     
-    Vertex a22 = graph2.getVertex("Paul Salda�a");
-    assertEquals(1, Iterables.size(graph2.getVertex("Paul Salda�a").getEdges(Direction.OUT)));
-    Vertex b22 = graph2.getVertex("B2");
+    Vertex paulNodeFromGraph1 = graph1.getVertex("Paul");
+    assertEquals(1, Iterables.size(graph1.getVertex("Paul").getEdges(Direction.OUT)));
+//    Vertex b22 = graph.getVertex("B2");
     
-    Vertex a4=dgraph.addVertex("A4:Paul Salda�a");
-    Vertex a5=dgraph.addVertex("A5:B2");
+    Vertex a4=graph2.addVertex("A4:Paul");
+    Vertex a5=graph2.addVertex("A5:B2");
     String edgeId="equiv"+a4.getId()+"->"+a5.getId();
-    dgraph.addEdge(edgeId, a4, a5, "equivalent");
-    System.out.println(GraphUtils.toString(dgraph));
-    
-    assertEquals(1, Iterables.size(graph2.getVertex("Paul Salda�a").getEdges(Direction.OUT)));
-    System.out.println("a22 edges="+Iterables.toString(a22.getEdges(Direction.OUT)));
-    assertEquals(1, Iterables.size(a22.getEdges(Direction.OUT)));
-    
-    dgraph.getVertex("A4:"+a22.getId()); // <----
-
-    //assertEquals(1, Iterables.size(graph2.getVertex("Paul Salda�a").getEdges(Direction.OUT)));
-    System.out.println("a22 edges="+Iterables.toString(a22.getEdges(Direction.OUT)));
-    assertEquals(1, Iterables.size(a22.getEdges(Direction.OUT)));
-    
+    graph2.addEdge(edgeId, a4, a5, "equivalent");
     System.out.println(GraphUtils.toString(graph2));
-    System.out.println(GraphUtils.toString(dgraph));
-    dgUri.shutdown();
     
+    assertEquals(1, Iterables.size(graph1.getVertex("Paul").getEdges(Direction.OUT)));
+    System.out.println("a22 edges="+Iterables.toString(paulNodeFromGraph1.getEdges(Direction.OUT)));
+    assertEquals(1, Iterables.size(paulNodeFromGraph1.getEdges(Direction.OUT)));
+    
+    assertNotNull(graph2.getVertex("A4:Paul")); // <---- causes a22 to be confused
+
+    System.out.println("a22 edges="+Iterables.toString(paulNodeFromGraph1.getEdges(Direction.OUT))); // <-- NPE here
+    assertEquals(1, Iterables.size(paulNodeFromGraph1.getEdges(Direction.OUT)));
+    
+//    System.out.println("graph= "+GraphUtils.toString(graph));
+//    System.out.println("dgraph= "+GraphUtils.toString(dgraph));
+    dgUri.shutdown();
     gUri.shutdown();
 
   }

@@ -28,6 +28,6 @@ public interface Encoder<B> {
 
   int getEntityRelationCount(RecordContext<B> context);
 
-  EntityRelation<? extends RecordContext<B>> getEntityRelation(int i);
+  EntityRelation<? extends RecordContext<B>> getEntityRelation(int i, RecordContext<B> context);
 
 }

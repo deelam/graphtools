@@ -31,7 +31,7 @@ public class GraphRecordBuilder<B> {
     gRecords.clear();
     for (int i = 0; i < numRelRules; ++i) {
       @SuppressWarnings("rawtypes")
-      EntityRelation relation = encoder.getEntityRelation(i);
+      EntityRelation relation = encoder.getEntityRelation(i, rContext);
       NodeFiller<RecordContext<B>> srcNodeFiller = relation.srcNodeFiller;
       NodeFiller<RecordContext<B>> dstNodeFiller = relation.dstNodeFiller;
       EdgeFiller<RecordContext<B>> edgeFiller = relation.edgeFiller;

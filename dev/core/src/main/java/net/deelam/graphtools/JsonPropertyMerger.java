@@ -35,25 +35,37 @@ public class JsonPropertyMerger implements PropertyMerger {
       if (key.equals(IdGraph.ID)) // needed, in case this method is called for GraphElements
         continue;
 
+      if (key.endsWith(SET_SUFFIX)) {
+        continue;
+      }
+
       Object fromValue = fromE.getProperty(key);
       if (fromValue == null) {
         continue;
       }
 
+      // fromValue is not null at this point
+
       Object toValue = toE.getProperty(key);
       if (toValue == null) {
         setElementProperty(toE, key, fromValue);
+        if (fromValue.equals(SET_VALUE)) {
+          String setPropertyKey = key + SET_SUFFIX;
+          String fromValueSetStr = fromE.getProperty(setPropertyKey);
+          toE.setProperty(setPropertyKey, fromValueSetStr);
+        }
         continue;
       }
 
-      if (toValue.equals(fromValue)) { // nothing to do
+      if (!fromValue.equals(SET_VALUE) && toValue.equals(fromValue)) {
+        // nothing to do; values are the same
         continue;
       }
 
       try {
         mergeProperty(fromE, toE, key, fromValue);
       } catch (ClassNotFoundException e) {
-        log.warn("Could not merge property values for key="+key, e);
+        log.warn("Could not merge property values for key=" + key, e);
       }
     }
   }
@@ -76,18 +88,18 @@ public class JsonPropertyMerger implements PropertyMerger {
   // for Graphs (like Neo4j) that can only store primitives
   private void setElementProperty(Element elem, String key, Object value) {
     Object leafValue;
-    if(value.getClass().isArray()){
-      if(Array.getLength(value)==0){
+    if (value.getClass().isArray()) {
+      if (Array.getLength(value) == 0) {
         elem.setProperty(key, value);
         return;
-      }else{
-        leafValue=Array.get(value, 0);
+      } else {
+        leafValue = Array.get(value, 0);
       }
-    }else{
-      leafValue=value;
+    } else {
+      leafValue = value;
     }
-    
-    if (validPropertyClasses.contains(leafValue.getClass())){
+
+    if (validPropertyClasses.contains(leafValue.getClass())) {
       elem.setProperty(key, value);
     } else { // save as Json
       elem.setProperty(key, mapper.toJson(value));
@@ -99,10 +111,11 @@ public class JsonPropertyMerger implements PropertyMerger {
     final String compClassPropKey = key + VALUE_CLASS_SUFFIX;
     elem.setProperty(compClassPropKey, value.getClass().getCanonicalName());
   }
+
   private Class<?> getPropertyValueClass(Element elem, String key) throws ClassNotFoundException {
     final String compClassPropKey = key + VALUE_CLASS_SUFFIX;
-    String classStr=elem.getProperty(compClassPropKey);
-    if(classStr==null)
+    String classStr = elem.getProperty(compClassPropKey);
+    if (classStr == null)
       return null;
     return Class.forName(classStr);
   }
@@ -122,20 +135,20 @@ public class JsonPropertyMerger implements PropertyMerger {
     final String valSetPropKey = key + SET_SUFFIX;
     final String valueSetStr = toE.getProperty(valSetPropKey);
     List valueList;
-    
-    Class<?> compClass=getPropertyValueClass(toE, key);
-    
+
+    Class<?> compClass = getPropertyValueClass(toE, key);
+
     if (valueSetStr == null) {
       valueList = new ValueList(false);
       Object existingVal = toE.getProperty(key);
       valueList.add(existingVal);
       toE.setProperty(key, SET_VALUE);
-      
-      if(compClass==null){
+
+      if (compClass == null) {
         setPropertyValueClass(toE, key, existingVal);
-        compClass=existingVal.getClass();
+        compClass = existingVal.getClass();
       }
-      
+
     } else {
       valueList = (List) mapper.parser().parseList(compClass, valueSetStr);
     }
@@ -147,7 +160,7 @@ public class JsonPropertyMerger implements PropertyMerger {
       List fromValueList = (List) mapper.parser().parseList(compClass, fromListStr);
       for (Object fVal : fromValueList) {
         if (!valueList.contains(fVal)) {
-          if(!compClass.equals(fVal.getClass()))
+          if (!compClass.equals(fVal.getClass()))
             log.warn("existingClass={} newValueClass={}", compClass, fVal.getClass());
           valueList.add(fVal); // hopefully, fromValue is the same type as other elements in the set
           toValueChanged = true;
@@ -155,7 +168,7 @@ public class JsonPropertyMerger implements PropertyMerger {
       }
     } else { // fromValue is a single value
       if (!valueList.contains(fromValue)) {
-        if(!compClass.equals(fromValue.getClass()))
+        if (!compClass.equals(fromValue.getClass()))
           log.warn("existingClass={} newValueClass={}", compClass, fromValue.getClass());
         valueList.add(fromValue); // hopefully, fromValue is the same type as other elements in the set
         toValueChanged = true;

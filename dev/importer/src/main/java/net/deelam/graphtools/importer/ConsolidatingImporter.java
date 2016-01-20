@@ -36,7 +36,7 @@ public class ConsolidatingImporter<B> implements Importer<B> {
   private final GraphRecordBuilder<B> grBuilder;
 
   @Setter
-  private int bufferThreshold=1000;
+  private int bufferThreshold=10000;
   
   @Inject
   public ConsolidatingImporter(Encoder<B> encoder, Populator populator) {
@@ -54,23 +54,32 @@ public class ConsolidatingImporter<B> implements Importer<B> {
       int gRecCounter = 0;
       Map<String,GraphRecord> gRecordsBuffered=new HashMap<>(bufferThreshold+100);
       B inRecord;
+      long recordNum=0;
       while ((inRecord = sourceData.getNextRecord()) != null) {
-        log.debug("-------------- row={}", inRecord);
-        Collection<GraphRecord> gRecords = grBuilder.build(inRecord);
-        //log.debug(gRecords.toString());
-        gRecCounter += gRecords.size();
-        
-        // merge records before adding to graph
-        mergeRecords(gRecordsBuffered, gRecords);
-        
-        if (gRecCounter > bufferThreshold) {
-          populateAndCommit(graph, tx, gRecordsBuffered);
-          gRecCounter = 0;
+        ++recordNum;
+        log.debug("{}: record={}", recordNum, inRecord);
+        try{
+          Collection<GraphRecord> gRecords = grBuilder.build(inRecord);
+          //log.debug(gRecords.toString());
+          gRecCounter += gRecords.size();
+
+          // merge records before adding to graph
+          mergeRecords(gRecordsBuffered, gRecords);
+
+          if (gRecCounter > bufferThreshold) {
+            log.debug("Incremental graph populate and transaction commit");
+            populateAndCommit(graph, tx, gRecordsBuffered);
+            gRecCounter = 0;
+          }
+        }catch(Exception e){
+          log.warn("Skipping record; got exception for recordNum=~"+recordNum, e);
         }
       }
+      log.debug("Last graph populate and transaction commit");
       populateAndCommit(graph, tx, gRecordsBuffered);
       GraphTransaction.commit(tx);
     } catch (RuntimeException re) {
+      log.warn("Done reading records but got exception during graph population", re);
       GraphTransaction.rollback(tx);
       throw re;
     } finally {

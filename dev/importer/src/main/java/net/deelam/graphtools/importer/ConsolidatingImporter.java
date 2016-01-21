@@ -72,7 +72,7 @@ public class ConsolidatingImporter<B> implements Importer<B> {
             gRecCounter = 0;
           }
         }catch(Exception e){
-          log.warn("Skipping record; got exception for recordNum=~"+recordNum, e);
+          log.warn("Skipping record; got exception for recordNum=~"+recordNum+": "+inRecord, e);
         }
       }
       log.debug("Last graph populate and transaction commit");

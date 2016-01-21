@@ -19,7 +19,7 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 @Slf4j
 public class GraphRecordBuilder<B> {
   private final Encoder<B> encoder;
-  
+
   private Map<String, GraphRecord> gRecords = new HashMap<>(40);
 
   @SuppressWarnings("unchecked")
@@ -67,28 +67,30 @@ public class GraphRecordBuilder<B> {
           }
 
           String label = edgeFiller.getLabel();
-          String edgeId = edgeFiller.getId(outFv, inFv, rContext);
-          if (label != null && edgeId != null && outFv != null && inFv != null) {
-            GraphRecordEdge fe = outFv.getOutEdge(edgeId);
-            if (fe == null) {
-              fe = new GraphRecordEdge(edgeId, label, outFv, inFv);
-              fe.setProperty(IdGraph.ID, edgeId);
-              //fe.setProperty(CsvGraphFiller.LONG_ID_PROPKEY, generateEdgeId());
-              outFv.addEdge(fe);
-              //log.info("outEdges: "+Iterables.toString(outFv.getEdges(Direction.BOTH)));
-              //log.info("Creating edge: "+fe);
+          if (outFv != null && inFv != null) {
+            String edgeId = edgeFiller.getId(outFv, inFv, rContext);
+            if (label != null && edgeId != null) {
+              GraphRecordEdge fe = outFv.getOutEdge(edgeId);
+              if (fe == null) {
+                fe = new GraphRecordEdge(edgeId, label, outFv, inFv);
+                fe.setProperty(IdGraph.ID, edgeId);
+                //fe.setProperty(CsvGraphFiller.LONG_ID_PROPKEY, generateEdgeId());
+                outFv.addEdge(fe);
+                //log.info("outEdges: "+Iterables.toString(outFv.getEdges(Direction.BOTH)));
+                //log.info("Creating edge: "+fe);
 
-              // use an empty edge to reduce merging properties later
-              //GraphRecordEdge feEmpty=new GraphRecordEdge(label, outFv, inFv);
-              if (!outFv.equals(inFv)) // if edge is self-edge, it has already been added to both IN and OUT edge tables
-                inFv.addEdge(fe/*.emptyCopy()*/);
-              //log.info("inEdges: "+Iterables.toString(inFv.getEdges(Direction.BOTH)));
-            } else {
-              log.info("Using existing edge: {}", edgeId);
-              Preconditions.checkState(fe.getOutVertexStringId().equals(outFv.getStringId()));
-              Preconditions.checkState(fe.getInVertexStringId().equals(inFv.getStringId()));
+                // use an empty edge to reduce merging properties later
+                //GraphRecordEdge feEmpty=new GraphRecordEdge(label, outFv, inFv);
+                if (!outFv.equals(inFv)) // if edge is self-edge, it has already been added to both IN and OUT edge tables
+                  inFv.addEdge(fe/*.emptyCopy()*/);
+                //log.info("inEdges: "+Iterables.toString(inFv.getEdges(Direction.BOTH)));
+              } else {
+                log.info("Using existing edge: {}", edgeId);
+                Preconditions.checkState(fe.getOutVertexStringId().equals(outFv.getStringId()));
+                Preconditions.checkState(fe.getInVertexStringId().equals(inFv.getStringId()));
+              }
+              edgeFiller.fill(fe, rContext);
             }
-            edgeFiller.fill(fe, rContext);
           }
         }
       }

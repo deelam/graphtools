@@ -50,7 +50,7 @@ public class ClassDepEncoder implements Encoder<ClassDepBean> {
   }
 
   @Override
-  public EntityRelation<ClassDepRC> getEntityRelation(int i) {
+  public EntityRelation<ClassDepRC> getEntityRelation(int i, RecordContext<ClassDepBean> context) {
     return graphFillers.get(i);
   }
 

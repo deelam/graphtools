@@ -74,7 +74,7 @@ public class CompanyContactsEncoder implements Encoder<CompanyContactBean>{
 	}
 
 	@Override
-	public EntityRelation<CompanyContactsRC> getEntityRelation(int i, RecordContext<B> context) {
+	public EntityRelation<CompanyContactsRC> getEntityRelation(int i, RecordContext<CompanyContactBean> context) {
 		return graphFillers.get(i);
 	}
 	

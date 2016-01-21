@@ -26,8 +26,8 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 public class JsonPropertyMerger implements PropertyMerger {
 
   private static final String VALUE_CLASS_SUFFIX = "__jsonClass";
-  private static final String SET_VALUE = "[multivalued]";
-  private static final String SET_SUFFIX = "__jsonSET";
+  static final String SET_VALUE = "[multivalued]";
+  static final String SET_SUFFIX = "__jsonSET";
 
   @Override
   public void mergeProperties(Element fromE, Element toE) {

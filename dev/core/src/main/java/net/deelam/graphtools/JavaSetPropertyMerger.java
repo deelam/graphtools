@@ -15,8 +15,8 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 //@Slf4j
 public class JavaSetPropertyMerger implements PropertyMerger {
 
-  private static final String SET_VALUE = "[multivalued]";
-  private static final String SET_SUFFIX = "__jsonSET";
+  static final String SET_VALUE = "[multivalued]";
+  static final String SET_SUFFIX = "__jsonSET";
 
   @SuppressWarnings("unchecked")
   public void mergeProperties(Element fromE, Element toE) {
@@ -24,7 +24,6 @@ public class JavaSetPropertyMerger implements PropertyMerger {
       if (key.equals(IdGraph.ID)) // needed, in case this method is called for GraphElements
         continue;
 
-      // TODO: 0: add unit test that merges properties repeatedly into same toNode; should get ClassCastException without next block
       if (key.endsWith(SET_SUFFIX)) {
         continue;
       }

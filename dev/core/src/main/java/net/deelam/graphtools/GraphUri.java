@@ -69,7 +69,7 @@ public class GraphUri {
     Preconditions.checkNotNull(uri, "uri parameter cannot be null");
     origUri=uri;
     int colonIndx = uri.indexOf(':');
-    Preconditions.checkState(colonIndx>0, "Expecting something like 'tinker:'");
+    Preconditions.checkState(colonIndx>0, "Expecting something like 'tinker:' but got "+uri);
     scheme=uri.substring(0,colonIndx);
     factory = graphFtry.get(scheme);
     Preconditions.checkNotNull(factory, "Unknown schema: " + scheme);
@@ -95,13 +95,24 @@ public class GraphUri {
     return factory.exists(this);
   }
   
+  public boolean isOpen(){
+    return graph!=null;
+  }
+  
   @SuppressWarnings("rawtypes")
   public IdGraph openExistingIdGraph() throws FileNotFoundException {
+    checkNotOpen();
+
     if(factory.exists(this)){
       return openIdGraph(KeyIndexableGraph.class);
     } else {
       throw new FileNotFoundException("Graph not found at "+getUriPath());
     }
+  }
+
+  private void checkNotOpen() {
+    if(isOpen())
+      throw new RuntimeException("Graph already opened graph={}"+graph);
   }
   
   /**
@@ -145,11 +156,12 @@ public class GraphUri {
       shutdown(graph);
       graph=null;
     } else {
-      new IllegalArgumentException("Call shutdown(graph) instead since you didn't open the graph using this class.");
+      //new IllegalArgumentException("Call shutdown(graph) instead since you didn't open the graph using this class.");
+      log.warn("Cannot shutdown; graph is not opened or you didn't open the graph using this GraphUri instance.");
     }
   }
   
-  public void shutdown(IdGraph<?> graph){
+  private void shutdown(IdGraph<?> graph){
     log.info("Shutting down graph={}",graph);
     try {
       factory.shutdown(this, graph);
@@ -164,6 +176,7 @@ public class GraphUri {
    * @return
    */
   public <T extends KeyIndexableGraph> IdGraph<T> openIdGraph(Class<T> baseGraphClass) {
+    checkNotOpen();
     if (config == null)
       config = new BaseConfiguration();
     config.setProperty(URI_SCHEMA_PART, baseUri.getSchemeSpecificPart());

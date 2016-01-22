@@ -18,6 +18,7 @@ import org.apache.commons.io.FileUtils;
 import com.google.common.collect.Iterators;
 import com.tinkerpop.blueprints.KeyIndexableGraph;
 import com.tinkerpop.blueprints.impls.neo4j.Neo4jGraph;
+import com.tinkerpop.blueprints.util.GraphHelper;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
@@ -85,6 +86,10 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
 
   @Override
   public void copy(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException {
+    // TODO: 1: check if graph isOpen and use alternative copy-graph approach or fail if graphs are open?  GraphHelper.copyGraph(from, to);
+    log.info("Shutting down src and dst graphs in order to copy graph");
+    srcGraphUri.shutdown();
+    dstGraphUri.shutdown();
     File srcFile = new File(srcGraphUri.getUriPath());
     File destFile = new File(dstGraphUri.getUriPath());
     FileUtils.copyDirectory(srcFile, destFile);

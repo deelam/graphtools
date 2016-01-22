@@ -163,7 +163,8 @@ public class IdGraphFactoryOrientdbTest {
     IdGraph<OrientGraph> graph = gUri.openIdGraph();
 
     try {
-      gUri.openIdGraph(); // should be able to connect to graph simultaneously
+      IdGraph graph2 = new GraphUri("orientdb:plocal:./target/myODb2").openIdGraph(); // should be able to connect to graph simultaneously
+//      assertTrue(graph==graph2);
     } catch (RuntimeException re) {
       Assert.fail();
     }

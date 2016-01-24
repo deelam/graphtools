@@ -221,7 +221,7 @@ public final class GraphUtils {
   ///
 
   private static final String METADATA_VERTEXID = "_GRAPH_METADATA_";
-  private static final String TIMESTAMP_PROP = "_GRAPHURI_";
+  private static final String TIMESTAMP_PROP = "_TIMESTAMP_";
   private static final String GRAPHURI_PROP = "_GRAPHURI_";
 
   //  private static final String VERTEXTYPES_PROP = "_VERTEXTYPES_";
@@ -243,7 +243,7 @@ public final class GraphUtils {
     if (mdV == null) {
       mdV = graph.addVertex(METADATA_VERTEXID);
       mdV.setProperty(TIMESTAMP_PROP, new Date().toString());
-      mdV.setProperty(GRAPHURI_PROP, gUri.toString());
+      mdV.setProperty(GRAPHURI_PROP, gUri.asString());
       //      mdV.setProperty(VERTEXTYPES_PROP, gUri.getVertexTypes());
       //      mdV.setProperty(EDGELABELS_PROP, gUri.getEdgeLabels());
     }

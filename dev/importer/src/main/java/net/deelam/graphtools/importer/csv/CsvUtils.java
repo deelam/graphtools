@@ -22,7 +22,7 @@ public class CsvUtils {
     if (secondDelim < 0)
       return null;
     
-    String field1 = rowStr.substring(firstDelim, secondDelim).trim();
+    String field1 = rowStr.substring(firstDelim+1, secondDelim).trim();
     return field1;
   }
 

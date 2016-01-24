@@ -1,6 +1,6 @@
 package net.deelam.enricher.indexing;
 
-import static com.google.common.base.Preconditions.*;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,13 +10,15 @@ import java.util.Map;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.deelam.graphtools.*;
+import net.deelam.graphtools.GraphTransaction;
+import net.deelam.graphtools.GraphUri;
+import net.deelam.graphtools.GraphUtils;
+import net.deelam.graphtools.PropertyMerger;
 
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.Vertex;
-import com.tinkerpop.blueprints.util.ElementHelper;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
@@ -107,7 +109,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   @Getter
   private IdMapper graphIdMapper = null;
 
-  // TODO: save mapper in META_DATA node
+  // TODO: 0: save mapper in META_DATA node
   public void setGraphIdMapper(IdMapper graphIdMapper) {
     this.graphIdMapper = graphIdMapper;
     GraphUtils.setMetaData(graph, GRAPHID_MAP_FILE, graphIdMapper.getFilename());
@@ -156,11 +158,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
 
   private String getShortGraphId(String graphId) {
-    String shortGraphId = graphId;
-    if (graphIdMapper != null) {
-      shortGraphId = graphIdMapper.shortId(graphId);
-    }
-    return shortGraphId;
+    return (graphIdMapper == null) ? graphId : graphIdMapper.shortId(graphId);
   }
 
   public Vertex getExternalVertex(String nodeId, String graphId) {
@@ -175,18 +173,41 @@ public class MultigraphConsolidator implements AutoCloseable {
     return e;
   }
 
+  public Vertex importVertex(Vertex v, String graphId) {
+    return importVertex((String) v.getId(), graphId);
+  }
+
   public Vertex importVertex(String nodeId, String graphId) {
     Vertex v = getExternalVertex(nodeId, graphId);
     checkNotNull(v, "Cannot find nodeId=" + nodeId + " in graph=" + graphId);
-    String shortGraphId = (graphIdMapper == null) ? graphId : graphIdMapper.shortId(graphId);
-    return importVertex(v, shortGraphId);
+    String shortGraphId = getShortGraphId(graphId);
+    return importVertexUsingShortId(v, shortGraphId);
+  }
+
+  public Edge importEdge(Edge e, String graphId) {
+    return importEdge((String) e.getId(), graphId);
   }
 
   public Edge importEdge(String edgeId, String graphId) {
     Edge e = getExternalEdge(edgeId, graphId);
     checkNotNull(e, "Cannot find edgeId=" + edgeId + " in graph=" + graphId);
-    String shortGraphId = (graphIdMapper == null) ? graphId : graphIdMapper.shortId(graphId);
-    return importEdge(e, shortGraphId);
+    String shortGraphId = getShortGraphId(graphId);
+    return importEdgeUsingShortId(e, shortGraphId, null, null);
+  }
+
+  /**
+   * import all edge info and provenance, excepts uses different vertices
+   * @param e
+   * @param shortGraphId
+   * @param importedOutV some vertex already in graph
+   * @param importedInV some vertex already in graph
+   * @return
+   */
+  public Edge importEdgeWithDifferentVertices(String edgeId, String graphId, Vertex importedOutV, Vertex importedInV) {
+    Edge e = getExternalEdge(edgeId, graphId);
+    checkNotNull(e, "Cannot find edgeId=" + edgeId + " in graph=" + graphId);
+    String shortGraphId = getShortGraphId(graphId);
+    return importEdgeUsingShortId(e, shortGraphId, importedOutV, importedInV);
   }
 
   //  public void addEdge(String edgeId, Vertex nodeOut, Vertex nodeIn, String edgeLabel) {
@@ -200,7 +221,7 @@ public class MultigraphConsolidator implements AutoCloseable {
 
   public boolean useOrigId = false; // used to import from another graph created by MultigraphConsolidator // TODO: design better useOrigId
 
-  private Vertex importVertex(Vertex v, String shortGraphId) {
+  private Vertex importVertexUsingShortId(Vertex v, String shortGraphId) {
     String newId = (String) ((useOrigId) ? v.getId() : shortGraphId + ":" + v.getId());
     Vertex newV = graph.getVertex(newId);
     if (newV == null) {
@@ -212,25 +233,27 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
 
   public Vertex getVertex(String nodeId, String graphId) {
-    String shortGraphId = (graphIdMapper == null) ? graphId : graphIdMapper.shortId(graphId);
+    String shortGraphId = getShortGraphId(graphId);
     String localId = shortGraphId + ":" + nodeId;
     Vertex existingV = graph.getVertex(localId);
     return existingV;
   }
 
   public Edge getEdge(String edgeId, String graphId) {
-    String shortGraphId = (graphIdMapper == null) ? graphId : graphIdMapper.shortId(graphId);
+    String shortGraphId = getShortGraphId(graphId);
     String localId = shortGraphId + ":" + edgeId;
     Edge existingE = graph.getEdge(localId);
     return existingE;
   }
 
-  private Edge importEdge(Edge e, String shortGraphId) {
+  private Edge importEdgeUsingShortId(Edge e, String shortGraphId, Vertex outV, Vertex inV) {
     String newId = (String) ((useOrigId) ? e.getId() : shortGraphId + ":" + e.getId());
     Edge newE = graph.getEdge(newId);
     if (newE == null) {
-      Vertex outV = importVertex(e.getVertex(Direction.OUT), shortGraphId);
-      Vertex inV = importVertex(e.getVertex(Direction.IN), shortGraphId);
+      if (outV == null)
+        outV = importVertexUsingShortId(e.getVertex(Direction.OUT), shortGraphId);
+      if (inV == null)
+        inV = importVertexUsingShortId(e.getVertex(Direction.IN), shortGraphId);
       newE = graph.addEdge(newId, outV, inV, e.getLabel());
       setNewProperties(e, shortGraphId, newE);
     }
@@ -294,15 +317,15 @@ public class MultigraphConsolidator implements AutoCloseable {
     int tx = GraphTransaction.begin(graph, 50000); // TODO: 2: how frequently to GraphTransaction.commit()?
     try {
       for (final Vertex fromVertex : from.getVertices()) {
-        importVertex(fromVertex, shortGraphId);
+        importVertexUsingShortId(fromVertex, shortGraphId);
         GraphTransaction.commitIfFull(tx);
       }
-      
+
       for (final Edge fromEdge : from.getEdges()) {
-        importEdge(fromEdge, shortGraphId);
+        importEdgeUsingShortId(fromEdge, shortGraphId, null, null);
         GraphTransaction.commitIfFull(tx);
       }
-      
+
       GraphTransaction.commit(tx);
     } catch (RuntimeException re) {
       GraphTransaction.rollback(tx);

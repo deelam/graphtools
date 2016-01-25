@@ -5,7 +5,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <parent>
     <groupId>net.deelam</groupId>
     <artifactId>graphtools-dev-pom</artifactId>
-    <version>0.0.3</version>
+    <version>0.0.4-SNAPSHOT</version>
   </parent>
   <artifactId>graphtools-enricher</artifactId>
   <packaging>bundle</packaging>

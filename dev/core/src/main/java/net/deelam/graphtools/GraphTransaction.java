@@ -181,9 +181,8 @@ public class GraphTransaction {
     if (isOuterMostTransaction()) {
       return endTransaction();
     } else {
-      log.warn("Depth={}, Not yet committing transaction on graph: {}", nestingCounter.get(),
-          graphHolder.get());
-      log.warn("This occurs here: ", new Throwable());
+//      log.warn("Depth={}, Not yet committing transaction on graph: {}", nestingCounter.get(), graphHolder.get());
+//      log.warn("This occurs here: ", new Throwable());
       return false;
     }
   }

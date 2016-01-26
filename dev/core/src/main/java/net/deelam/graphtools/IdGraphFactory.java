@@ -28,10 +28,10 @@ public interface IdGraphFactory {
   public void delete(GraphUri gUri) throws IOException;
 
   /**
-   * copies graph to dstGraphUri
+   * backs up srcGraphUri to dstGraphUri
    * @throws IOException 
    */
-  public void copy(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException;
+  public void backup(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException;
   
   /**
    * 

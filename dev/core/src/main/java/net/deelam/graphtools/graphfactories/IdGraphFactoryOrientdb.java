@@ -100,7 +100,7 @@ public class IdGraphFactoryOrientdb implements IdGraphFactory {
   }
 
   @Override
-  public void copy(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException {
+  public void backup(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException {
     File srcFile = new File(srcGraphUri.getUriPath());
     File destFile = new File(dstGraphUri.getUriPath());
     FileUtils.copyDirectory(srcFile, destFile);

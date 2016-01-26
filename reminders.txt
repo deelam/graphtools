@@ -4,6 +4,7 @@
 
     mvn versions:set -DnewVersion=1.2.3
     mvn clean deploy -P deployment
+       # check that files in .gnupgp/ are valid
     git commit -am "create release version 1.2.3" 
 
 Push and tag release version

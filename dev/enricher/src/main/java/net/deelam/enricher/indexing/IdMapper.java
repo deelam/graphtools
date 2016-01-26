@@ -66,7 +66,7 @@ public class IdMapper implements AutoCloseable {
   }
 
   @Override
-  public void close() throws Exception {
+  public void close() throws IOException {
     save();
   }
 

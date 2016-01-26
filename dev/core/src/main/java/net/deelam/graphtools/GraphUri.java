@@ -6,7 +6,6 @@ package net.deelam.graphtools;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.FileAlreadyExistsException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -141,13 +140,13 @@ public class GraphUri {
     }
   }
 
+  @SuppressWarnings("rawtypes")
   @Getter
   private IdGraph graph;
   
-  public IdGraph getOrOpenGraph() throws FileNotFoundException{
+  public IdGraph<?> getOrOpenGraph() throws FileNotFoundException{
     if(graph!=null)
       return graph;
-    
     return openExistingIdGraph();
   }
   
@@ -175,6 +174,7 @@ public class GraphUri {
    * @param baseGraphClass
    * @return
    */
+  @SuppressWarnings("unchecked")
   public <T extends KeyIndexableGraph> IdGraph<T> openIdGraph(Class<T> baseGraphClass) {
     checkNotOpen();
     if (config == null)
@@ -242,8 +242,14 @@ public class GraphUri {
     return getConfig().getString(URI_PATH);
   }
 
-  public void copyTo(GraphUri dstGraphUri) throws IOException {
-    factory.copy(this, dstGraphUri);
+  public void backupTo(GraphUri dstGraphUri) throws IOException {
+    if(this.isOpen())
+      throw new IllegalStateException("This graph must not be open so underlying files can be copied.");
+    if(dstGraphUri.isOpen())
+      throw new IllegalStateException("Destination graph must not be open so underlying files can be copied.");
+    if(dstGraphUri.exists())
+      throw new IllegalStateException("Destination graph must not already exist so underlying files can be copied.");
+    factory.backup(this, dstGraphUri);
   }
 
   public PropertyMerger createPropertyMerger() {

@@ -220,7 +220,7 @@ public final class GraphUtils {
 
   ///
 
-  private static final String METADATA_VERTEXID = "_GRAPH_METADATA_";
+  public static final String METADATA_VERTEXID = "_GRAPH_METADATA_";
   private static final String TIMESTAMP_PROP = "_TIMESTAMP_";
   private static final String GRAPHURI_PROP = "_GRAPHURI_";
 

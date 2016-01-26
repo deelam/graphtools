@@ -3,6 +3,7 @@ package net.deelam.enricher.indexing;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -146,12 +147,16 @@ public class MultigraphConsolidator implements AutoCloseable {
     String shortGraphId = getShortGraphId(graphId);
     IdGraph<?> graph = graphs.get(shortGraphId);
     if (graph == null) {
-      graph = graphUri.getGraph();
-      IdGraph<?> existingGraph = graphs.put(shortGraphId, graph);
-      if (existingGraph != null) {
-        log.warn("Overriding existing registered graph: {} with shortGraphId={}", graphUri, shortGraphId);
+      try {
+        graph = graphUri.getOrOpenGraph();
+        IdGraph<?> existingGraph = graphs.put(shortGraphId, graph);
+        if (existingGraph != null) {
+          log.warn("Overriding existing registered graph: {} with shortGraphId={}", graphUri, shortGraphId);
+        }
+        graphs.put(graphId, graph); // for lookup efficiency, so a shortGraphId is not created each time
+      } catch (FileNotFoundException e) {
+        e.printStackTrace();
       }
-      graphs.put(graphId, graph); // for lookup efficiency, so a shortGraphId is not created each time
     } else {
       log.warn("Graph already registered: {} with shortGraphId={}", graphUri, shortGraphId);
     }

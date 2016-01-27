@@ -45,6 +45,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   private IdGraph<?> graph;
 
   private final Map<String, IdGraph<?>> graphs = new HashMap<>();
+  private final Map<String, GraphUri> graphUris = new HashMap<>();
 
   @Override
   public void close() throws IOException {
@@ -54,8 +55,8 @@ public class MultigraphConsolidator implements AutoCloseable {
       saveIdMapperAsGraphMetaData();
       graphIdMapper.close();
     }
-    for (IdGraph<?> g : new HashSet<>(graphs.values())) {
-      g.shutdown();
+    for (GraphUri gUri : new HashSet<>(graphUris.values())) {
+      gUri.shutdown();
     }
   }
 
@@ -70,7 +71,7 @@ public class MultigraphConsolidator implements AutoCloseable {
     srcGraphIdPropKey = GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
     origIdPropKey = GraphUtils.getMetaData(graph, ORIGID_PROPKEY);
 
-    loadFromGraphMetaData();
+    loadIdMapperFromGraphMetaData();
   }
 
   private static final String SRCGRAPHID_PROPKEY = "_SRCGRAPHID_PROPKEY_";
@@ -139,7 +140,7 @@ public class MultigraphConsolidator implements AutoCloseable {
     }
   }
 
-  private void loadFromGraphMetaData() throws FileNotFoundException, IOException {
+  private void loadIdMapperFromGraphMetaData() throws FileNotFoundException, IOException {
     int tx = GraphTransaction.begin(graph);
     try {
       if (useFileBasedIdMapper) {
@@ -156,6 +157,7 @@ public class MultigraphConsolidator implements AutoCloseable {
         } else {
           // load mapper from META_DATA node
           Vertex mdV = GraphUtils.getMetaDataNode(graph);
+          graphIdMapper=new IdMapper();
           for (String k : mdV.getPropertyKeys()) {
             if(k.startsWith(GRAPHID_MAP_ENTRY_PREFIX)){
               String shortId=k.substring(GRAPHID_MAP_ENTRY_PREFIX.length()+1);
@@ -181,17 +183,23 @@ public class MultigraphConsolidator implements AutoCloseable {
     graph = graphs.get(shortGraphId);
     if (graph == null) {
       try {
-        graph = new GraphUri(graphId).openExistingIdGraph();
-        IdGraph<?> existingGraph = graphs.put(shortGraphId, graph);
-        if (existingGraph != null) {
-          log.warn("Overriding existing graph: {} with shortGraphId={}", graph, shortGraphId);
-        }
-        graphs.put(graphId, graph); // for lookup efficiency, so a shortGraphId is not created each time
+        GraphUri graphUri = new GraphUri(graphId);
+        graph = graphUri.openExistingIdGraph();
+        addSrcGraph(graphUri, graphId, shortGraphId, graph);
       } catch (IOException e) {
         e.printStackTrace();
       }
     }
     return graph;
+  }
+
+  private void addSrcGraph(GraphUri graphUri, String graphId, String shortGraphId, IdGraph<?> graph) {
+    IdGraph<?> existingGraph = graphs.put(shortGraphId, graph);
+    graphUris.put(shortGraphId, graphUri);
+    if (existingGraph != null) {
+      log.warn("Overriding existing graph: {} with shortGraphId={}", graph, shortGraphId);
+    }
+    graphs.put(graphId, graph); // for lookup efficiency, so a shortGraphId is not created each time
   }
 
   /**
@@ -205,11 +213,7 @@ public class MultigraphConsolidator implements AutoCloseable {
     if (graph == null) {
       try {
         graph = graphUri.getOrOpenGraph();
-        IdGraph<?> existingGraph = graphs.put(shortGraphId, graph);
-        if (existingGraph != null) {
-          log.warn("Overriding existing registered graph: {} with shortGraphId={}", graphUri, shortGraphId);
-        }
-        graphs.put(graphId, graph); // for lookup efficiency, so a shortGraphId is not created each time
+        addSrcGraph(graphUri, graphId, shortGraphId, graph);
       } catch (FileNotFoundException e) {
         e.printStackTrace();
       }
@@ -367,11 +371,13 @@ public class MultigraphConsolidator implements AutoCloseable {
 
   ///
 
-  public void importGraph(String srcGraphId) {
+  public void importGraph(String srcGraphId, int commitFreq) {
     IdGraph<?> from = getGraph(srcGraphId);
     String shortGraphId = getShortGraphId(srcGraphId);
 
-    int tx = GraphTransaction.begin(graph, 50000); // TODO: 2: how frequently to GraphTransaction.commit()?
+    // TODO: 3: currently copies METADATA nodes from source graphs, which can make graph dirty
+    
+    int tx = GraphTransaction.begin(graph, commitFreq);
     try {
       for (final Vertex fromVertex : from.getVertices()) {
         importVertexUsingShortId(fromVertex, shortGraphId);

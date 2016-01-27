@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.Map;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphTransaction;
 import net.deelam.graphtools.GraphUri;
@@ -49,8 +50,10 @@ public class MultigraphConsolidator implements AutoCloseable {
   public void close() throws IOException {
     //log.debug("Shutting down: {}", graph);
     //graph.shutdown();
-    if (graphIdMapper != null)
+    if (graphIdMapper != null) {
+      saveIdMapperAsGraphMetaData();
       graphIdMapper.close();
+    }
     for (IdGraph<?> g : new HashSet<>(graphs.values())) {
       g.shutdown();
     }
@@ -67,16 +70,7 @@ public class MultigraphConsolidator implements AutoCloseable {
     srcGraphIdPropKey = GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
     origIdPropKey = GraphUtils.getMetaData(graph, ORIGID_PROPKEY);
 
-    String graphIdMapFile = GraphUtils.getMetaData(graph, GRAPHID_MAP_FILE);
-    if (graphIdMapFile != null) {
-      if (new File(graphIdMapFile).exists()) {
-        log.info("Using graphIdMapFile={}", graphIdMapFile);
-        graphIdMapper = IdMapper.newFromFile(graphIdMapFile);
-      } else {
-        log.warn("Could not find graphIdMapFile={}.  Fix this or call setGraphIdMapper() to override with your own.",
-            graphIdMapFile);
-      }
-    }
+    loadFromGraphMetaData();
   }
 
   private static final String SRCGRAPHID_PROPKEY = "_SRCGRAPHID_PROPKEY_";
@@ -106,14 +100,76 @@ public class MultigraphConsolidator implements AutoCloseable {
     return v.getProperty(origIdPropKey);
   }
 
-  private static final String GRAPHID_MAP_FILE = "_GRAPHID_MAP_";
   @Getter
   private IdMapper graphIdMapper = null;
 
-  // TODO: 0: save mapper in META_DATA node
+  private String getShortGraphId(String graphId) {
+    return (graphIdMapper == null) ? graphId : graphIdMapper.shortId(graphId);
+  }
+
   public void setGraphIdMapper(IdMapper graphIdMapper) {
     this.graphIdMapper = graphIdMapper;
-    GraphUtils.setMetaData(graph, GRAPHID_MAP_FILE, graphIdMapper.getFilename());
+    saveIdMapperAsGraphMetaData();
+  }
+
+  @Setter
+  private boolean useFileBasedIdMapper = false;
+
+  private static final String GRAPHID_MAP_FILE = "_GRAPHID_MAP_FILE";
+  //  private static final String GRAPHID_MAP_SIZE = "_GRAPHID_MAP_SIZE";
+  private static final String GRAPHID_MAP_ENTRY_PREFIX = "_GRAPHID_MAP_ENTRY_";
+
+  private void saveIdMapperAsGraphMetaData() {
+    int tx = GraphTransaction.begin(graph);
+    try {
+      if (useFileBasedIdMapper) {
+        GraphUtils.setMetaData(graph, GRAPHID_MAP_FILE, graphIdMapper.getFilename());
+      } else {
+        // save mapper in META_DATA node
+        //GraphUtils.setMetaData(graph, GRAPHID_MAP_SIZE, graphIdMapper.map.size());
+        Vertex mdV = GraphUtils.getMetaDataNode(graph);
+        for (String k : graphIdMapper.getShortIdSet()) {
+          mdV.setProperty(GRAPHID_MAP_ENTRY_PREFIX + k, graphIdMapper.longId(k));
+        }
+      }
+      GraphTransaction.commit(tx);
+    } catch (RuntimeException re) {
+      GraphTransaction.rollback(tx);
+      throw re;
+    }
+  }
+
+  private void loadFromGraphMetaData() throws FileNotFoundException, IOException {
+    int tx = GraphTransaction.begin(graph);
+    try {
+      if (useFileBasedIdMapper) {
+        String graphIdMapFile = GraphUtils.getMetaData(graph, GRAPHID_MAP_FILE);
+        if (graphIdMapFile != null) {
+          if (new File(graphIdMapFile).exists()) {
+            log.info("Using graphIdMapFile={}", graphIdMapFile);
+            graphIdMapper = IdMapper.newFromFile(graphIdMapFile);
+          } else {
+            log.warn(
+                "Could not find graphIdMapFile={}.  Fix this or call setGraphIdMapper() to override with your own.",
+                graphIdMapFile);
+          }
+        } else {
+          // load mapper from META_DATA node
+          Vertex mdV = GraphUtils.getMetaDataNode(graph);
+          for (String k : mdV.getPropertyKeys()) {
+            if(k.startsWith(GRAPHID_MAP_ENTRY_PREFIX)){
+              String shortId=k.substring(GRAPHID_MAP_ENTRY_PREFIX.length()+1);
+              String longId=mdV.getProperty(k);
+              graphIdMapper.put(shortId, longId);
+            }
+          }
+        }
+      }
+      GraphTransaction.commit(tx);
+    } catch (RuntimeException re) {
+      GraphTransaction.rollback(tx);
+      throw re;
+    }
   }
 
   private IdGraph<?> getGraph(String graphId) {
@@ -160,10 +216,6 @@ public class MultigraphConsolidator implements AutoCloseable {
     } else {
       log.warn("Graph already registered: {} with shortGraphId={}", graphUri, shortGraphId);
     }
-  }
-
-  private String getShortGraphId(String graphId) {
-    return (graphIdMapper == null) ? graphId : graphIdMapper.shortId(graphId);
   }
 
   public Vertex getExternalVertex(String nodeId, String graphId) {

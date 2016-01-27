@@ -5,6 +5,7 @@ package net.deelam.enricher.indexing;
 
 import java.io.*;
 import java.util.Map;
+import java.util.Set;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,7 +29,11 @@ public class IdMapper implements AutoCloseable {
 
   @Getter
   String filename = null;
-  final BidiMap map = new DualHashBidiMap();
+  private final BidiMap map = new DualHashBidiMap();
+  
+  public Set<String> getShortIdSet(){
+    return map.keySet();
+  }
 
   public void put(String shortStrId, String longStrId) {
     map.put(shortStrId, longStrId);

@@ -227,19 +227,24 @@ public final class GraphUtils {
   //  private static final String VERTEXTYPES_PROP = "_VERTEXTYPES_";
   //  private static final String EDGELABELS_PROP = "_EDGELABELS_";
 
-  public static Vertex setMetaData(IdGraph<?> graph, String propKey, Object propValue) {
+  public static Vertex getMetaDataNode(IdGraph<?> graph) {
     Vertex mdV = graph.getVertex(METADATA_VERTEXID);
+    return mdV;
+  }
+
+  public static Vertex setMetaData(IdGraph<?> graph, String propKey, Object propValue) {
+    Vertex mdV = getMetaDataNode(graph);
     mdV.setProperty(propKey, propValue);
     return mdV;
   }
 
   public static <T> T getMetaData(IdGraph<?> graph, String propKey) {
-    Vertex mdV = graph.getVertex(METADATA_VERTEXID);
+    Vertex mdV = getMetaDataNode(graph);
     return mdV.getProperty(propKey);
   }
 
   public static void addMetaDataNode(GraphUri gUri, IdGraph<?> graph) {
-    Vertex mdV = graph.getVertex(METADATA_VERTEXID);
+    Vertex mdV = getMetaDataNode(graph);
     if (mdV == null) {
       mdV = graph.addVertex(METADATA_VERTEXID);
       mdV.setProperty(TIMESTAMP_PROP, new Date().toString());

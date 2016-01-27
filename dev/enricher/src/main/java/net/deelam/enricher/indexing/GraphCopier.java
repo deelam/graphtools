@@ -2,7 +2,6 @@ package net.deelam.enricher.indexing;
 
 import static com.google.common.base.Preconditions.*;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import lombok.Getter;
@@ -25,19 +24,19 @@ public class GraphCopier implements AutoCloseable {
   @Getter
   private IdGraph<?> graph;
 
-  private final GraphUri srcGraphUri;
+  private final GraphUri srcGraphUri, dstGraphUri;
   
   private final IdGraph<?> srcGraph;
 
   @Override
   public void close() throws IOException {
-    //log.debug("Shutting down: {}", graph);
+    dstGraphUri.shutdown();
     srcGraphUri.shutdown();
   }
 
   public GraphCopier(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException {
     this.srcGraphUri=srcGraphUri;
-//    this.dstGraphUri=dstGraphUri;
+    this.dstGraphUri=dstGraphUri;
     
     srcGraph = srcGraphUri.getOrOpenGraph();
     this.graph = dstGraphUri.getOrOpenGraph();

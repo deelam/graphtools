@@ -41,6 +41,8 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 @Slf4j
 public class MultigraphConsolidator implements AutoCloseable {
 
+  private final GraphUri dstGraphUri;
+  
   @Getter
   private IdGraph<?> graph;
 
@@ -49,12 +51,11 @@ public class MultigraphConsolidator implements AutoCloseable {
 
   @Override
   public void close() throws IOException {
-    //log.debug("Shutting down: {}", graph);
-    //graph.shutdown();
     if (graphIdMapper != null) {
       saveIdMapperAsGraphMetaData();
       graphIdMapper.close();
     }
+    dstGraphUri.shutdown();
     for (GraphUri gUri : new HashSet<>(srcGraphUris.values())) {
       gUri.shutdown();
     }
@@ -65,8 +66,9 @@ public class MultigraphConsolidator implements AutoCloseable {
   //  }
 
   public MultigraphConsolidator(GraphUri graphUri) throws IOException {
-    this.graph = graphUri.getOrOpenGraph();
-    merger = graphUri.createPropertyMerger();
+    dstGraphUri=graphUri;
+    this.graph = dstGraphUri.openExistingIdGraph(); // graph must be initially closed so that close() can call shutdown()
+    merger = dstGraphUri.createPropertyMerger();
 
     srcGraphIdPropKey = GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
     origIdPropKey = GraphUtils.getMetaData(graph, ORIGID_PROPKEY);
@@ -188,6 +190,7 @@ public class MultigraphConsolidator implements AutoCloseable {
       try {
         GraphUri graphUri = new GraphUri(graphId);
         graph = graphUri.openExistingIdGraph();
+        srcGraphUris.put(shortGraphId, graphUri); //so that graph can be closed
         addSrcGraph(graphUri, graphId, shortGraphId, graph);
       } catch (IOException e) {
         e.printStackTrace();
@@ -198,7 +201,6 @@ public class MultigraphConsolidator implements AutoCloseable {
 
   private void addSrcGraph(GraphUri graphUri, String graphId, String shortGraphId, IdGraph<?> graph) {
     IdGraph<?> existingGraph = srcGraphs.put(shortGraphId, graph);
-    srcGraphUris.put(shortGraphId, graphUri);
     if (existingGraph != null) {
       log.warn("Overriding existing graph: {} with shortGraphId={}", graph, shortGraphId);
     }
@@ -215,7 +217,13 @@ public class MultigraphConsolidator implements AutoCloseable {
     IdGraph<?> graph = srcGraphs.get(shortGraphId);
     if (graph == null) {
       try {
-        graph = graphUri.getOrOpenGraph();
+        if(graphUri.isOpen()){
+          graph = graphUri.getGraph();
+          // do not close graph since I didn't open it
+        } else {
+          graph = graphUri.openExistingIdGraph();//so that graph can be closed
+          srcGraphUris.put(shortGraphId, graphUri);
+        }
         addSrcGraph(graphUri, graphId, shortGraphId, graph);
       } catch (FileNotFoundException e) {
         e.printStackTrace();

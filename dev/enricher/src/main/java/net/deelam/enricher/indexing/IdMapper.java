@@ -72,7 +72,8 @@ public class IdMapper implements AutoCloseable {
 
   @Override
   public void close() throws IOException {
-    save();
+    if(filename!=null)
+      saveToFile();
   }
 
   private static ObjectMapper jsonObjMapper = JsonFactory.create();
@@ -126,7 +127,7 @@ public class IdMapper implements AutoCloseable {
     return jsonStr;
   }
 
-  private void save() throws IOException {
+  private void saveToFile() throws IOException {
     String jsonMap = toJson();
     try (FileWriter writer = new FileWriter(filename, false)) {
       writer.write(jsonMap);

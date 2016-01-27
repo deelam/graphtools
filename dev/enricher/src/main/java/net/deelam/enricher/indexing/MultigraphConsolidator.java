@@ -44,8 +44,8 @@ public class MultigraphConsolidator implements AutoCloseable {
   @Getter
   private IdGraph<?> graph;
 
-  private final Map<String, IdGraph<?>> graphs = new HashMap<>();
-  private final Map<String, GraphUri> graphUris = new HashMap<>();
+  private final Map<String, IdGraph<?>> srcGraphs = new HashMap<>();
+  private final Map<String, GraphUri> srcGraphUris = new HashMap<>();
 
   @Override
   public void close() throws IOException {
@@ -55,7 +55,7 @@ public class MultigraphConsolidator implements AutoCloseable {
       saveIdMapperAsGraphMetaData();
       graphIdMapper.close();
     }
-    for (GraphUri gUri : new HashSet<>(graphUris.values())) {
+    for (GraphUri gUri : new HashSet<>(srcGraphUris.values())) {
       gUri.shutdown();
     }
   }
@@ -114,10 +114,10 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
 
   @Setter
-  private boolean useFileBasedIdMapper = false;
+  private boolean useFileBasedIdMapper = true;
 
   private static final String GRAPHID_MAP_FILE = "_GRAPHID_MAP_FILE";
-  //  private static final String GRAPHID_MAP_SIZE = "_GRAPHID_MAP_SIZE";
+  private static final String GRAPHID_MAP_SIZE = "_GRAPHID_MAP_SIZE";
   private static final String GRAPHID_MAP_ENTRY_PREFIX = "_GRAPHID_MAP_ENTRY_";
 
   private void saveIdMapperAsGraphMetaData() {
@@ -127,8 +127,8 @@ public class MultigraphConsolidator implements AutoCloseable {
         GraphUtils.setMetaData(graph, GRAPHID_MAP_FILE, graphIdMapper.getFilename());
       } else {
         // save mapper in META_DATA node
-        //GraphUtils.setMetaData(graph, GRAPHID_MAP_SIZE, graphIdMapper.map.size());
         Vertex mdV = GraphUtils.getMetaDataNode(graph);
+        mdV.setProperty(GRAPHID_MAP_SIZE, graphIdMapper.getShortIdSet().size());
         for (String k : graphIdMapper.getShortIdSet()) {
           mdV.setProperty(GRAPHID_MAP_ENTRY_PREFIX + k, graphIdMapper.longId(k));
         }
@@ -154,14 +154,17 @@ public class MultigraphConsolidator implements AutoCloseable {
                 "Could not find graphIdMapFile={}.  Fix this or call setGraphIdMapper() to override with your own.",
                 graphIdMapFile);
           }
-        } else {
-          // load mapper from META_DATA node
+        }
+      } else {
+        // load mapper from META_DATA node if it exists
+        Integer graphIdMapSize = GraphUtils.getMetaData(graph, GRAPHID_MAP_SIZE);
+        if (graphIdMapSize != null) {
           Vertex mdV = GraphUtils.getMetaDataNode(graph);
-          graphIdMapper=new IdMapper();
+          graphIdMapper = new IdMapper();
           for (String k : mdV.getPropertyKeys()) {
-            if(k.startsWith(GRAPHID_MAP_ENTRY_PREFIX)){
-              String shortId=k.substring(GRAPHID_MAP_ENTRY_PREFIX.length()+1);
-              String longId=mdV.getProperty(k);
+            if (k.startsWith(GRAPHID_MAP_ENTRY_PREFIX)) {
+              String shortId = k.substring(GRAPHID_MAP_ENTRY_PREFIX.length() + 1);
+              String longId = mdV.getProperty(k);
               graphIdMapper.put(shortId, longId);
             }
           }
@@ -175,12 +178,12 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
 
   private IdGraph<?> getGraph(String graphId) {
-    IdGraph<?> graph = graphs.get(graphId); // for lookup efficiency
+    IdGraph<?> graph = srcGraphs.get(graphId); // for lookup efficiency
     if (graph != null)
       return graph;
 
     String shortGraphId = getShortGraphId(graphId);
-    graph = graphs.get(shortGraphId);
+    graph = srcGraphs.get(shortGraphId);
     if (graph == null) {
       try {
         GraphUri graphUri = new GraphUri(graphId);
@@ -194,12 +197,12 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
 
   private void addSrcGraph(GraphUri graphUri, String graphId, String shortGraphId, IdGraph<?> graph) {
-    IdGraph<?> existingGraph = graphs.put(shortGraphId, graph);
-    graphUris.put(shortGraphId, graphUri);
+    IdGraph<?> existingGraph = srcGraphs.put(shortGraphId, graph);
+    srcGraphUris.put(shortGraphId, graphUri);
     if (existingGraph != null) {
       log.warn("Overriding existing graph: {} with shortGraphId={}", graph, shortGraphId);
     }
-    graphs.put(graphId, graph); // for lookup efficiency, so a shortGraphId is not created each time
+    srcGraphs.put(graphId, graph); // for lookup efficiency, so a shortGraphId is not created each time
   }
 
   /**
@@ -209,7 +212,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   public void registerGraph(GraphUri graphUri) {
     String graphId = graphUri.asString();
     String shortGraphId = getShortGraphId(graphId);
-    IdGraph<?> graph = graphs.get(shortGraphId);
+    IdGraph<?> graph = srcGraphs.get(shortGraphId);
     if (graph == null) {
       try {
         graph = graphUri.getOrOpenGraph();
@@ -376,7 +379,7 @@ public class MultigraphConsolidator implements AutoCloseable {
     String shortGraphId = getShortGraphId(srcGraphId);
 
     // TODO: 3: currently copies METADATA nodes from source graphs, which can make graph dirty
-    
+
     int tx = GraphTransaction.begin(graph, commitFreq);
     try {
       for (final Vertex fromVertex : from.getVertices()) {

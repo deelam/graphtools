@@ -47,7 +47,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   private IdGraph<?> graph;
 
   private final Map<String, IdGraph<?>> srcGraphs = new HashMap<>();
-  private final Map<String, GraphUri> srcGraphUris = new HashMap<>();
+  private final Map<String, GraphUri> srcGraphUrisToShutdown = new HashMap<>();
 
   @Override
   public void close() throws IOException {
@@ -56,7 +56,7 @@ public class MultigraphConsolidator implements AutoCloseable {
       graphIdMapper.close();
     }
     dstGraphUri.shutdown();
-    for (GraphUri gUri : new HashSet<>(srcGraphUris.values())) {
+    for (GraphUri gUri : new HashSet<>(srcGraphUrisToShutdown.values())) {
       gUri.shutdown();
     }
   }
@@ -67,7 +67,7 @@ public class MultigraphConsolidator implements AutoCloseable {
 
   public MultigraphConsolidator(GraphUri graphUri) throws IOException {
     dstGraphUri=graphUri;
-    this.graph = dstGraphUri.openExistingIdGraph(); // graph must be initially closed so that close() can call shutdown()
+    this.graph = dstGraphUri.openExistingIdGraph(); // graph will be open here so that close() can call shutdown()
     merger = dstGraphUri.createPropertyMerger();
 
     srcGraphIdPropKey = GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
@@ -190,7 +190,7 @@ public class MultigraphConsolidator implements AutoCloseable {
       try {
         GraphUri graphUri = new GraphUri(graphId);
         graph = graphUri.openExistingIdGraph();
-        srcGraphUris.put(shortGraphId, graphUri); //so that graph can be closed
+        srcGraphUrisToShutdown.put(shortGraphId, graphUri); //so that graph can be closed
         addSrcGraph(graphUri, graphId, shortGraphId, graph);
       } catch (IOException e) {
         e.printStackTrace();
@@ -221,8 +221,8 @@ public class MultigraphConsolidator implements AutoCloseable {
           graph = graphUri.getGraph();
           // do not close graph since I didn't open it
         } else {
-          graph = graphUri.openExistingIdGraph();//so that graph can be closed
-          srcGraphUris.put(shortGraphId, graphUri);
+          graph = graphUri.openExistingIdGraph();
+          srcGraphUrisToShutdown.put(shortGraphId, graphUri); //so that graph can be closed
         }
         addSrcGraph(graphUri, graphId, shortGraphId, graph);
       } catch (FileNotFoundException e) {

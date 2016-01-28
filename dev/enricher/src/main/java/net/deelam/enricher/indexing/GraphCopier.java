@@ -23,23 +23,30 @@ public class GraphCopier implements AutoCloseable {
 
   @Getter
   private IdGraph<?> graph;
+  private final GraphUri dstGraphUri;
 
-  private final GraphUri srcGraphUri, dstGraphUri;
-  
   private final IdGraph<?> srcGraph;
+  private GraphUri srcGraphUriToShutdown = null;
 
   @Override
   public void close() throws IOException {
     dstGraphUri.shutdown();
-    srcGraphUri.shutdown();
+    if (srcGraphUriToShutdown != null)
+      srcGraphUriToShutdown.shutdown();
   }
 
   public GraphCopier(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException {
-    this.srcGraphUri=srcGraphUri;
-    this.dstGraphUri=dstGraphUri;
+    this.dstGraphUri = dstGraphUri;
+    this.graph = dstGraphUri.openExistingIdGraph(); // graph will be open here so that close() can call shutdown()
+
+    if (srcGraphUri.isOpen()) {
+      srcGraph = srcGraphUri.getGraph();
+      // do not close graph since I didn't open it
+    } else {
+      srcGraph = srcGraphUri.openExistingIdGraph();
+      srcGraphUriToShutdown = srcGraphUri;//so that graph can be closed
+    }
     
-    srcGraph = srcGraphUri.getOrOpenGraph();
-    this.graph = dstGraphUri.getOrOpenGraph();
     merger = dstGraphUri.createPropertyMerger();
   }
 
@@ -137,7 +144,7 @@ public class GraphCopier implements AutoCloseable {
     IdGraph<?> from = srcGraph;
 
     // TODO: 3: currently copies METADATA nodes from source graphs, which can make graph dirty
-    
+
     int tx = GraphTransaction.begin(graph, commitFreq);
     try {
       for (final Vertex fromVertex : from.getVertices()) {

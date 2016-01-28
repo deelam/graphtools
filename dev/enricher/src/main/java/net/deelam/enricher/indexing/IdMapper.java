@@ -61,12 +61,13 @@ public class IdMapper implements AutoCloseable {
     return sName;
   }
 
+  private static final String GRAPH_ID_PREFIX = "_";
   int counter = 0;
 
   private String genNewId() {
     String newId;
     do {
-      newId = "_" + (++counter);
+      newId = GRAPH_ID_PREFIX + (++counter);
     } while (map.containsKey(newId));
     return newId;
   }

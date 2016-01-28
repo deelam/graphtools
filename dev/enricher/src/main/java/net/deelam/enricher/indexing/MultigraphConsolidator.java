@@ -292,9 +292,10 @@ public class MultigraphConsolidator implements AutoCloseable {
   private final PropertyMerger merger;
 
   public boolean useOrigId = false; // used to import from another graph created by MultigraphConsolidator // TODO: design better useOrigId
+  private static final String GRAPH_ID_SEP = ":";
 
   private Vertex importVertexUsingShortId(Vertex v, String shortGraphId) {
-    String newId = (String) ((useOrigId) ? v.getId() : shortGraphId + ":" + v.getId());
+    String newId = (String) ((useOrigId) ? v.getId() : genNewId(shortGraphId, v.getId()));
     Vertex newV = graph.getVertex(newId);
     if (newV == null) {
       newV = graph.addVertex(newId);
@@ -304,22 +305,24 @@ public class MultigraphConsolidator implements AutoCloseable {
     return newV;
   }
 
+  private String genNewId(String shortGraphId, Object nodeId) {
+    return shortGraphId + GRAPH_ID_SEP + nodeId;
+  }
+
   public Vertex getVertex(String nodeId, String graphId) {
-    String shortGraphId = getShortGraphId(graphId);
-    String localId = shortGraphId + ":" + nodeId;
+    String localId = genNewId(getShortGraphId(graphId), nodeId);
     Vertex existingV = graph.getVertex(localId);
     return existingV;
   }
 
   public Edge getEdge(String edgeId, String graphId) {
-    String shortGraphId = getShortGraphId(graphId);
-    String localId = shortGraphId + ":" + edgeId;
+    String localId = genNewId(getShortGraphId(graphId), edgeId);
     Edge existingE = graph.getEdge(localId);
     return existingE;
   }
 
   private Edge importEdgeUsingShortId(Edge e, String shortGraphId, Vertex outV, Vertex inV) {
-    String newId = (String) ((useOrigId) ? e.getId() : shortGraphId + ":" + e.getId());
+    String newId = (String) ((useOrigId) ? e.getId() : genNewId(shortGraphId, e.getId()));
     Edge newE = graph.getEdge(newId);
     if (newE == null) {
       if (outV == null)

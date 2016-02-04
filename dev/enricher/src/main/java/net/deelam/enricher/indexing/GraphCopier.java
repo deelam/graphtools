@@ -140,7 +140,7 @@ public class GraphCopier implements AutoCloseable {
 
   ///
 
-  public void importGraph(String srcGraphId, int commitFreq) {
+  public void importGraph(int commitFreq) {
     IdGraph<?> from = srcGraph;
 
     // TODO: 3: currently copies METADATA nodes from source graphs, which can make graph dirty

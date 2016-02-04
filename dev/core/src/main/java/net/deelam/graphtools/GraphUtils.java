@@ -263,16 +263,13 @@ public final class GraphUtils {
    * Removes original edges and node.
    * @param propMerger to merge node and edge properties
    */
-  public static void mergeNodesAndEdges(Vertex origV, Vertex targetV, Graph graph, PropertyMerger propMerger) {
+  public static void mergeNodesAndEdges(Vertex origV, Vertex targetV, boolean excludeNewSelfEdges, Graph graph, PropertyMerger propMerger) {
     propMerger.mergeProperties(origV, targetV);
-    moveEdges(origV, targetV, graph);
+    moveEdges(origV, targetV, excludeNewSelfEdges, graph);
     graph.removeVertex(origV);
   }
 
-  /**
-   * 
-   */
-  public static void moveEdges(Vertex origV, Vertex targetV, Graph graph) {
+  public static void moveEdges(Vertex origV, Vertex targetV, boolean excludeNewSelfEdges, Graph graph) {
     for (Direction dir : BOTHDIR)
       for (Edge edge : origV.getEdges(dir)) {
         Vertex neighbor = edge.getVertex(dir.opposite());
@@ -283,12 +280,16 @@ public final class GraphUtils {
         graph.removeEdge(edge);
 
         Edge eCopy;
-        if (dir == Direction.OUT) {
-          eCopy = graph.addEdge(inMemEdge.getId(), targetV, neighbor, inMemEdge.getLabel());
+        if(excludeNewSelfEdges && targetV.equals(neighbor)){ // whether to include the original edge from origV to targetV, which would be a self-edge
+          // don't add edge back into graph
         } else {
-          eCopy = graph.addEdge(inMemEdge.getId(), neighbor, targetV, inMemEdge.getLabel());
+          if (dir == Direction.OUT) {
+            eCopy = graph.addEdge(inMemEdge.getId(), targetV, neighbor, inMemEdge.getLabel());
+          } else {
+            eCopy = graph.addEdge(inMemEdge.getId(), neighbor, targetV, inMemEdge.getLabel());
+          }
+          ElementHelper.copyProperties(inMemEdge, eCopy);
         }
-        ElementHelper.copyProperties(inMemEdge, eCopy);
       }
   }
 

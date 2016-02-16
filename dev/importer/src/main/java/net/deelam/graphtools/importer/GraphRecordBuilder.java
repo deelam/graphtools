@@ -93,7 +93,7 @@ public class GraphRecordBuilder<B> {
                   inFv.addEdge(fe/*.emptyCopy()*/);
                 //log.info("inEdges: "+Iterables.toString(inFv.getEdges(Direction.BOTH)));
               } else {
-                log.info("Using existing edge: {}", edgeId);
+                log.debug("Using existing edge: {}", edgeId);
                 Preconditions.checkState(fe.getOutVertexStringId().equals(outFv.getStringId()));
                 Preconditions.checkState(fe.getInVertexStringId().equals(inFv.getStringId()));
               }

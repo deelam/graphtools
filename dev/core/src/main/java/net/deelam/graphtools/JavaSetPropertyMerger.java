@@ -21,6 +21,9 @@ public class JavaSetPropertyMerger implements PropertyMerger {
   @SuppressWarnings("unchecked")
   public void mergeProperties(Element fromE, Element toE) {
     for (String key : fromE.getPropertyKeys()) {
+      if(key.length()==0)
+        throw new IllegalArgumentException("Property key cannot be empty: "+fromE);
+      
       if (key.equals(IdGraph.ID)) // needed, in case this method is called for GraphElements
         continue;
 

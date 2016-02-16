@@ -67,7 +67,7 @@ public class ConsolidatingImporter<B> implements Importer<B> {
           mergeRecords(gRecordsBuffered, gRecords);
 
           if (gRecCounter > bufferThreshold) {
-            log.debug("Incremental graph populate and transaction commit");
+            log.info("Incremental graph populate and transaction commit");
             populateAndCommit(graph, tx, gRecordsBuffered);
             gRecCounter = 0;
           }
@@ -75,7 +75,7 @@ public class ConsolidatingImporter<B> implements Importer<B> {
           log.warn("Skipping record; got exception for recordNum=~"+recordNum+": "+inRecord, e);
         }
       }
-      log.debug("Last graph populate and transaction commit");
+      log.info("Last graph populate and transaction commit");
       populateAndCommit(graph, tx, gRecordsBuffered);
       GraphTransaction.commit(tx);
     } catch (RuntimeException re) {

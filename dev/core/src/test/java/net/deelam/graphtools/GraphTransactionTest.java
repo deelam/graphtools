@@ -21,7 +21,7 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 @Slf4j
 public class GraphTransactionTest {
 
-  protected static TransactionalGraph outGraph;
+  protected TransactionalGraph outGraph;
 
   @Before
   public void setUp() throws Exception {

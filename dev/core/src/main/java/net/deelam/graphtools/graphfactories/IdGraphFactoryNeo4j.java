@@ -71,6 +71,7 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
     File pathFile = new File(gUri.getUriPath());
     if(pathFile.exists()){
       log.info("Deleting Neo4j DB at {}",pathFile);
+      System.gc(); // addresses problem with NFS files still being held by JVM 
       FileUtils.deleteDirectory(pathFile);
     }
   }

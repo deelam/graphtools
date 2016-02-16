@@ -132,6 +132,8 @@ public class GraphUri {
   }
   
   public boolean delete() throws IOException{
+    if(isOpen())
+      throw new IllegalStateException("Graph is still open: "+graph);
     if(factory.exists(this)){
       factory.delete(this);
       return true;
@@ -166,6 +168,8 @@ public class GraphUri {
       factory.shutdown(this, graph);
     } catch (Exception e) {
       throw new RuntimeException(e);
+    } finally {
+      System.gc(); // addresses problem with NFS files still being held by JVM 
     }
   }
 

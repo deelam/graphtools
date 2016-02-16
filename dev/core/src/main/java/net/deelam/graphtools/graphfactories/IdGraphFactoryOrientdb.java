@@ -95,6 +95,7 @@ public class IdGraphFactoryOrientdb implements IdGraphFactory {
     if(dbType==DB_TYPE.plocal){
       File pathFile = new File(gUri.getUriPath());
       log.info("Deleting OrientDB at {}",pathFile);
+      System.gc(); // addresses problem with NFS files still being held by JVM
       FileUtils.deleteDirectory(pathFile);
     }
   }

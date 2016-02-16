@@ -36,16 +36,23 @@ public class ImporterManager {
     return registry.keySet();
   }
 
+  SourceData sData =null;
+  public int getPercentProcessed(){
+    if(sData==null)
+      return -1;
+    return sData.getPercentProcessed();
+  }
   @SuppressWarnings({"unchecked", "rawtypes"})
   public void importFile(String ingesterId, File file, IdGraph<?> graph) throws IOException {
     // get ingester
     Ingester ingester = registry.get(ingesterId);
     Preconditions.checkNotNull(ingester, "ingester not registered: " + ingesterId);
     
-    SourceData sData = ingester.sdFactory.createFrom(file);
+    sData = ingester.sdFactory.createFrom(file);
     final Importer importer = ingester.importer;
     
     importData(sData, importer, graph);
+    sData=null;
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
@@ -54,10 +61,11 @@ public class ImporterManager {
     Ingester ingester = registry.get(ingesterId);
     Preconditions.checkNotNull(ingester, "ingester not registered: " + ingesterId);
     
-    SourceData sData = ingester.sdFactory.createFrom(readable);
+    sData = ingester.sdFactory.createFrom(readable);
     final Importer importer = ingester.importer;
     
     importData(sData, importer, graph);
+    sData=null;
   }
   
   public <B> void importData(SourceData<B> sData, final Importer<B> importer, IdGraph<?> graph)

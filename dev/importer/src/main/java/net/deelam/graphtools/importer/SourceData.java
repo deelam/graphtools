@@ -18,4 +18,6 @@ public interface SourceData<R> {
    */
   R getNextRecord() throws IOException;
 
+  int getPercentProcessed();
+
 }

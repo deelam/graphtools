@@ -67,4 +67,9 @@ public class CsvLineToBeanSourceData<B> implements SourceData<B> {
     return bean;
   }
 
+  @Override
+  public int getPercentProcessed() {
+    return -1;
+  }
+
 }

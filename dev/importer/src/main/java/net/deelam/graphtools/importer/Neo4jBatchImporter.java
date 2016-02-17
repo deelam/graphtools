@@ -52,7 +52,6 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
   @Override
   public void importFile(SourceData<B> sourceData, IdGraph<?> graph) throws IOException {
     encoder.reinit(sourceData);
-    int tx = GraphTransaction.begin(graph);
     try {
       int gRecCounter = 0;
       Map<String,GraphRecord> gRecordsBuffered=new HashMap<>(bufferThreshold+100);
@@ -71,7 +70,7 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
 
           if (gRecCounter > bufferThreshold) {
             log.info("Incremental graph populate and transaction commit: {}", recordNum);
-            populateAndCommit(graph, tx, gRecordsBuffered);
+            populateAndCommit(graph, gRecordsBuffered);
             log.info("  commit done.");
             gRecCounter = 0;
           }
@@ -80,49 +79,31 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
         }
       }
       log.info("Last graph populate and transaction commit: {}", recordNum);
-      populateAndCommit(graph, tx, gRecordsBuffered);
-      GraphTransaction.commit(tx);
+      populateAndCommit(graph, gRecordsBuffered);
       ((Neo4jBatchPopulator)populator).shutdown();
       log.info("  commit done.");
     } catch (RuntimeException re) {
       log.warn("Done reading records but got exception during graph population", re);
-      GraphTransaction.rollback(tx);
       throw re;
     } finally {
       encoder.close(sourceData);
     }
   }
 
-  private void populateAndCommit(IdGraph<?> graph, int tx, Map<String, GraphRecord> gRecordsBuffered) {
+  private void populateAndCommit(IdGraph<?> graph, Map<String, GraphRecord> gRecordsBuffered) {
     populator.populateGraph(graph, gRecordsBuffered.values());
-    //GraphTransaction.commit(tx);
-    //GraphTransaction.begin(graph); // should be the same tx number
     gRecordsBuffered.clear();
   }
 
   private void mergeRecords(Map<String, GraphRecord> gRecordsBuffered, Collection<GraphRecord> gRecords) {
     for(GraphRecord gr:gRecords){
       // merges/consolidate root record
-      mergeRecord(gRecordsBuffered, gr);
-      
-      // merge/consolidate other endpoints
-//      for(Entry<String, Edge> e:gr.getInEdges().entrySet()){
-//        Vertex v = e.getValue().getVertex(Direction.OUT);
-//        mergeRecord(gRecordsBuffered, (GraphRecord) v);
-//      }
-//      for(Entry<String, Edge> e:gr.getOutEdges().entrySet()){
-//        Vertex v = e.getValue().getVertex(Direction.IN);
-//        mergeRecord(gRecordsBuffered, (GraphRecord) v);
-//      }
-    }
-  }
-
-  private void mergeRecord(Map<String, GraphRecord> gRecordsBuffered, GraphRecord gr) {
-    GraphRecord existingGR = gRecordsBuffered.get(gr.getStringId());
-    if(existingGR==null){
-      gRecordsBuffered.put(gr.getStringId(),gr);
-    } else {
-      populator.getGraphRecordMerger().merge(gr, existingGR);
+      GraphRecord existingGR = gRecordsBuffered.get(gr.getStringId());
+      if(existingGR==null){
+        gRecordsBuffered.put(gr.getStringId(),gr);
+      } else {
+        populator.getGraphRecordMerger().merge(gr, existingGR);
+      }
     }
   }
 

@@ -181,7 +181,10 @@ public class JsonPropertyMerger implements PropertyMerger {
     if (toValueChanged)
       toE.setProperty(valSetPropKey, mapper.toJson(valueList));
   }
-  
+
+  // TODO: 3: set limit on size of Set
+  // TODO: 3: add supernode detection and warning
+
   public Map<String, Object> convertToJson(Map<String, Object> props){
     Map<String, Object> newMap=new HashMap<>();
     for(Entry<String, Object> e:props.entrySet()){
@@ -199,7 +202,6 @@ public class JsonPropertyMerger implements PropertyMerger {
     }
     return newMap;
   }
-  
 
   public void convertFromJson(Map<String, Object> existingProps, GraphRecord tempGr) {
     for(Entry<String, Object> entry:existingProps.entrySet()){

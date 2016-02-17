@@ -78,7 +78,7 @@ public class Neo4jBatchPopulator implements Populator {
   private BatchInserterIndex edgeStringIdIndex = null;
 
   @Override
-  public void populateGraph(GraphUri _graph, Collection<GraphRecord> gRecords) {
+  public void populateGraph(GraphUri graphUri, Collection<GraphRecord> gRecords) {
     if (importerName != null) {
       markRecords(gRecords);
     }
@@ -93,7 +93,12 @@ public class Neo4jBatchPopulator implements Populator {
       }
 
       if (graph == null) {
-        graph = BatchInserters.inserter("batch-" + _graph.toString());
+        graphUri.delete();
+        graph = BatchInserters.inserter(graphUri.getUriPath());
+        Map<String, Object> rootNodeProps=new HashMap<>();
+        rootNodeProps.put(IdGraph.ID, "root");
+        graph.setNodeProperties(0, rootNodeProps);
+        
         LuceneBatchInserterIndexProvider indexProvider = new LuceneBatchInserterIndexProvider(graph);
         nodeStringIdIndex = indexProvider.nodeIndex("stringId", MapUtil.stringMap("type", "exact"));
         nodeStringIdIndex.setCacheCapacity(IdGraph.ID, 100000);

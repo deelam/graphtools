@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.inject.Inject;
 
@@ -15,12 +14,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphRecord;
-import net.deelam.graphtools.GraphTransaction;
-
-import com.tinkerpop.blueprints.Direction;
-import com.tinkerpop.blueprints.Edge;
-import com.tinkerpop.blueprints.Vertex;
-import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
+import net.deelam.graphtools.GraphUri;
 
 /**
  * Given sourceData, iterates through ioRecord of type B 
@@ -50,7 +44,7 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
   }
 
   @Override
-  public void importFile(SourceData<B> sourceData, IdGraph<?> graph) throws IOException {
+  public void importFile(SourceData<B> sourceData, GraphUri graphUri) throws IOException {
     encoder.reinit(sourceData);
     try {
       int gRecCounter = 0;
@@ -70,7 +64,7 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
 
           if (gRecCounter > bufferThreshold) {
             log.info("Incremental graph populate and transaction commit: {}", recordNum);
-            populateAndCommit(graph, gRecordsBuffered);
+            populateAndCommit(graphUri, gRecordsBuffered);
             log.info("  commit done.");
             gRecCounter = 0;
           }
@@ -79,7 +73,7 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
         }
       }
       log.info("Last graph populate and transaction commit: {}", recordNum);
-      populateAndCommit(graph, gRecordsBuffered);
+      populateAndCommit(graphUri, gRecordsBuffered);
       ((Neo4jBatchPopulator)populator).shutdown();
       log.info("  commit done.");
     } catch (RuntimeException re) {
@@ -90,8 +84,8 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
     }
   }
 
-  private void populateAndCommit(IdGraph<?> graph, Map<String, GraphRecord> gRecordsBuffered) {
-    populator.populateGraph(graph, gRecordsBuffered.values());
+  private void populateAndCommit(GraphUri graphUri, Map<String, GraphRecord> gRecordsBuffered) {
+    populator.populateGraph(graphUri, gRecordsBuffered.values());
     gRecordsBuffered.clear();
   }
 

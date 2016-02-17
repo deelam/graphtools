@@ -43,7 +43,7 @@ public class ImportingTest {
         new ConsolidatingImporter<CompanyContactBean>(
             new CompanyContactsEncoder(),
             new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JavaSetPropertyMerger()))
-            );
+        );
 
     mgr.register("companyContactsCsvConsolidating", new CsvBeanSourceDataFactory<CompanyContactBean>(
         new CompanyContactsCsvParser()), importer3);
@@ -55,30 +55,26 @@ public class ImportingTest {
     File csvFile = new File(getClass().getResource("/us-500.csv").getFile());
 
     // create new graph
-    IdGraph<?> graph = new GraphUri("tinker:///./target/us500test?fileType=graphml")
-        .createNewIdGraph(true);
-    mgr.importFile("companyContactsCsv", csvFile, graph);
-
-    // close graph
-    graph.shutdown();
+    GraphUri graphUri = new GraphUri("tinker:///./target/us500test?fileType=graphml");
+    mgr.importFile("companyContactsCsv", csvFile, graphUri);
   }
 
-  @Test
+  //@Test
   public void orientImportTest() throws Exception {
     StopWatch sw = new StopWatch();
-
-    IdGraph<?> graph = new GraphUri("orientdb:plocal:./target/orient-us500test")
-        .createNewIdGraph(true);
+    GraphUri graphUri = new GraphUri("orientdb:plocal:./target/orient-us500test");
+    IdGraph<?> graph = graphUri.createNewIdGraph(true);
     OrientGraph oGraph = ((OrientGraph) graph.getBaseGraph());
     oGraph.createEdgeType("hasDevice");
     oGraph.createEdgeType("inState");
     oGraph.createEdgeType("employeeAt");
+    oGraph.shutdown();
+    
     sw.start();
     File csvFile = new File(getClass().getResource("/us-500.csv").getFile());
-    mgr.importFile("companyContactsCsvConsolidating", csvFile, graph);
+    mgr.importFile("companyContactsCsvConsolidating", csvFile, graphUri);
 
     //GraphExporter.exportGraphml(graph, "orient-us500test.graphml", true);
 
-    graph.shutdown();
   }
 }

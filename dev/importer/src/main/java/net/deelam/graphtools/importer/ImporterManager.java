@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import net.deelam.graphtools.GraphUri;
 import lombok.AllArgsConstructor;
 
 import com.google.common.base.Preconditions;
@@ -42,8 +43,9 @@ public class ImporterManager {
       return -1;
     return sData.getPercentProcessed();
   }
+  
   @SuppressWarnings({"unchecked", "rawtypes"})
-  public void importFile(String ingesterId, File file, IdGraph<?> graph) throws IOException {
+  public void importFile(String ingesterId, File file, GraphUri graphUri) throws IOException {
     // get ingester
     Ingester ingester = registry.get(ingesterId);
     Preconditions.checkNotNull(ingester, "ingester not registered: " + ingesterId);
@@ -51,12 +53,12 @@ public class ImporterManager {
     sData = ingester.sdFactory.createFrom(file);
     final Importer importer = ingester.importer;
     
-    importData(sData, importer, graph);
+    importData(sData, importer, graphUri);
     sData=null;
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
-  public void importReadable(String ingesterId, Readable readable, IdGraph<?> graph) throws IOException {
+  public void importReadable(String ingesterId, Readable readable, GraphUri graphUri) throws IOException {
     // get ingester
     Ingester ingester = registry.get(ingesterId);
     Preconditions.checkNotNull(ingester, "ingester not registered: " + ingesterId);
@@ -64,15 +66,15 @@ public class ImporterManager {
     sData = ingester.sdFactory.createFrom(readable);
     final Importer importer = ingester.importer;
     
-    importData(sData, importer, graph);
+    importData(sData, importer, graphUri);
     sData=null;
   }
   
-  public <B> void importData(SourceData<B> sData, final Importer<B> importer, IdGraph<?> graph)
+  public <B> void importData(SourceData<B> sData, final Importer<B> importer, GraphUri graphUri)
       throws IOException {
-    Preconditions.checkNotNull(graph, "Could not open graph: " + graph);
+    Preconditions.checkNotNull(graphUri);
 
     // apply ingester on graph
-    importer.importFile(sData, graph);
+    importer.importFile(sData, graphUri);
   }
 }

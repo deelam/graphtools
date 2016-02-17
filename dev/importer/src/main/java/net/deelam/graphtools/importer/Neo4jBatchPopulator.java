@@ -78,7 +78,7 @@ public class Neo4jBatchPopulator implements Populator {
   private BatchInserterIndex edgeStringIdIndex = null;
 
   @Override
-  public void populateGraph(IdGraph<?> _graph, Collection<GraphRecord> gRecords) {
+  public void populateGraph(GraphUri _graph, Collection<GraphRecord> gRecords) {
     if (importerName != null) {
       markRecords(gRecords);
     }

@@ -12,6 +12,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphRecord;
 import net.deelam.graphtools.GraphTransaction;
+import net.deelam.graphtools.GraphUri;
 
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
@@ -41,9 +42,10 @@ public class BufferedImporter<B> implements Importer<B> {
   }
 
   @Override
-  public void importFile(SourceData<B> sourceData, IdGraph<?> graph) throws IOException {
+  public void importFile(SourceData<B> sourceData, GraphUri graphUri) throws IOException {
     encoder.reinit(sourceData);
-    int tx = GraphTransaction.begin(graph);
+    graphUri.createNewIdGraph(true);
+    int tx = GraphTransaction.begin(graphUri.getGraph());
     try {
       int gRecCounter = 0;
       Collection<GraphRecord> gRecordsBuffered=new ArrayList<>(bufferThreshold+100);
@@ -55,24 +57,25 @@ public class BufferedImporter<B> implements Importer<B> {
         gRecCounter += gRecords.size();
         gRecordsBuffered.addAll(gRecords);
         if (gRecCounter > bufferThreshold) {
-          populateAndCommit(graph, tx, gRecordsBuffered);
+          populateAndCommit(graphUri, tx, gRecordsBuffered);
           gRecCounter = 0;
         }
       }
-      populateAndCommit(graph, tx, gRecordsBuffered);
+      populateAndCommit(graphUri, tx, gRecordsBuffered);
       GraphTransaction.commit(tx);
     } catch (RuntimeException re) {
       GraphTransaction.rollback(tx);
       throw re;
     } finally {
+      graphUri.shutdown();
       encoder.close(sourceData);
     }
   }
 
-  private void populateAndCommit(IdGraph<?> graph, int tx, Collection<GraphRecord> gRecordsBuffered) {
-    populator.populateGraph(graph, gRecordsBuffered);
+  private void populateAndCommit(GraphUri graphUri, int tx, Collection<GraphRecord> gRecordsBuffered) {
+    populator.populateGraph(graphUri, gRecordsBuffered);
     GraphTransaction.commit(tx);
-    GraphTransaction.begin(graph); // should be the same tx number
+    GraphTransaction.begin(graphUri.getGraph()); // should be the same tx number
     gRecordsBuffered.clear();
   }
 

@@ -15,9 +15,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphRecord;
 import net.deelam.graphtools.GraphTransaction;
-import net.deelam.graphtools.GraphRecordMerger;
-
-import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
+import net.deelam.graphtools.GraphUri;
 
 /**
  * Given sourceData, iterates through ioRecord of type B 
@@ -47,9 +45,10 @@ public class ConsolidatingImporter<B> implements Importer<B> {
   }
 
   @Override
-  public void importFile(SourceData<B> sourceData, IdGraph<?> graph) throws IOException {
+  public void importFile(SourceData<B> sourceData, GraphUri graphUri) throws IOException {
     encoder.reinit(sourceData);
-    int tx = GraphTransaction.begin(graph);
+    graphUri.createNewIdGraph(true);
+    int tx = GraphTransaction.begin(graphUri.getGraph());
     try {
       int gRecCounter = 0;
       Map<String,GraphRecord> gRecordsBuffered=new HashMap<>(bufferThreshold+100);
@@ -68,7 +67,7 @@ public class ConsolidatingImporter<B> implements Importer<B> {
 
           if (gRecCounter > bufferThreshold) {
             log.info("Incremental graph populate and transaction commit");
-            populateAndCommit(graph, tx, gRecordsBuffered);
+            populateAndCommit(graphUri, tx, gRecordsBuffered);
             log.info("  commit done.");
             gRecCounter = 0;
           }
@@ -77,7 +76,7 @@ public class ConsolidatingImporter<B> implements Importer<B> {
         }
       }
       log.info("Last graph populate and transaction commit");
-      populateAndCommit(graph, tx, gRecordsBuffered);
+      populateAndCommit(graphUri, tx, gRecordsBuffered);
       GraphTransaction.commit(tx);
       log.info("  commit done.");
     } catch (RuntimeException re) {
@@ -85,14 +84,15 @@ public class ConsolidatingImporter<B> implements Importer<B> {
       GraphTransaction.rollback(tx);
       throw re;
     } finally {
+      graphUri.shutdown();
       encoder.close(sourceData);
     }
   }
 
-  private void populateAndCommit(IdGraph<?> graph, int tx, Map<String, GraphRecord> gRecordsBuffered) {
-    populator.populateGraph(graph, gRecordsBuffered.values());
+  private void populateAndCommit(GraphUri graphUri, int tx, Map<String, GraphRecord> gRecordsBuffered) {
+    populator.populateGraph(graphUri, gRecordsBuffered.values());
     GraphTransaction.commit(tx);
-    GraphTransaction.begin(graph); // should be the same tx number
+    GraphTransaction.begin(graphUri.getGraph()); // should be the same tx number
     gRecordsBuffered.clear();
   }
 

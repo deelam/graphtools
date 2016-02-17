@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.inject.Inject;
 
@@ -15,8 +16,10 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphRecord;
 import net.deelam.graphtools.GraphTransaction;
-import net.deelam.graphtools.GraphRecordMerger;
 
+import com.tinkerpop.blueprints.Direction;
+import com.tinkerpop.blueprints.Edge;
+import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
@@ -26,7 +29,7 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
  * @author deelam
  */
 @Slf4j
-public class ConsolidatingImporter<B> implements Importer<B> {
+public class Neo4jBatchImporter<B> implements Importer<B> {
 
   @Getter
   private final Encoder<B> encoder;
@@ -36,10 +39,10 @@ public class ConsolidatingImporter<B> implements Importer<B> {
   private final GraphRecordBuilder<B> grBuilder;
 
   @Setter
-  private int bufferThreshold=10000;
+  private int bufferThreshold=200000; // TODO: 4: create benchmark to determine best threshold given installation
   
   @Inject
-  public ConsolidatingImporter(Encoder<B> encoder, Populator populator) {
+  public Neo4jBatchImporter(Encoder<B> encoder, Populator populator) {
     super();
     this.encoder = encoder;
     this.populator = populator;
@@ -67,18 +70,19 @@ public class ConsolidatingImporter<B> implements Importer<B> {
           mergeRecords(gRecordsBuffered, gRecords);
 
           if (gRecCounter > bufferThreshold) {
-            log.info("Incremental graph populate and transaction commit");
+            log.info("Incremental graph populate and transaction commit: {}", recordNum);
             populateAndCommit(graph, tx, gRecordsBuffered);
             log.info("  commit done.");
             gRecCounter = 0;
           }
         }catch(Exception e){
-          log.warn("Skipping record; got exception for recordNum=~"+recordNum+": "+inRecord, e);
+          log.info("Skipping record; got exception for recordNum=~"+recordNum+": "+inRecord, e);
         }
       }
-      log.info("Last graph populate and transaction commit");
+      log.info("Last graph populate and transaction commit: {}", recordNum);
       populateAndCommit(graph, tx, gRecordsBuffered);
       GraphTransaction.commit(tx);
+      ((Neo4jBatchPopulator)populator).shutdown();
       log.info("  commit done.");
     } catch (RuntimeException re) {
       log.warn("Done reading records but got exception during graph population", re);
@@ -91,19 +95,34 @@ public class ConsolidatingImporter<B> implements Importer<B> {
 
   private void populateAndCommit(IdGraph<?> graph, int tx, Map<String, GraphRecord> gRecordsBuffered) {
     populator.populateGraph(graph, gRecordsBuffered.values());
-    GraphTransaction.commit(tx);
-    GraphTransaction.begin(graph); // should be the same tx number
+    //GraphTransaction.commit(tx);
+    //GraphTransaction.begin(graph); // should be the same tx number
     gRecordsBuffered.clear();
   }
 
   private void mergeRecords(Map<String, GraphRecord> gRecordsBuffered, Collection<GraphRecord> gRecords) {
     for(GraphRecord gr:gRecords){
-      GraphRecord existingGR = gRecordsBuffered.get(gr.getStringId());
-      if(existingGR==null){
-        gRecordsBuffered.put(gr.getStringId(),gr);
-      } else {
-        populator.getGraphRecordMerger().merge(gr, existingGR);
-      }
+      // merges/consolidate root record
+      mergeRecord(gRecordsBuffered, gr);
+      
+      // merge/consolidate other endpoints
+//      for(Entry<String, Edge> e:gr.getInEdges().entrySet()){
+//        Vertex v = e.getValue().getVertex(Direction.OUT);
+//        mergeRecord(gRecordsBuffered, (GraphRecord) v);
+//      }
+//      for(Entry<String, Edge> e:gr.getOutEdges().entrySet()){
+//        Vertex v = e.getValue().getVertex(Direction.IN);
+//        mergeRecord(gRecordsBuffered, (GraphRecord) v);
+//      }
+    }
+  }
+
+  private void mergeRecord(Map<String, GraphRecord> gRecordsBuffered, GraphRecord gr) {
+    GraphRecord existingGR = gRecordsBuffered.get(gr.getStringId());
+    if(existingGR==null){
+      gRecordsBuffered.put(gr.getStringId(),gr);
+    } else {
+      populator.getGraphRecordMerger().merge(gr, existingGR);
     }
   }
 

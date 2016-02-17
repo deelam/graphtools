@@ -5,8 +5,11 @@ package net.deelam.graphtools;
 
 import java.lang.reflect.Array;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import lombok.Getter;
@@ -178,6 +181,54 @@ public class JsonPropertyMerger implements PropertyMerger {
     if (toValueChanged)
       toE.setProperty(valSetPropKey, mapper.toJson(valueList));
   }
+  
+  public Map<String, Object> convertToJson(Map<String, Object> props){
+    Map<String, Object> newMap=new HashMap<>();
+    for(Entry<String, Object> e:props.entrySet()){
+      if (validPropertyClasses.contains(e.getValue().getClass())) {
+        newMap.put(e.getKey(), e.getValue());
+      } else { // save as Json
+        newMap.put(e.getKey(), SET_VALUE);
+        
+        final String compClassPropKey = e.getKey() + VALUE_CLASS_SUFFIX;
+        newMap.put(compClassPropKey, e.getValue().getClass().getCanonicalName());
+        
+        String setPropertyKey = e.getKey() + SET_SUFFIX;
+        newMap.put(setPropertyKey, mapper.toJson(e.getValue()));
+      }
+    }
+    return newMap;
+  }
+  
+
+  public void convertFromJson(Map<String, Object> existingProps, GraphRecord tempGr) {
+    for(Entry<String, Object> entry:existingProps.entrySet()){
+      if(entry.getKey().equals(SET_VALUE)){
+        Class<?> compClass;
+        {
+          final String compClassPropKey = entry.getKey() + VALUE_CLASS_SUFFIX;
+          String classStr = (String) existingProps.get(compClassPropKey);
+          try {
+            compClass=Class.forName(classStr);
+          } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+          }
+        }
+        String valueSetStr;
+        final String valSetPropKey = entry.getKey() + SET_SUFFIX;
+        {
+          valueSetStr = (String) existingProps.get(valSetPropKey);
+        }
+        Set set=new HashSet((List) mapper.parser().parseList(compClass, valueSetStr));
+        tempGr.setProperty(entry.getKey(), entry.getValue());
+        tempGr.setProperty(valSetPropKey, set);
+      }else if(entry.getKey().endsWith(SET_SUFFIX)){
+        // ignore
+      }else{
+        tempGr.setProperty(entry.getKey(), entry.getValue());
+      }
+    }
+  }
 
   public static void main(String[] args) throws ClassNotFoundException {
     ObjectMapper mapper = JsonFactory.create();
@@ -195,14 +246,15 @@ public class JsonPropertyMerger implements PropertyMerger {
       System.out.println(Class.forName(mapper.parser().parseString(json)));
     }
     {
-      String json = mapper.toJson(1);
+      String json = mapper.toJson(1L);
       System.out.println(json);
       System.out.println(mapper.parser().parse(json).getClass());
     }
     {
-      HashSet<Integer> valueSet = new HashSet<>();
-      valueSet.add(1);
-      valueSet.add(2);
+      HashSet<Number> valueSet = new HashSet<>();
+      valueSet.add(1L);
+      valueSet.add(2.0);
+      valueSet.add(2.0f);
       valueSet.add(1);
       String intArrJson = mapper.toJson(valueSet);
       System.out.println(intArrJson);
@@ -210,11 +262,13 @@ public class JsonPropertyMerger implements PropertyMerger {
     }
 
     {
-      HashSet<String> valueSet = new HashSet<>();
+      HashSet<Object> valueSet = new HashSet<>();
       valueSet.add("a");
       valueSet.add("2");
       valueSet.add("b");
-      valueSet.add("2");
+      valueSet.add('b');
+      valueSet.add(true);
+      valueSet.add(2234567892345678L);
       String inJson = mapper.toJson(valueSet);
       System.out.println(inJson);
       List list = (List) mapper.parser().parse(inJson);
@@ -223,6 +277,9 @@ public class JsonPropertyMerger implements PropertyMerger {
       if (!list.contains("c"))
         list.add("d");
       System.out.println(list);
+      for(Object i:list){
+        System.err.println(i.getClass());
+      }
     }
     {
       HashSet<Date> valueSet = new HashSet<>();

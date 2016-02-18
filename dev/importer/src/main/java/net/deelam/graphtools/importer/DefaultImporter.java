@@ -11,8 +11,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphRecord;
 import net.deelam.graphtools.GraphTransaction;
-
-import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
+import net.deelam.graphtools.GraphUri;
 
 /**
  * Given sourceData, iterates through ioRecord of type B 
@@ -40,9 +39,10 @@ public class DefaultImporter<B> implements Importer<B> {
   }
 
   @Override
-  public void importFile(SourceData<B> sourceData, IdGraph<?> graph) throws IOException {
+  public void importFile(SourceData<B> sourceData, GraphUri graphUri) throws IOException {
     encoder.reinit(sourceData);
-    int tx = GraphTransaction.begin(graph);
+    graphUri.createNewIdGraph(true);
+    int tx = GraphTransaction.begin(graphUri.getGraph());
     try {
       int gRecCounter = 0;
       B inRecord;
@@ -51,10 +51,10 @@ public class DefaultImporter<B> implements Importer<B> {
         Collection<GraphRecord> gRecords = grBuilder.build(inRecord);
         log.debug("graphRecords=", gRecords);
         gRecCounter += gRecords.size();
-        populator.populateGraph(graph, gRecords);
+        populator.populateGraph(graphUri, gRecords);
         if (gRecCounter > commitThreshold) {
           GraphTransaction.commit(tx);
-          tx = GraphTransaction.begin(graph);
+          tx = GraphTransaction.begin(graphUri.getGraph());
           gRecCounter = 0;
         }
       }
@@ -63,6 +63,7 @@ public class DefaultImporter<B> implements Importer<B> {
       GraphTransaction.rollback(tx);
       throw re;
     } finally {
+      graphUri.shutdown();
       encoder.close(sourceData);
     }
   }

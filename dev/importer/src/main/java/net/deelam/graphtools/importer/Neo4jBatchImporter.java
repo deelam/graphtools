@@ -14,7 +14,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphRecord;
-import net.deelam.graphtools.GraphTransaction;
 import net.deelam.graphtools.GraphUri;
 
 /**
@@ -24,7 +23,7 @@ import net.deelam.graphtools.GraphUri;
  * @author deelam
  */
 @Slf4j
-public class ConsolidatingImporter<B> implements Importer<B> {
+public class Neo4jBatchImporter<B> implements Importer<B> {
 
   @Getter
   private final Encoder<B> encoder;
@@ -34,10 +33,10 @@ public class ConsolidatingImporter<B> implements Importer<B> {
   private final GraphRecordBuilder<B> grBuilder;
 
   @Setter
-  private int bufferThreshold=10000;
+  private int bufferThreshold=200000; // TODO: 4: create benchmark to determine best threshold given installation
   
   @Inject
-  public ConsolidatingImporter(Encoder<B> encoder, Populator populator) {
+  public Neo4jBatchImporter(Encoder<B> encoder, Populator populator) {
     super();
     this.encoder = encoder;
     this.populator = populator;
@@ -47,8 +46,6 @@ public class ConsolidatingImporter<B> implements Importer<B> {
   @Override
   public void importFile(SourceData<B> sourceData, GraphUri graphUri) throws IOException {
     encoder.reinit(sourceData);
-    graphUri.createNewIdGraph(true);
-    int tx = GraphTransaction.begin(graphUri.getGraph());
     try {
       int gRecCounter = 0;
       Map<String,GraphRecord> gRecordsBuffered=new HashMap<>(bufferThreshold+100);
@@ -66,38 +63,35 @@ public class ConsolidatingImporter<B> implements Importer<B> {
           mergeRecords(gRecordsBuffered, gRecords);
 
           if (gRecCounter > bufferThreshold) {
-            log.info("Incremental graph populate and transaction commit");
-            populateAndCommit(graphUri, tx, gRecordsBuffered);
+            log.info("Incremental graph populate and transaction commit: {}", recordNum);
+            populateAndCommit(graphUri, gRecordsBuffered);
             log.info("  commit done.");
             gRecCounter = 0;
           }
         }catch(Exception e){
-          log.warn("Skipping record; got exception for recordNum=~"+recordNum+": "+inRecord, e);
+          log.info("Skipping record; got exception for recordNum=~"+recordNum+": "+inRecord, e);
         }
       }
-      log.info("Last graph populate and transaction commit");
-      populateAndCommit(graphUri, tx, gRecordsBuffered);
-      GraphTransaction.commit(tx);
+      log.info("Last graph populate and transaction commit: {}", recordNum);
+      populateAndCommit(graphUri, gRecordsBuffered);
+      ((Neo4jBatchPopulator)populator).shutdown();
       log.info("  commit done.");
     } catch (RuntimeException re) {
       log.warn("Done reading records but got exception during graph population", re);
-      GraphTransaction.rollback(tx);
       throw re;
     } finally {
-      graphUri.shutdown();
       encoder.close(sourceData);
     }
   }
 
-  private void populateAndCommit(GraphUri graphUri, int tx, Map<String, GraphRecord> gRecordsBuffered) {
+  private void populateAndCommit(GraphUri graphUri, Map<String, GraphRecord> gRecordsBuffered) {
     populator.populateGraph(graphUri, gRecordsBuffered.values());
-    GraphTransaction.commit(tx);
-    GraphTransaction.begin(graphUri.getGraph()); // should be the same tx number
     gRecordsBuffered.clear();
   }
 
   private void mergeRecords(Map<String, GraphRecord> gRecordsBuffered, Collection<GraphRecord> gRecords) {
     for(GraphRecord gr:gRecords){
+      // merges/consolidate root record
       GraphRecord existingGR = gRecordsBuffered.get(gr.getStringId());
       if(existingGR==null){
         gRecordsBuffered.put(gr.getStringId(),gr);

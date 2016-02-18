@@ -5,7 +5,7 @@ package net.deelam.graphtools.importer;
 
 import java.io.IOException;
 
-import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
+import net.deelam.graphtools.GraphUri;
 
 /**
  * @author deelam
@@ -13,6 +13,6 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
  */
 public interface Importer<R> {
 
-  void importFile(SourceData<R> sourceData, IdGraph<?> graph) throws IOException;
+  void importFile(SourceData<R> sourceData, GraphUri graphUri) throws IOException;
 
 }

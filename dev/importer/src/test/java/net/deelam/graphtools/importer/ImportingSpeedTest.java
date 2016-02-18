@@ -77,10 +77,8 @@ public class ImportingSpeedTest {
     /// Tinker    
     sw.reset();sw.start();
     {
-      IdGraph<?> graph = new GraphUri("tinker:./target/us500test?fileType=graphml")
-        .createNewIdGraph(true);
-      mgr.importFile("companyContactsCsv", csvFile, graph);
-      graph.shutdown();
+      GraphUri graphUri = new GraphUri("tinker:./target/us500test?fileType=graphml");
+      mgr.importFile("companyContactsCsv", csvFile, graphUri);
     }
     System.err.println("Tinker graphml: "+sw);
 
@@ -98,16 +96,16 @@ public class ImportingSpeedTest {
   public void orientImportTest() throws IOException, URISyntaxException {
     /// Orient
     sw.reset();
+    final GraphUri graphUri = new GraphUri("orientdb:plocal:./target/orient-us500test");
     if(!false){
-      IdGraph<?> graph = new GraphUri("orientdb:plocal:./target/orient-us500test")
-      .createNewIdGraph(true);
+      IdGraph<?> graph = graphUri      .createNewIdGraph(true);
       OrientGraph oGraph = ((OrientGraph) graph.getBaseGraph());
       oGraph.createEdgeType("hasDevice");
       oGraph.createEdgeType("inState");
       oGraph.createEdgeType("employeeAt");
+      oGraph.shutdown();
       sw.start();
-      mgr.importFile("companyContactsCsvConsolidating", csvFile, graph);
-      graph.shutdown();
+      mgr.importFile("companyContactsCsvConsolidating", csvFile, graphUri);
     }
     System.err.println("OrientDB Consolidating: "+sw);
   
@@ -120,27 +118,26 @@ public class ImportingSpeedTest {
       noGraph.createEdgeType("hasDevice");
       noGraph.createEdgeType("inState");
       noGraph.createEdgeType("employeeAt");
+      noGraph.shutdown();
 
       IdGraph<?> graph = new IdGraph<>(noGraph);
       sw.start();
-      mgr.importFile("companyContactsCsv", csvFile, graph);
-      graph.shutdown();
+      mgr.importFile("companyContactsCsv", csvFile, graphUri);
     }
     System.err.println("OrientDB NoTx: "+sw);
     
     sw.reset();
     {
-      IdGraph<?> graph = new GraphUri("orientdb:plocal:./target/orient-us500test")
-        .createNewIdGraph(true);
+      IdGraph<?> graph = graphUri.createNewIdGraph(true);
       OrientGraph oGraph = ((OrientGraph) graph.getBaseGraph());
       //oGraph.getRawGraph().declareIntent(new OIntentMassiveInsert());
       oGraph.createEdgeType("hasDevice");
       oGraph.createEdgeType("inState");
       oGraph.createEdgeType("employeeAt");
+      oGraph.shutdown();
 
       sw.start();
-      mgr.importFile("companyContactsCsv", csvFile, graph);
-      graph.shutdown();
+      mgr.importFile("companyContactsCsv", csvFile, graphUri);
     }
     System.err.println("OrientDB: "+sw);
   }
@@ -165,11 +162,9 @@ public class ImportingSpeedTest {
     
     sw.reset();
     {
-      IdGraph<?> graph = new GraphUri("neo4j:./target/neo-us500test")
-        .createNewIdGraph(true);
+      GraphUri graphUri = new GraphUri("neo4j:./target/neo-us500test");
       sw.start();
-      mgr.importFile("companyContactsCsv", csvFile, graph);
-      graph.shutdown();
+      mgr.importFile("companyContactsCsv", csvFile, graphUri);
     }
     System.err.println("Neo4j: "+sw);
 

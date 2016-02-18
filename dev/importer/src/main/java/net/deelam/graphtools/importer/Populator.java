@@ -7,8 +7,7 @@ import java.util.Collection;
 
 import net.deelam.graphtools.GraphRecord;
 import net.deelam.graphtools.GraphRecordMerger;
-
-import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
+import net.deelam.graphtools.GraphUri;
 
 /**
  * @author deelam
@@ -18,6 +17,6 @@ public interface Populator {
 
   GraphRecordMerger getGraphRecordMerger();
   
-  void populateGraph(IdGraph<?> graph, Collection<GraphRecord> gRecords);
+  void populateGraph(GraphUri graphUri, Collection<GraphRecord> gRecords);
 
 }

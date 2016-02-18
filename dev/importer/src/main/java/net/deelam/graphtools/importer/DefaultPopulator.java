@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import net.deelam.graphtools.GraphRecord;
 import net.deelam.graphtools.GraphRecordEdge;
 import net.deelam.graphtools.GraphRecordMerger;
+import net.deelam.graphtools.GraphUri;
 
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
@@ -37,16 +38,16 @@ public class DefaultPopulator implements Populator {
   }
 
   @Override
-  public void populateGraph(IdGraph<?> graph, Collection<GraphRecord> gRecords) {
+  public void populateGraph(GraphUri graphUri, Collection<GraphRecord> gRecords) {
     if (importerName != null) {
       markRecords(gRecords);
     }
 
     // add to graph
     for (GraphRecord gr : gRecords) {
-      Vertex newV = importVertex(graph, gr);
-      importEdges(graph, Direction.OUT, newV, gr);
-      importEdges(graph, Direction.IN, newV, gr);
+      Vertex newV = importVertex(graphUri.getGraph(), gr);
+      importEdges(graphUri.getGraph(), Direction.OUT, newV, gr);
+      importEdges(graphUri.getGraph(), Direction.IN, newV, gr);
     }
   }
 

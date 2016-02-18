@@ -111,7 +111,7 @@ public class GraphUri {
 
   private void checkNotOpen() {
     if(isOpen())
-      throw new RuntimeException("Graph already opened graph={}"+graph);
+      throw new RuntimeException("Graph is open: {}"+graph);
   }
   
   /**
@@ -121,19 +121,19 @@ public class GraphUri {
    */
   @SuppressWarnings("rawtypes")
   public IdGraph createNewIdGraph(boolean deleteExisting) throws IOException {
+    checkNotOpen();
     if(factory.exists(this)){
       if(deleteExisting)
         factory.delete(this);
       else
         throw new FileAlreadyExistsException("Graph exists at: "+getUriPath());
     }
-    IdGraph<KeyIndexableGraph> graph = openIdGraph(KeyIndexableGraph.class);
+    graph = openIdGraph(KeyIndexableGraph.class);
     return graph;
   }
   
   public boolean delete() throws IOException{
-    if(isOpen())
-      throw new IllegalStateException("Graph is still open: "+graph);
+    checkNotOpen();
     if(factory.exists(this)){
       factory.delete(this);
       return true;

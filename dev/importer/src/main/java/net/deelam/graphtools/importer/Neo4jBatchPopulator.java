@@ -6,7 +6,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.TimeUnit;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -14,19 +13,11 @@ import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.*;
 import net.openhft.chronicle.map.ChronicleMapBuilder;
 
-import org.mapdb.DB;
-import org.mapdb.DBMaker;
-import org.mapdb.HTreeMap;
-import org.mapdb.Serializer;
 import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.index.lucene.unsafe.batchinsert.LuceneBatchInserterIndexProvider;
-import org.neo4j.unsafe.batchinsert.BatchInserter;
-import org.neo4j.unsafe.batchinsert.BatchInserterIndex;
-import org.neo4j.unsafe.batchinsert.BatchInserterIndexProvider;
-import org.neo4j.unsafe.batchinsert.BatchInserters;
-import org.neo4j.unsafe.batchinsert.BatchRelationship;
+import org.neo4j.unsafe.batchinsert.*;
 
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
@@ -99,7 +90,7 @@ public class Neo4jBatchPopulator implements Populator {
         rootNodeProps.put(IdGraph.ID, "root");
         graph.setNodeProperties(0, rootNodeProps);
         
-        LuceneBatchInserterIndexProvider indexProvider = new LuceneBatchInserterIndexProvider(graph);
+        BatchInserterIndexProvider indexProvider = new LuceneBatchInserterIndexProvider(graph);
         nodeStringIdIndex = indexProvider.nodeIndex("stringId", MapUtil.stringMap("type", "exact"));
         nodeStringIdIndex.setCacheCapacity(IdGraph.ID, 100000);
 

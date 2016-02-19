@@ -6,31 +6,28 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import net.deelam.graphtools.GraphUri;
 import lombok.AllArgsConstructor;
+import net.deelam.graphtools.GraphUri;
 
 import com.google.common.base.Preconditions;
-import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
  * 
  * @author deelam
  */
 public class ImporterManager {
+  
   @AllArgsConstructor
-  public static class Ingester {
-    String id;
+  private static class ImporterFactories {
+    SourceDataFactory sourceDataFactory;
 
-    SourceDataFactory sdFactory;
-
-    @SuppressWarnings("rawtypes")
-    Importer importer;
+    ImporterFactory importerFactory;
   }
+  
+  private Map<String, ImporterFactories> registry = new HashMap<>();
 
-  private Map<String, Ingester> registry = new HashMap<>();
-
-  public Ingester register(String id, SourceDataFactory sdFactory, Importer<?> importer) {
-    return registry.put(id, new Ingester(id, sdFactory, importer));
+  public ImporterFactories register(String id, SourceDataFactory sdFactory, ImporterFactory importerFactory) {
+    return registry.put(id, new ImporterFactories(sdFactory, importerFactory));
   }
 
   public Set<String> getIngesterList() {
@@ -44,29 +41,29 @@ public class ImporterManager {
     return sData.getPercentProcessed();
   }
   
-  @SuppressWarnings({"unchecked", "rawtypes"})
+  @SuppressWarnings({"unchecked"})
   public void importFile(String ingesterId, File file, GraphUri graphUri) throws IOException {
     // get ingester
-    Ingester ingester = registry.get(ingesterId);
-    Preconditions.checkNotNull(ingester, "ingester not registered: " + ingesterId);
+    ImporterFactories factories = registry.get(ingesterId);
+    Preconditions.checkNotNull(factories, "importerFactory not registered: " + ingesterId);
     
-    sData = ingester.sdFactory.createFrom(file);
-    final Importer importer = ingester.importer;
+    sData = factories.sourceDataFactory.createFrom(file);
+    final ImporterFactory importerF = factories.importerFactory;
     
-    importData(sData, importer, graphUri);
+    importData(sData, importerF.create(), graphUri);
     sData=null;
   }
 
-  @SuppressWarnings({"unchecked", "rawtypes"})
+  @SuppressWarnings({"unchecked"})
   public void importReadable(String ingesterId, Readable readable, GraphUri graphUri) throws IOException {
     // get ingester
-    Ingester ingester = registry.get(ingesterId);
-    Preconditions.checkNotNull(ingester, "ingester not registered: " + ingesterId);
+    ImporterFactories factories = registry.get(ingesterId);
+    Preconditions.checkNotNull(factories, "importerFactory not registered: " + ingesterId);
     
-    sData = ingester.sdFactory.createFrom(readable);
-    final Importer importer = ingester.importer;
+    sData = factories.sourceDataFactory.createFrom(readable);
+    final ImporterFactory importerF = factories.importerFactory;
     
-    importData(sData, importer, graphUri);
+    importData(sData, importerF.create(), graphUri);
     sData=null;
   }
   

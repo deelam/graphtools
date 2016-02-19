@@ -219,7 +219,7 @@ public class Neo4jBatchPopulator implements Populator {
   static final String SET_SUFFIX = DefaultGraphRecordMerger.SET_SUFFIX;
 
   @Getter
-  final GraphRecordMerger graphRecordMerger;
+  final GraphRecordMerger graphRecordMerger = new DefaultGraphRecordMerger(new JavaSetPropertyMerger());
 
   private GraphRecord tempGr = new GraphRecordImpl("temp");
 

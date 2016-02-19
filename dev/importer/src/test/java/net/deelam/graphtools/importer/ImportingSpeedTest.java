@@ -9,6 +9,7 @@ import java.net.URISyntaxException;
 
 import net.deelam.graphtools.GraphRecordImpl;
 import net.deelam.graphtools.GraphUri;
+import net.deelam.graphtools.JavaSetPropertyMerger;
 import net.deelam.graphtools.JsonPropertyMerger;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryNeo4j;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryOrientdb;
@@ -43,66 +44,82 @@ public class ImportingSpeedTest {
     IdGraphFactoryTinker.register();
     IdGraphFactoryNeo4j.register();
     IdGraphFactoryOrientdb.register();
-    
-    DefaultImporter<CompanyContactBean> importer1 = new DefaultImporter<CompanyContactBean>(
-      new CompanyContactsEncoder(), 
-      new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())),
-      new GraphRecordImpl.Factory());
-    mgr.register("companyContactsCsv", new CsvBeanSourceDataFactory<CompanyContactBean>(
-        new CompanyContactsCsvParser()), importer1);
-    
-    BufferedImporter<CompanyContactBean> importer2 = new BufferedImporter<CompanyContactBean>(
-      new CompanyContactsEncoder(), 
-      new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())),
-      new GraphRecordImpl.Factory());
+
+    mgr.register("companyContactsCsv",
+        new CsvBeanSourceDataFactory<CompanyContactBean>(new CompanyContactsCsvParser()),
+        new ImporterFactory() {
+          @Override
+          public Importer<CompanyContactBean> create() {
+            DefaultImporter<CompanyContactBean> importer = new DefaultImporter<CompanyContactBean>(
+                new CompanyContactsEncoder(),
+                new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())),
+                new GraphRecordImpl.Factory());
+            importer.setCommitThreshold(Integer.MAX_VALUE);
+            return importer;
+          }
+        });
+
     mgr.register("companyContactsCsvBuffered", new CsvBeanSourceDataFactory<CompanyContactBean>(
-        new CompanyContactsCsvParser()), importer2);
+        new CompanyContactsCsvParser()),
+        new ImporterFactory() {
+          @Override
+          public Importer<CompanyContactBean> create() {
+            BufferedImporter<CompanyContactBean> importer = new BufferedImporter<CompanyContactBean>(
+                new CompanyContactsEncoder(),
+                new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())),
+                new GraphRecordImpl.Factory());
+            importer.setBufferThreshold(Integer.MAX_VALUE);
+            return importer;
+          }
+        });
 
-    ConsolidatingImporter<CompanyContactBean> importer3 = new ConsolidatingImporter<CompanyContactBean>(
-      new CompanyContactsEncoder(),  
-      new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())),
-      new GraphRecordImpl.Factory());
     mgr.register("companyContactsCsvConsolidating", new CsvBeanSourceDataFactory<CompanyContactBean>(
-        new CompanyContactsCsvParser()), importer3);
-
-    if(!false){
-      importer1.setCommitThreshold(Integer.MAX_VALUE);
-      importer2.setBufferThreshold(Integer.MAX_VALUE);
-      importer3.setBufferThreshold(100000000);
-    }
+        new CompanyContactsCsvParser()), new ImporterFactory() {
+      @Override
+      public Importer<CompanyContactBean> create() {
+        ConsolidatingImporter<CompanyContactBean> importer = new ConsolidatingImporter<CompanyContactBean>(
+            new CompanyContactsEncoder(),
+            new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())),
+            new GraphRecordImpl.Factory());
+        importer.setBufferThreshold(100000000);
+        return importer;
+      }
+    });
 
   }
 
   File csvFile = new File(getClass().getResource("/us-50000.csv").getFile());
-  StopWatch sw=new StopWatch();
-  
+  StopWatch sw = new StopWatch();
+
   @Test
   public void tinkerImportTest() throws IOException, URISyntaxException {
     /// Tinker    
-    sw.reset();sw.start();
+    sw.reset();
+    sw.start();
     {
       GraphUri graphUri = new GraphUri("tinker:./target/us500test?fileType=graphml");
       mgr.importFile("companyContactsCsv", csvFile, graphUri);
     }
-    System.err.println("Tinker graphml: "+sw);
+    System.err.println("Tinker graphml: " + sw);
 
-    sw.reset();sw.start();
+    sw.reset();
+    sw.start();
     {
       IdGraph<?> graph = new GraphUri("tinker:./target/us500test?fileType=graphml")
-      .createNewIdGraph(true);
-//      mgr.importFile("companyContactsCsvConsolidating", csvFile, graph);
+          .createNewIdGraph(true);
+      //      mgr.importFile("companyContactsCsvConsolidating", csvFile, graph);
       graph.shutdown();
     }
-    System.err.println("Tinker graphml Consolidating: "+sw);
+    System.err.println("Tinker graphml Consolidating: " + sw);
   }
-  
+
   @Test
   public void orientImportTest() throws IOException, URISyntaxException {
     /// Orient
     sw.reset();
     final GraphUri graphUri = new GraphUri("orientdb:plocal:./target/orient-us500test");
-    if(!false){
-      IdGraph<?> graph = graphUri      .createNewIdGraph(true);
+    if (!false) {
+      IdGraph<?> graph = graphUri.createNewIdGraph(true);
       OrientGraph oGraph = ((OrientGraph) graph.getBaseGraph());
       oGraph.createEdgeType("hasDevice");
       oGraph.createEdgeType("inState");
@@ -111,10 +128,10 @@ public class ImportingSpeedTest {
       sw.start();
       mgr.importFile("companyContactsCsvConsolidating", csvFile, graphUri);
     }
-    System.err.println("OrientDB Consolidating: "+sw);
-  
+    System.err.println("OrientDB Consolidating: " + sw);
+
     sw.reset();
-    if(!false){
+    if (!false) {
       FileUtils.deleteDirectory(new File("./target/orientNoTx-us500test"));
       OrientGraphFactory factory = new OrientGraphFactory("plocal:./target/orientNoTx-us500test", "admin", "admin");
       factory.declareIntent(new OIntentMassiveInsert());
@@ -128,8 +145,8 @@ public class ImportingSpeedTest {
       sw.start();
       mgr.importFile("companyContactsCsv", csvFile, graphUri);
     }
-    System.err.println("OrientDB NoTx: "+sw);
-    
+    System.err.println("OrientDB NoTx: " + sw);
+
     sw.reset();
     {
       IdGraph<?> graph = graphUri.createNewIdGraph(true);
@@ -143,7 +160,7 @@ public class ImportingSpeedTest {
       sw.start();
       mgr.importFile("companyContactsCsv", csvFile, graphUri);
     }
-    System.err.println("OrientDB: "+sw);
+    System.err.println("OrientDB: " + sw);
   }
 
   @Test
@@ -153,33 +170,34 @@ public class ImportingSpeedTest {
     OrientGraph graph = new OrientGraph("plocal:./target/orient-us500test2");
     graph.createVertexType("hasDevice");
     graph.shutdown(true);
-    
+
     FileUtils.deleteDirectory(new File("./target/orient-us500test2"));
     OrientGraph graph2 = new OrientGraph("plocal:./target/orient-us500test2");
     graph2.createVertexType("hasDevice");
     graph2.shutdown();
   }
+
   @Test
   public void neo4jImportTest() throws IOException, URISyntaxException {
 
     /// Neo4j
-    
+
     sw.reset();
     {
       GraphUri graphUri = new GraphUri("neo4j:./target/neo-us500test");
       sw.start();
       mgr.importFile("companyContactsCsv", csvFile, graphUri);
     }
-    System.err.println("Neo4j: "+sw);
+    System.err.println("Neo4j: " + sw);
 
     sw.reset();
     {
       IdGraph<?> graph = new GraphUri("neo4j:./target/neo-us500test")
-      .createNewIdGraph(true);
+          .createNewIdGraph(true);
       sw.start();
-//      mgr.importFile("companyContactsCsvConsolidating", csvFile, graph);
+      //      mgr.importFile("companyContactsCsvConsolidating", csvFile, graph);
       graph.shutdown();
     }
-    System.err.println("Neo4j Consolidating: "+sw);
+    System.err.println("Neo4j Consolidating: " + sw);
   }
 }

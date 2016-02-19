@@ -3,6 +3,7 @@
  */
 package net.deelam.graphtools.importer;
 
+import java.io.IOException;
 import java.util.Collection;
 
 import net.deelam.graphtools.GraphRecord;
@@ -17,6 +18,6 @@ public interface Populator {
 
   GraphRecordMerger getGraphRecordMerger();
   
-  void populateGraph(GraphUri graphUri, Collection<GraphRecord> gRecords);
+  void populateGraph(GraphUri graphUri, Collection<GraphRecord> gRecords) throws IOException;
 
 }

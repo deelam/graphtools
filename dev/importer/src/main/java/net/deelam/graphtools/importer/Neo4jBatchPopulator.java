@@ -63,59 +63,72 @@ public class Neo4jBatchPopulator implements Populator {
   90k chronmap.file w neoindexing  60s
   900k chronmap.file w neoindexing ~10 mins 16:44-26:35
    */
-  private Map<String, Long> mapDb = null;
-  BatchInserter graph = null;
-  private BatchInserterIndex nodeStringIdIndex = null;
-  private BatchInserterIndex edgeStringIdIndex = null;
+  private Map<String, Long> idMap = null;
+  
+  private Map<String, Long> createIdMap(long maxNumNodes){
+    Map<String, Long> mapDb;
+    try {
+      File mapFile = File.createTempFile("batchImporter-", ".map");
+      log.info("Creating temp file: " + mapFile.getAbsolutePath());
+      mapDb = ChronicleMapBuilder.of(String.class, Long.class)
+          .entries(maxNumNodes).createPersistedTo(mapFile);
+    } catch (IOException e) {
+      log.warn("Could not create file-based map, using in-memory map instead.");
+      mapDb=new HashMap<>();
+    }
+    return mapDb;
+  }
+
+  private BatchInserter inserter = null;
 
   @Override
-  public void populateGraph(GraphUri graphUri, Collection<GraphRecord> gRecords) {
+  public void populateGraph(GraphUri graphUri, Collection<GraphRecord> gRecords) throws IOException {
     if (importerName != null) {
       markRecords(gRecords);
     }
 
-    File mapFile;
-    try {
-      if (mapDb == null) {
-        mapFile = File.createTempFile("batchImporter-", ".map");
-        log.info("Creating temp file: " + mapFile.getAbsolutePath());
-        mapDb = ChronicleMapBuilder.of(String.class, Long.class)
-            .entries(1000000).createPersistedTo(mapFile);
-      }
+    if(idMap==null)
+      idMap=createIdMap(1000000);
+    
+    if (inserter == null) {
+      inserter = createBatchInserter(graphUri);
+    }
 
-      if (graph == null) {
-        graphUri.delete();
-        graph = BatchInserters.inserter(graphUri.getUriPath());
-        Map<String, Object> rootNodeProps=new HashMap<>();
-        rootNodeProps.put(IdGraph.ID, "root");
-        graph.setNodeProperties(0, rootNodeProps);
-        
-        BatchInserterIndexProvider indexProvider = new LuceneBatchInserterIndexProvider(graph);
-        nodeStringIdIndex = indexProvider.nodeIndex("stringId", MapUtil.stringMap("type", "exact"));
-        nodeStringIdIndex.setCacheCapacity(IdGraph.ID, 100000);
-
-        edgeStringIdIndex = indexProvider.relationshipIndex("stringId", MapUtil.stringMap("type", "exact"));
-        edgeStringIdIndex.setCacheCapacity(IdGraph.ID, 100000);
-      }
-      // add to graph
-      for (GraphRecord gr : gRecords) {
-        long newVLongId = importVertex(graph, gr); //getLongId(gr.getStringId());    
-        importEdges(graph, Direction.OUT, newVLongId, gr);
-        importEdges(graph, Direction.IN, newVLongId, gr);
-      }
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } finally {
+    // add to graph
+    for (GraphRecord gr : gRecords) {
+      long newVLongId = importVertex(inserter, gr); //getLongId(gr.getStringId());    
+      importEdges(inserter, Direction.OUT, newVLongId, gr);
+      importEdges(inserter, Direction.IN, newVLongId, gr);
     }
   }
 
-  public void shutdown() {
-    nodeStringIdIndex.flush();
-    edgeStringIdIndex.flush();
-    graph.shutdown();
+  private BatchInserterIndex nodeStringIdIndex = null;
+  private BatchInserterIndex edgeStringIdIndex = null;
+  
+  private BatchInserter createBatchInserter(GraphUri graphUri) throws IOException {
+    graphUri.delete();
+    BatchInserter inserter = BatchInserters.inserter(graphUri.getUriPath());
+    Map<String, Object> rootNodeProps = new HashMap<>();
+    rootNodeProps.put(IdGraph.ID, "root");
+    inserter.setNodeProperties(0, rootNodeProps);
+
+    BatchInserterIndexProvider indexProvider = new LuceneBatchInserterIndexProvider(inserter);
+    nodeStringIdIndex = indexProvider.nodeIndex("stringId", MapUtil.stringMap("type", "exact"));
+    nodeStringIdIndex.setCacheCapacity(IdGraph.ID, 100000);
+
+    edgeStringIdIndex = indexProvider.relationshipIndex("stringId", MapUtil.stringMap("type", "exact"));
+    edgeStringIdIndex.setCacheCapacity(IdGraph.ID, 100000);
+    
+    return inserter;
   }
 
+  public void shutdown() {
+    if(inserter!=null){
+      nodeStringIdIndex.flush();
+      edgeStringIdIndex.flush();
+      inserter.shutdown();
+    }
+  }
 
   private void importEdges(BatchInserter graph, Direction direction, long newVLongId, GraphRecord gr) {
     for (Edge e : gr.getEdges(direction)) {
@@ -125,19 +138,19 @@ public class Neo4jBatchPopulator implements Populator {
     }
   }
 
-  JsonPropertyMerger jsonPropMerger = new JsonPropertyMerger();
+  private JsonPropertyMerger jsonPropMerger = new JsonPropertyMerger();
 
   public long importVertex(BatchInserter graph, GraphRecord gr) {
     String id = gr.getStringId();
     //long longId=getLongId(id);
-    Long longId = (Long) mapDb.get(id);
+    Long longId = (Long) idMap.get(id);
     if (longId == null) {
       Map<String, Object> cProps = jsonPropMerger.convertToJson(gr.getProps());
       cProps.put(IdGraph.ID, id);
       longId = graph.createNode(cProps);
       //log.info("Create node: {} {}",longId, id);
       nodeStringIdIndex.add(longId, cProps);
-      mapDb.put(id, longId);
+      idMap.put(id, longId);
     } else {
       Map<String, Object> existingProps = graph.getNodeProperties(longId);
       //log.info("Found node: {} {}",longId, id);
@@ -177,7 +190,7 @@ public class Neo4jBatchPopulator implements Populator {
   public void importEdge(BatchInserter graph, GraphRecordEdge grE, Direction direction,
       long v1inGraphLongId, long v2inGraphLongId) {
     String edgeId = grE.getStringId();
-    Long edgeLongId = (Long) mapDb.get(edgeId);
+    Long edgeLongId = (Long) idMap.get(edgeId);
     if (edgeLongId == null) {
       RelationshipType type = DynamicRelationshipType.withName(grE.getLabel());
       Map<String, Object> cProps = jsonPropMerger.convertToJson(grE.getProps());

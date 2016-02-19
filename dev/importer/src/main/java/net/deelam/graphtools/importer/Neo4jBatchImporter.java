@@ -84,7 +84,7 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
     }
   }
 
-  private void populateAndCommit(GraphUri graphUri, Map<String, GraphRecord> gRecordsBuffered) {
+  private void populateAndCommit(GraphUri graphUri, Map<String, GraphRecord> gRecordsBuffered) throws IOException {
     populator.populateGraph(graphUri, gRecordsBuffered.values());
     gRecordsBuffered.clear();
   }

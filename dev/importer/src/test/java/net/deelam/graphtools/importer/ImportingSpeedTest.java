@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
+import net.deelam.graphtools.GraphRecordImpl;
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.JsonPropertyMerger;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryNeo4j;
@@ -45,19 +46,22 @@ public class ImportingSpeedTest {
     
     DefaultImporter<CompanyContactBean> importer1 = new DefaultImporter<CompanyContactBean>(
       new CompanyContactsEncoder(), 
-      new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())));
+      new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())),
+      new GraphRecordImpl.Factory());
     mgr.register("companyContactsCsv", new CsvBeanSourceDataFactory<CompanyContactBean>(
         new CompanyContactsCsvParser()), importer1);
     
     BufferedImporter<CompanyContactBean> importer2 = new BufferedImporter<CompanyContactBean>(
       new CompanyContactsEncoder(), 
-      new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())));
+      new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())),
+      new GraphRecordImpl.Factory());
     mgr.register("companyContactsCsvBuffered", new CsvBeanSourceDataFactory<CompanyContactBean>(
         new CompanyContactsCsvParser()), importer2);
 
     ConsolidatingImporter<CompanyContactBean> importer3 = new ConsolidatingImporter<CompanyContactBean>(
       new CompanyContactsEncoder(),  
-      new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())));
+      new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())),
+      new GraphRecordImpl.Factory());
     mgr.register("companyContactsCsvConsolidating", new CsvBeanSourceDataFactory<CompanyContactBean>(
         new CompanyContactsCsvParser()), importer3);
 

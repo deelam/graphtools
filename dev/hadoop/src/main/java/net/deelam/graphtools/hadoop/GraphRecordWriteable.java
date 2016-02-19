@@ -10,6 +10,7 @@ import java.util.Set;
 
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphRecord;
+import net.deelam.graphtools.GraphRecordImpl;
 
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableUtils;
@@ -21,9 +22,34 @@ import com.tinkerpop.blueprints.Edge;
  * @author deelam, Created:Nov 10, 2015
  */
 @Slf4j
-public class GraphRecordWriteable extends GraphRecord implements WritableComparable<GraphRecordWriteable> {
+public class GraphRecordWriteable extends GraphRecordImpl implements GraphRecord, WritableComparable<GraphRecordWriteable> {
   private static final long serialVersionUID = 201511100951L;
 
+  public static class Factory extends GraphRecord.Factory {
+    @Override
+    public GraphRecordWriteable create(String id){
+      return new GraphRecordWriteable(id);
+    }
+    @Override
+    public GraphRecordWriteable create(String id, String nodeType){
+      return new GraphRecordWriteable(id, nodeType);      
+    }
+    @Override
+    public GraphRecordEdgeWriteable createEdge(String id, String label, String outVertex, String inVertex) {
+      return new GraphRecordEdgeWriteable(id, label, outVertex, inVertex);
+    }
+  }
+  
+  static Factory factory=new Factory();
+
+  protected GraphRecordWriteable(String id){
+    super(id);
+  }
+  
+  protected GraphRecordWriteable(String id, String nodeType){
+    super(id, nodeType);
+  }
+  
   @Override
   public void write(final DataOutput out) throws IOException {
     writeElement(id, props, out);

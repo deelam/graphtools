@@ -37,11 +37,11 @@ public class ConsolidatingImporter<B> implements Importer<B> {
   private int bufferThreshold=10000;
   
   @Inject
-  public ConsolidatingImporter(Encoder<B> encoder, Populator populator) {
+  public ConsolidatingImporter(Encoder<B> encoder, Populator populator, GraphRecord.Factory grFactory) {
     super();
     this.encoder = encoder;
     this.populator = populator;
-    grBuilder=new GraphRecordBuilder<>(encoder);
+    grBuilder=new GraphRecordBuilder<>(encoder, grFactory);
   }
 
   @Override

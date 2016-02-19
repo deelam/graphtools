@@ -1,15 +1,14 @@
 package net.deelam.enricher.indexing.domain;
 
+import lombok.RequiredArgsConstructor;
 import net.deelam.enricher.indexing.EntityIndexer;
-import net.deelam.graphtools.GraphRecord;
+import net.deelam.graphtools.GraphRecordImpl;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.SortedDocValuesField;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.util.BytesRef;
-
-import lombok.RequiredArgsConstructor;
 
 import com.tinkerpop.blueprints.Vertex;
 
@@ -19,7 +18,7 @@ public class PersonIndexer extends EntityIndexer {
   
   @Override
   protected boolean isIndexable(Vertex v) {
-    return GraphRecord.getType(v).equals(ENTITY_TYPE);
+    return GraphRecordImpl.getType(v).equals(ENTITY_TYPE);
   }
   
   @Override

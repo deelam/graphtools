@@ -14,10 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.*;
 import net.openhft.chronicle.map.ChronicleMapBuilder;
 
-import org.mapdb.DB;
-import org.mapdb.DBMaker;
-import org.mapdb.HTreeMap;
-import org.mapdb.Serializer;
 import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.helpers.collection.MapUtil;
@@ -230,7 +226,7 @@ public class Neo4jBatchPopulator implements Populator {
   @Getter
   final GraphRecordMerger graphRecordMerger;
 
-  private GraphRecord tempGr = new GraphRecord("temp");
+  private GraphRecord tempGr = new GraphRecordImpl("temp");
 
   private Map<String, Object> copyProperties(Element fromE, Map<String, Object> existingProps) {
     //log.info("Copy props from existing element={} \n\t existing={}", fromE, existingProps);

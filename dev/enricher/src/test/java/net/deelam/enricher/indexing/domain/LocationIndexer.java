@@ -1,7 +1,7 @@
 package net.deelam.enricher.indexing.domain;
 
 import net.deelam.enricher.indexing.EntityIndexer;
-import net.deelam.graphtools.GraphRecord;
+import net.deelam.graphtools.GraphRecordImpl;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -17,7 +17,7 @@ public class LocationIndexer extends EntityIndexer {
 
   @Override
   protected boolean isIndexable(Vertex v) {
-    return GraphRecord.getType(v).equals(ENTITY_TYPE);
+    return GraphRecordImpl.getType(v).equals(ENTITY_TYPE);
   }
 
   @Override

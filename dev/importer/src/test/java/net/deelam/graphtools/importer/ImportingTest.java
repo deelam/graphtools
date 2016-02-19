@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
+import net.deelam.graphtools.GraphRecordImpl;
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.JavaSetPropertyMerger;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryOrientdb;
@@ -35,14 +36,16 @@ public class ImportingTest {
         new CsvBeanSourceDataFactory<CompanyContactBean>(new CompanyContactsCsvParser()),
         new DefaultImporter<CompanyContactBean>(
             new CompanyContactsEncoder(),
-            new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JavaSetPropertyMerger()))
+            new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JavaSetPropertyMerger())),
+            new GraphRecordImpl.Factory()
         ));
 
 
     ConsolidatingImporter<CompanyContactBean> importer3 =
         new ConsolidatingImporter<CompanyContactBean>(
             new CompanyContactsEncoder(),
-            new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JavaSetPropertyMerger()))
+            new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JavaSetPropertyMerger())),
+            new GraphRecordImpl.Factory()
         );
 
     mgr.register("companyContactsCsvConsolidating", new CsvBeanSourceDataFactory<CompanyContactBean>(

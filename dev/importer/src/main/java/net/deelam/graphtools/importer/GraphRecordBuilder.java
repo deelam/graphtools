@@ -27,6 +27,7 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 @Slf4j
 public class GraphRecordBuilder<B> {
   private final Encoder<B> encoder;
+  private final GraphRecord.Factory grFactory;
 
   private Map<String, GraphRecord> gRecords = new HashMap<>(40);
 
@@ -53,7 +54,7 @@ public class GraphRecordBuilder<B> {
           if (outVertexId != null) {
             outFv = gRecords.get(outVertexId);
             if (outFv == null) {
-              outFv = new GraphRecord(outVertexId, srcNodeFiller.getType());
+              outFv = grFactory.create(outVertexId, srcNodeFiller.getType());
               outFv.setProperty(IdGraph.ID, outVertexId);
               gRecords.put(outVertexId, outFv);
             }
@@ -67,7 +68,7 @@ public class GraphRecordBuilder<B> {
           if (inVertexId != null) {
             inFv = gRecords.get(inVertexId);
             if (inFv == null) {
-              inFv = new GraphRecord(inVertexId, dstNodeFiller.getType());
+              inFv = grFactory.create(inVertexId, dstNodeFiller.getType());
               inFv.setProperty(IdGraph.ID, inVertexId);
               gRecords.put(inVertexId, inFv);
             }
@@ -80,7 +81,7 @@ public class GraphRecordBuilder<B> {
             if (label != null && edgeId != null) {
               GraphRecordEdge fe = outFv.getOutEdge(edgeId);
               if (fe == null) {
-                fe = new GraphRecordEdge(edgeId, label, outFv, inFv);
+                fe = grFactory.createEdge(edgeId, label, outFv, inFv);
                 fe.setProperty(IdGraph.ID, edgeId);
                 //fe.setProperty(CsvGraphFiller.LONG_ID_PROPKEY, generateEdgeId());
                 outFv.addEdge(fe);

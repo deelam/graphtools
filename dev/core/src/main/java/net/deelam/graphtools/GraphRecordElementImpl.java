@@ -10,9 +10,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 @NoArgsConstructor
 @ToString
+@Slf4j
 public class GraphRecordElementImpl implements GraphRecordElement {
   private static final long serialVersionUID = 201509030419L;
 
@@ -54,6 +56,8 @@ public class GraphRecordElementImpl implements GraphRecordElement {
 
   @Override
   public void setProperty(final String key, final Object value) {
+    if(value==null)
+      log.warn("Null value for key={} id={}", key, id);
     props.put(key, value);
   }
 

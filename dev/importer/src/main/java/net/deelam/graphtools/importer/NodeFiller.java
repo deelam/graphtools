@@ -12,10 +12,10 @@ public abstract class NodeFiller<C extends RecordContext<?>> {
   @Getter
   protected String type;
 
-  public NodeFiller<C> type(String nodeType) {
-    type = nodeType;
-    return this;
-  }
+//  public NodeFiller<C> type(String nodeType) {
+//    type = nodeType;
+//    return this;
+//  }
 
   abstract public String getId(C context);
 

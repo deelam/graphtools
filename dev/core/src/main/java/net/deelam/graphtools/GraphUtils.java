@@ -274,7 +274,7 @@ public final class GraphUtils {
       for (Edge edge : origV.getEdges(dir)) {
         Vertex neighbor = edge.getVertex(dir.opposite());
         // copy edge in memory before removing from graph
-        GraphRecordEdge inMemEdge = new GraphRecordEdge((String) edge.getId(), edge.getLabel(),
+        GraphRecordEdge inMemEdge = new GraphRecordEdgeImpl((String) edge.getId(), edge.getLabel(),
             (String) targetV.getId(), (String) neighbor.getId());
         ElementHelper.copyProperties(edge, inMemEdge);
         graph.removeEdge(edge);

@@ -221,7 +221,7 @@ public class Neo4jBatchPopulator implements Populator {
   @Getter
   final GraphRecordMerger graphRecordMerger;
 
-  private GraphRecord tempGr = new GraphRecord("temp");
+  private GraphRecord tempGr = new GraphRecordImpl("temp");
 
   private Map<String, Object> copyProperties(Element fromE, Map<String, Object> existingProps) {
     //log.info("Copy props from existing element={} \n\t existing={}", fromE, existingProps);

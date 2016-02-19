@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.Collection;
 
 import net.deelam.graphtools.GraphRecord;
+import net.deelam.graphtools.GraphRecordImpl;
 import net.deelam.graphtools.importer.csv.CsvLineToBeanSourceData;
 import net.deelam.graphtools.importer.csv.CsvParser;
 import net.deelam.graphtools.importer.domain.CompanyContactBean;
@@ -31,7 +32,8 @@ public class GraphRecordBuilderTest {
   }
   public <B> GraphRecordBuilder<B> initGRBuilder(String encoderClassname) {
     Encoder<B> encoder = instantiate(encoderClassname);
-    return new GraphRecordBuilder<>(encoder);
+    GraphRecord.Factory grFactory=new GraphRecordImpl.Factory();
+    return new GraphRecordBuilder<>(encoder, grFactory);
   }
   
   static <T> T instantiate(String className) {

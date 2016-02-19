@@ -34,11 +34,11 @@ public class BufferedImporter<B> implements Importer<B> {
   @Setter
   private int bufferThreshold=1000;
   
-  public BufferedImporter(Encoder<B> encoder, Populator populator) {
+  public BufferedImporter(Encoder<B> encoder, Populator populator, GraphRecord.Factory grFactory) {
     super();
     this.encoder = encoder;
     this.populator = populator;
-    grBuilder=new GraphRecordBuilder<>(encoder);
+    grBuilder=new GraphRecordBuilder<>(encoder, grFactory);
   }
 
   @Override

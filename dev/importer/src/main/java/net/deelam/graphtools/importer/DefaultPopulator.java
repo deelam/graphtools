@@ -35,14 +35,8 @@ public class DefaultPopulator implements Populator {
     }
   }
 
-  private GraphUri graphUri;
-
   @Override
   public void populateGraph(GraphUri graphUri, Collection<GraphRecord> gRecords) {
-    if (this.graphUri == null) {
-      this.graphUri = graphUri;
-    }
-
     if (importerName != null) {
       markRecords(gRecords);
     }
@@ -55,9 +49,11 @@ public class DefaultPopulator implements Populator {
     }
   }
 
+  private GraphUri graphUri;
   private long createdNodes = 0, createdEdges = 0;
   
   public void reinit(GraphUri graphUri){
+    this.graphUri = graphUri;
     createdNodes=0;
     createdEdges=0;
   }

@@ -1,9 +1,9 @@
 package net.deelam.graphtools.importer;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.*;
+import net.deelam.graphtools.graphfactories.IdGraphFactoryNeo4j;
 import net.openhft.chronicle.map.ChronicleMap;
 import net.openhft.chronicle.map.ChronicleMapBuilder;
 
@@ -145,9 +146,11 @@ public class Neo4jBatchPopulator implements Populator {
     config.put("relationship_auto_indexing", "true");
   }
 
+  private GraphUri graphUri;
   private long createdNodes = 0, createdEdges = 0;
 
   public void reinit(GraphUri graphUri) throws IOException {
+    this.graphUri = graphUri;
     createdNodes = 0;
     createdEdges = 0;
 
@@ -179,12 +182,15 @@ public class Neo4jBatchPopulator implements Populator {
       idMap = null;
     }
 
-    {
-      IdGraph<Neo4jGraph> idGraph = new IdGraph(new Neo4jGraph(storeDir, config));
+    try{
+      GraphUri tmpGraphUri = new GraphUri(graphUri.asString(), IdGraphFactoryNeo4j.OPEN_AFTER_BATCH_INSERT_CONFIG);
+      IdGraph<?> idGraph = tmpGraphUri.openExistingIdGraph();
       Vertex mdV = GraphUtils.getMetaDataNode(idGraph);
       mdV.setProperty("createdNodes", createdNodes);
       mdV.setProperty("createdEdges", createdEdges);
-      idGraph.shutdown();
+      tmpGraphUri.shutdown();
+    }catch(FileNotFoundException e){
+      e.printStackTrace();
     }
 
 

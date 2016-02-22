@@ -12,7 +12,6 @@ import java.util.Iterator;
 import java.util.Map;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
@@ -34,7 +33,6 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
  * 
  * @author deelam
  */
-@RequiredArgsConstructor
 @ToString
 @Slf4j
 public class GraphUri {

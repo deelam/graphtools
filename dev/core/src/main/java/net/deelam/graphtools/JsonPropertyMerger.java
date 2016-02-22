@@ -124,6 +124,10 @@ public class JsonPropertyMerger implements PropertyMerger {
   }
 
   private ObjectMapper mapper = JsonFactory.create();
+  private static final Set<String> allowedMultivaluedProps=new HashSet<>();
+  public static void allowMultivaluedProperty(String propName){
+    allowedMultivaluedProps.add(propName);
+  }
 
   public void mergeProperty(Element fromE, Element toE, String key, Object fromValue) throws ClassNotFoundException {
     // toValue and fromValue are not null and not equal
@@ -146,6 +150,9 @@ public class JsonPropertyMerger implements PropertyMerger {
       Object existingVal = toE.getProperty(key);
       valueList.add(existingVal);
       toE.setProperty(key, SET_VALUE);
+      if(!allowedMultivaluedProps.contains(key)){
+        log.warn("Property has multiple values which is inefficient: {} for node={}", key, toE.getId());
+      }
 
       if (compClass == null) {
         setPropertyValueClass(toE, key, existingVal);

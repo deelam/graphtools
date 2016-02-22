@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
+
+import org.apache.commons.lang.mutable.MutableLong;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -48,12 +51,21 @@ public class MultigraphConsolidator implements AutoCloseable {
 
   private final Map<String, IdGraph<?>> srcGraphs = new HashMap<>();
   private final Map<String, GraphUri> srcGraphUrisToShutdown = new HashMap<>();
+  private final Map<String, MutableLong> srcGraphNodeImportCount = new HashMap<>();
+  private final Map<String, MutableLong> srcGraphEdgeImportCount = new HashMap<>();
 
   @Override
   public void close() throws IOException {
     if (graphIdMapper != null) {
       saveIdMapperAsGraphMetaData();
       graphIdMapper.close();
+    }
+    {
+      Vertex mdV = GraphUtils.getMetaDataNode(graph);
+      for(Entry<String, MutableLong> e:srcGraphNodeImportCount.entrySet()){
+        mdV.setProperty("importedNodes_"+e.getKey(), srcGraphNodeImportCount.get(e.getKey()).getValue());
+        mdV.setProperty("importedEdges_"+e.getKey(), srcGraphEdgeImportCount.get(e.getKey()).getValue());
+      }
     }
     dstGraphUri.shutdown();
     for (GraphUri gUri : new HashSet<>(srcGraphUrisToShutdown.values())) {
@@ -127,7 +139,8 @@ public class MultigraphConsolidator implements AutoCloseable {
     try {
       if (useFileBasedIdMapper) {
         GraphUtils.setMetaData(graph, GRAPHID_MAP_FILE, graphIdMapper.getFilename());
-      } else {
+      }
+      {
         // save mapper in META_DATA node
         Vertex mdV = GraphUtils.getMetaDataNode(graph);
         mdV.setProperty(GRAPHID_MAP_SIZE, graphIdMapper.getShortIdSet().size());
@@ -200,6 +213,9 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
 
   private void addSrcGraph(GraphUri graphUri, String graphId, String shortGraphId, IdGraph<?> graph) {
+    srcGraphNodeImportCount.put(shortGraphId, new MutableLong(0));
+    srcGraphEdgeImportCount.put(shortGraphId, new MutableLong(0));
+    
     IdGraph<?> existingGraph = srcGraphs.put(shortGraphId, graph);
     if (existingGraph != null) {
       log.warn("Overriding existing graph: {} with shortGraphId={}", graph, shortGraphId);
@@ -299,6 +315,7 @@ public class MultigraphConsolidator implements AutoCloseable {
     Vertex newV = graph.getVertex(newId);
     if (newV == null) {
       newV = graph.addVertex(newId);
+      srcGraphNodeImportCount.get(shortGraphId).increment();
       setNewProperties(v, shortGraphId, newV);
     }
     merger.mergeProperties(v, newV);
@@ -330,6 +347,7 @@ public class MultigraphConsolidator implements AutoCloseable {
       if (inV == null)
         inV = importVertexUsingShortId(e.getVertex(Direction.IN), shortGraphId);
       newE = graph.addEdge(newId, outV, inV, e.getLabel());
+      srcGraphEdgeImportCount.get(shortGraphId).increment();
       setNewProperties(e, shortGraphId, newE);
     }
     merger.mergeProperties(e, newE);

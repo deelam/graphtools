@@ -54,7 +54,10 @@ public class GraphRecordBuilder<B> {
           if (outVertexId != null) {
             outFv = gRecords.get(outVertexId);
             if (outFv == null) {
-              outFv = grFactory.create(outVertexId, srcNodeFiller.getType());
+              String nodeType = srcNodeFiller.getType();
+              if(nodeType==null)
+                log.warn("nodeType={} for id={}", nodeType, outVertexId);
+              outFv = grFactory.create(outVertexId, nodeType);
               outFv.setProperty(IdGraph.ID, outVertexId);
               gRecords.put(outVertexId, outFv);
             }
@@ -68,7 +71,10 @@ public class GraphRecordBuilder<B> {
           if (inVertexId != null) {
             inFv = gRecords.get(inVertexId);
             if (inFv == null) {
-              inFv = grFactory.create(inVertexId, dstNodeFiller.getType());
+              String nodeType = dstNodeFiller.getType();
+              if(nodeType==null)
+                log.warn("nodeType={} for id={}", nodeType, inVertexId);
+              inFv = grFactory.create(inVertexId, nodeType);
               inFv.setProperty(IdGraph.ID, inVertexId);
               gRecords.put(inVertexId, inFv);
             }

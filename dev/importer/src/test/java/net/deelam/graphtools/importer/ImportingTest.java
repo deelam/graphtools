@@ -34,23 +34,31 @@ public class ImportingTest {
     IdGraphFactoryOrientdb.register();
     mgr.register("companyContactsCsv",
         new CsvBeanSourceDataFactory<CompanyContactBean>(new CompanyContactsCsvParser()),
-        new DefaultImporter<CompanyContactBean>(
-            new CompanyContactsEncoder(),
-            new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JavaSetPropertyMerger())),
-            new GraphRecordImpl.Factory()
-        ));
+        new ImporterFactory() {
+          @Override
+          public Importer<CompanyContactBean> create() {
+            return new DefaultImporter<CompanyContactBean>(
+                new CompanyContactsEncoder(),
+                new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JavaSetPropertyMerger())),
+                new GraphRecordImpl.Factory()
+            );
+          }
+        });
 
 
-    ConsolidatingImporter<CompanyContactBean> importer3 =
-        new ConsolidatingImporter<CompanyContactBean>(
-            new CompanyContactsEncoder(),
-            new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JavaSetPropertyMerger())),
-            new GraphRecordImpl.Factory()
-        );
-
-    mgr.register("companyContactsCsvConsolidating", new CsvBeanSourceDataFactory<CompanyContactBean>(
-        new CompanyContactsCsvParser()), importer3);
-    importer3.setBufferThreshold(100000000);
+    mgr.register("companyContactsCsvConsolidating", new CsvBeanSourceDataFactory<CompanyContactBean>(new CompanyContactsCsvParser()), 
+        new ImporterFactory() {
+          @Override
+          public Importer<CompanyContactBean> create() {
+            ConsolidatingImporter<CompanyContactBean> importer = new ConsolidatingImporter<CompanyContactBean>(
+                new CompanyContactsEncoder(),
+                new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JavaSetPropertyMerger())),
+                new GraphRecordImpl.Factory()
+                );
+            importer.setBufferThreshold(100000000);
+            return importer;
+          }
+        });
   }
 
   @Test
@@ -72,7 +80,7 @@ public class ImportingTest {
     oGraph.createEdgeType("inState");
     oGraph.createEdgeType("employeeAt");
     oGraph.shutdown();
-    
+
     sw.start();
     File csvFile = new File(getClass().getResource("/us-500.csv").getFile());
     mgr.importFile("companyContactsCsvConsolidating", csvFile, graphUri);

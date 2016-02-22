@@ -35,9 +35,7 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
   @Setter
   private int bufferThreshold=200000; // TODO: 4: create benchmark to determine best threshold given installation
   
-  @Inject
   public Neo4jBatchImporter(Encoder<B> encoder, Populator populator, GraphRecord.Factory grFactory) {
-    super();
     this.encoder = encoder;
     this.populator = populator;
     grBuilder=new GraphRecordBuilder<>(encoder, grFactory);
@@ -84,7 +82,7 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
     }
   }
 
-  private void populateAndCommit(GraphUri graphUri, Map<String, GraphRecord> gRecordsBuffered) {
+  private void populateAndCommit(GraphUri graphUri, Map<String, GraphRecord> gRecordsBuffered) throws IOException {
     populator.populateGraph(graphUri, gRecordsBuffered.values());
     gRecordsBuffered.clear();
   }

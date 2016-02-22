@@ -14,8 +14,6 @@ import net.deelam.graphtools.GraphRecord;
 import net.deelam.graphtools.GraphTransaction;
 import net.deelam.graphtools.GraphUri;
 
-import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
-
 /**
  * Given sourceData, iterates through ioRecord of type B 
  * and populates provided graph each time bufferThreshold (number of ioRecords) is reached.
@@ -72,7 +70,7 @@ public class BufferedImporter<B> implements Importer<B> {
     }
   }
 
-  private void populateAndCommit(GraphUri graphUri, int tx, Collection<GraphRecord> gRecordsBuffered) {
+  private void populateAndCommit(GraphUri graphUri, int tx, Collection<GraphRecord> gRecordsBuffered) throws IOException {
     populator.populateGraph(graphUri, gRecordsBuffered);
     GraphTransaction.commit(tx);
     GraphTransaction.begin(graphUri.getGraph()); // should be the same tx number

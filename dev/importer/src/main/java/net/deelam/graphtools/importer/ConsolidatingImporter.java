@@ -89,7 +89,7 @@ public class ConsolidatingImporter<B> implements Importer<B> {
     }
   }
 
-  private void populateAndCommit(GraphUri graphUri, int tx, Map<String, GraphRecord> gRecordsBuffered) {
+  private void populateAndCommit(GraphUri graphUri, int tx, Map<String, GraphRecord> gRecordsBuffered) throws IOException {
     populator.populateGraph(graphUri, gRecordsBuffered.values());
     GraphTransaction.commit(tx);
     GraphTransaction.begin(graphUri.getGraph()); // should be the same tx number

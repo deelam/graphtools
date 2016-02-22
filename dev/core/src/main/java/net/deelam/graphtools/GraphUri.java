@@ -169,6 +169,7 @@ public class GraphUri {
     } catch (Exception e) {
       throw new RuntimeException(e);
     } finally {
+      log.info("  Shut down graphUri={}", this);
       System.gc(); // addresses problem with NFS files still being held by JVM 
     }
   }
@@ -185,8 +186,9 @@ public class GraphUri {
       config = new BaseConfiguration();
     config.setProperty(URI_SCHEMA_PART, baseUri.getSchemeSpecificPart());
     parseQuery(baseUri.toString());
+    log.info("Opening graphUri={}", this);
     graph = factory.open(this);
-    log.info("Opened graph={}", graph);
+    log.info("  Opened graph={}", graph);
     {
       GraphUtils.addMetaDataNode(this, graph);
     }

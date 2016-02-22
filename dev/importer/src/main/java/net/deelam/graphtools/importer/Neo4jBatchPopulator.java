@@ -90,7 +90,7 @@ public class Neo4jBatchPopulator implements Populator {
   @Override
   public void populateGraph(GraphUri graphUri, Collection<GraphRecord> gRecords) throws IOException {
     if (importerName != null) {
-      markRecords(gRecords);
+//      markRecords(gRecords);
     }
 
     log.info("Inserting into {}", graphUri.asString());
@@ -188,6 +188,9 @@ public class Neo4jBatchPopulator implements Populator {
       Vertex mdV = GraphUtils.getMetaDataNode(idGraph);
       mdV.setProperty("createdNodes", createdNodes);
       mdV.setProperty("createdEdges", createdEdges);
+      if (importerName != null) {
+        mdV.setProperty(IMPORTER_KEY, importerName);        
+      }
       tmpGraphUri.shutdown();
     }catch(FileNotFoundException e){
       e.printStackTrace();

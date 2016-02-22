@@ -11,7 +11,6 @@ import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.Vertex;
-import com.tinkerpop.blueprints.impls.neo4j.Neo4jGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 @RequiredArgsConstructor
@@ -38,7 +37,7 @@ public class DefaultPopulator implements Populator {
   @Override
   public void populateGraph(GraphUri graphUri, Collection<GraphRecord> gRecords) {
     if (importerName != null) {
-      markRecords(gRecords);
+//      markRecords(gRecords);
     }
 
     // add to graph
@@ -63,6 +62,9 @@ public class DefaultPopulator implements Populator {
       Vertex mdV = GraphUtils.getMetaDataNode(graphUri.getGraph());
       mdV.setProperty("createdNodes", createdNodes);
       mdV.setProperty("createdEdges", createdEdges);
+      if (importerName != null) {
+        mdV.setProperty(IMPORTER_KEY, importerName);        
+      }
     }
   }
 

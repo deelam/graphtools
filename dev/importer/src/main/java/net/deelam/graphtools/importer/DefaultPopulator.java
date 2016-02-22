@@ -5,15 +5,13 @@ import java.util.Map.Entry;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import net.deelam.graphtools.GraphRecord;
-import net.deelam.graphtools.GraphRecordEdge;
-import net.deelam.graphtools.GraphRecordMerger;
-import net.deelam.graphtools.GraphUri;
+import net.deelam.graphtools.*;
 
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.blueprints.impls.neo4j.Neo4jGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 @RequiredArgsConstructor
@@ -37,8 +35,14 @@ public class DefaultPopulator implements Populator {
     }
   }
 
+  private GraphUri graphUri;
+
   @Override
   public void populateGraph(GraphUri graphUri, Collection<GraphRecord> gRecords) {
+    if (this.graphUri == null) {
+      this.graphUri = graphUri;
+    }
+
     if (importerName != null) {
       markRecords(gRecords);
     }
@@ -51,6 +55,20 @@ public class DefaultPopulator implements Populator {
     }
   }
 
+  private long createdNodes = 0, createdEdges = 0;
+  
+  public void reinit(GraphUri graphUri){
+    createdNodes=0;
+    createdEdges=0;
+  }
+
+  public void shutdown() {
+    if (this.graphUri != null) {
+      Vertex mdV = GraphUtils.getMetaDataNode(graphUri.getGraph());
+      mdV.setProperty("createdNodes", createdNodes);
+      mdV.setProperty("createdEdges", createdEdges);
+    }
+  }
 
   private void importEdges(IdGraph<?> graph, Direction direction, Vertex newV, GraphRecord gr) {
     for (Edge e : gr.getEdges(direction)) {
@@ -65,6 +83,7 @@ public class DefaultPopulator implements Populator {
     Vertex newV = graph.getVertex(id);
     if (newV == null) {
       newV = graph.addVertex(id);
+      ++createdNodes;
     }
     copyProperties(gr, newV);
     return newV;
@@ -79,6 +98,7 @@ public class DefaultPopulator implements Populator {
         newEdge = graph.addEdge(edgeId, v1inGraph, v2inGraph, grE.getLabel());
       else
         newEdge = graph.addEdge(edgeId, v2inGraph, v1inGraph, grE.getLabel());
+      ++createdEdges;
     } else {
       if (!newEdge.getLabel().equals(grE.getLabel()))
         throw new IllegalArgumentException("Expecting " + grE.getLabel() + " but got "
@@ -98,7 +118,7 @@ public class DefaultPopulator implements Populator {
 
   @Getter
   final GraphRecordMerger graphRecordMerger;
-  
+
   public void copyProperties(Element fromE, Element toE) {
     graphRecordMerger.mergeProperties(fromE, toE);
   }

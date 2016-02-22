@@ -42,6 +42,7 @@ public class BufferedImporter<B> implements Importer<B> {
   @Override
   public void importFile(SourceData<B> sourceData, GraphUri graphUri) throws IOException {
     encoder.reinit(sourceData);
+    populator.reinit(graphUri);
     graphUri.createNewIdGraph(true);
     int tx = GraphTransaction.begin(graphUri.getGraph());
     try {
@@ -65,6 +66,7 @@ public class BufferedImporter<B> implements Importer<B> {
       GraphTransaction.rollback(tx);
       throw re;
     } finally {
+      populator.shutdown();
       graphUri.shutdown();
       encoder.close(sourceData);
     }

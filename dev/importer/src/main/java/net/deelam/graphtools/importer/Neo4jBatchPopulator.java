@@ -3,6 +3,7 @@ package net.deelam.graphtools.importer;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -11,6 +12,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.*;
+import net.openhft.chronicle.map.ChronicleMap;
 import net.openhft.chronicle.map.ChronicleMapBuilder;
 
 import org.neo4j.graphdb.DynamicRelationshipType;
@@ -90,16 +92,6 @@ public class Neo4jBatchPopulator implements Populator {
       markRecords(gRecords);
     }
 
-    if (idMap == null) {
-      log.info("Using default maxMapSize: 1000000");
-      idMap = createIdMap(1000000); // TODO: make this configurable
-    }
-
-    if (inserter == null) {
-      log.info("Creating BatchInserter={}", graphUri);
-      inserter = createBatchInserter(graphUri);
-    }
-
     log.info("Inserting into {}", graphUri.asString());
     // add to graph
     for (GraphRecord gr : gRecords) {
@@ -153,6 +145,22 @@ public class Neo4jBatchPopulator implements Populator {
     config.put("relationship_auto_indexing", "true");
   }
 
+  private long createdNodes = 0, createdEdges = 0;
+
+  public void reinit(GraphUri graphUri) throws IOException {
+    createdNodes = 0;
+    createdEdges = 0;
+
+    if (inserter != null || idMap != null)
+      throw new IllegalStateException("Populator was not shutdown() from previous use: " + this);
+
+    log.info("Using default maxMapSize: 1000000");
+    idMap = createIdMap(1000000); // TODO: make this configurable
+
+    log.info("Creating BatchInserter={}", graphUri);
+    inserter = createBatchInserter(graphUri);
+  }
+
   public void shutdown() {
     String storeDir = inserter.getStoreDir();
     if (inserter != null) {
@@ -163,7 +171,22 @@ public class Neo4jBatchPopulator implements Populator {
         indexProvider.shutdown();
       }
       inserter.shutdown();
+      inserter = null;
     }
+
+    if (idMap != null) {
+      ((ChronicleMap<String, Long>) idMap).close();
+      idMap = null;
+    }
+
+    {
+      IdGraph<Neo4jGraph> idGraph = new IdGraph(new Neo4jGraph(storeDir, config));
+      Vertex mdV = GraphUtils.getMetaDataNode(idGraph);
+      mdV.setProperty("createdNodes", createdNodes);
+      mdV.setProperty("createdEdges", createdEdges);
+      idGraph.shutdown();
+    }
+
 
     if (!true) {
       Neo4jGraph baseGraph = new Neo4jGraph(storeDir, config);
@@ -217,6 +240,7 @@ public class Neo4jBatchPopulator implements Populator {
       Map<String, Object> cProps = jsonPropMerger.convertToJson(gr.getProps());
       cProps.put(IdGraph.ID, id);
       longId = graph.createNode(cProps);
+      ++createdNodes;
       //log.info("Create node: {} {}",longId, id);
       addStringIdToIndex(nodeStringIdIndex, longId, id);
       idMap.put(id, longId);
@@ -269,6 +293,7 @@ public class Neo4jBatchPopulator implements Populator {
       } else {
         edgeLongId = graph.createRelationship(v2inGraphLongId, v1inGraphLongId, type, cProps);
       }
+      ++createdEdges;
       addStringIdToIndex(edgeStringIdIndex, edgeLongId, edgeId);
     } else {
       BatchRelationship newEdge = graph.getRelationshipById(edgeLongId);

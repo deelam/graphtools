@@ -8,8 +8,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.inject.Inject;
-
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +42,7 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
   @Override
   public void importFile(SourceData<B> sourceData, GraphUri graphUri) throws IOException {
     encoder.reinit(sourceData);
+    populator.reinit(graphUri);
     try {
       int gRecCounter = 0;
       Map<String,GraphRecord> gRecordsBuffered=new HashMap<>(bufferThreshold+100);
@@ -72,12 +71,12 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
       }
       log.info("Last graph populate and transaction commit: {}", recordNum);
       populateAndCommit(graphUri, gRecordsBuffered);
-      ((Neo4jBatchPopulator)populator).shutdown();
       log.info("  commit done.");
     } catch (RuntimeException re) {
       log.warn("Done reading records but got exception during graph population", re);
       throw re;
     } finally {
+      populator.shutdown();
       encoder.close(sourceData);
     }
   }

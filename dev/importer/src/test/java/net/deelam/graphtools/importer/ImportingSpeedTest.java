@@ -59,8 +59,8 @@ public class ImportingSpeedTest {
           }
         });
 
-    mgr.register("companyContactsCsvBuffered", new CsvBeanSourceDataFactory<CompanyContactBean>(
-        new CompanyContactsCsvParser()),
+    mgr.register("companyContactsCsvBuffered",
+        new CsvBeanSourceDataFactory<CompanyContactBean>(new CompanyContactsCsvParser()),
         new ImporterFactory() {
           @Override
           public Importer<CompanyContactBean> create() {
@@ -73,18 +73,19 @@ public class ImportingSpeedTest {
           }
         });
 
-    mgr.register("companyContactsCsvConsolidating", new CsvBeanSourceDataFactory<CompanyContactBean>(
-        new CompanyContactsCsvParser()), new ImporterFactory() {
-      @Override
-      public Importer<CompanyContactBean> create() {
-        ConsolidatingImporter<CompanyContactBean> importer = new ConsolidatingImporter<CompanyContactBean>(
-            new CompanyContactsEncoder(),
-            new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())),
-            new GraphRecordImpl.Factory());
-        importer.setBufferThreshold(100000000);
-        return importer;
-      }
-    });
+    mgr.register("companyContactsCsvConsolidating",
+        new CsvBeanSourceDataFactory<CompanyContactBean>(new CompanyContactsCsvParser()),
+        new ImporterFactory() {
+          @Override
+          public Importer<CompanyContactBean> create() {
+            ConsolidatingImporter<CompanyContactBean> importer = new ConsolidatingImporter<CompanyContactBean>(
+                new CompanyContactsEncoder(),
+                new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())),
+                new GraphRecordImpl.Factory());
+            importer.setBufferThreshold(100000000);
+            return importer;
+          }
+        });
 
   }
 

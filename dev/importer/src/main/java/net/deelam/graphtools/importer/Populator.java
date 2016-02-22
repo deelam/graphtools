@@ -20,4 +20,8 @@ public interface Populator {
   
   void populateGraph(GraphUri graphUri, Collection<GraphRecord> gRecords) throws IOException;
 
+  void reinit(GraphUri graphUri) throws IOException;
+
+  void shutdown();
+
 }

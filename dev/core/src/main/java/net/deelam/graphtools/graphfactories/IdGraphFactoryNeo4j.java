@@ -12,6 +12,7 @@ import net.deelam.graphtools.IdGraphFactory;
 import net.deelam.graphtools.JsonPropertyMerger;
 import net.deelam.graphtools.PropertyMerger;
 
+import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.io.FileUtils;
 
@@ -30,6 +31,18 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
 
   public static void register() {
     GraphUri.register("neo4j", new IdGraphFactoryNeo4j());
+  }
+  
+  // Pass this to GraphUri on graphs that were built using BatchInserter.  
+  // Ideally, this should be persisted with the graphstore but don't know how. 
+  // http://stackoverflow.com/questions/21368277/neo4j-automatic-indexing-on-batch-execution
+  // http://blog.armbruster-it.de/2013/12/indexing-in-neo4j-an-overview/
+  public static Configuration OPEN_AFTER_BATCH_INSERT_CONFIG=new BaseConfiguration();
+  static {
+    OPEN_AFTER_BATCH_INSERT_CONFIG.setProperty("node_keys_indexable", IdGraph.ID );
+    OPEN_AFTER_BATCH_INSERT_CONFIG.setProperty("node_auto_indexing", "true" );
+    OPEN_AFTER_BATCH_INSERT_CONFIG.setProperty("relationship_keys_indexable", IdGraph.ID );
+    OPEN_AFTER_BATCH_INSERT_CONFIG.setProperty("relationship_auto_indexing", "true" );
   }
 
   @SuppressWarnings("unchecked")

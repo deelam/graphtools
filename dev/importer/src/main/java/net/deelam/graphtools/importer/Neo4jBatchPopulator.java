@@ -109,6 +109,7 @@ public class Neo4jBatchPopulator implements Populator {
       "type", "exact"
       );
 
+  private static final String ROOT_ID = "root";
 
   private BatchInserter createBatchInserter(GraphUri graphUri) throws IOException {
     graphUri.delete();
@@ -129,9 +130,9 @@ public class Neo4jBatchPopulator implements Populator {
       //edgeStringIdIndex.setCacheCapacity(IdGraph.ID, 100000);
 
 
-      rootNodeProps.put(IdGraph.ID, "root");
+      rootNodeProps.put(IdGraph.ID, ROOT_ID);
       inserter.setNodeProperties(0l, rootNodeProps);
-      addStringIdToIndex(nodeStringIdIndex, 0l, "root");
+      addStringIdToIndex(nodeStringIdIndex, 0l, ROOT_ID);
 
     }
 
@@ -185,6 +186,8 @@ public class Neo4jBatchPopulator implements Populator {
     try{
       GraphUri tmpGraphUri = new GraphUri(graphUri.asString(), IdGraphFactoryNeo4j.OPEN_AFTER_BATCH_INSERT_CONFIG);
       IdGraph<?> idGraph = tmpGraphUri.openExistingIdGraph();
+      idGraph.removeVertex(idGraph.getVertex(ROOT_ID));
+      
       Vertex mdV = GraphUtils.getMetaDataNode(idGraph);
       mdV.setProperty("createdNodes", createdNodes);
       mdV.setProperty("createdEdges", createdEdges);

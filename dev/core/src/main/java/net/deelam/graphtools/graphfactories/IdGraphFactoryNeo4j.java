@@ -5,6 +5,7 @@ package net.deelam.graphtools.graphfactories;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphUri;
@@ -13,6 +14,7 @@ import net.deelam.graphtools.JsonPropertyMerger;
 import net.deelam.graphtools.PropertyMerger;
 
 import org.apache.commons.configuration.BaseConfiguration;
+import org.apache.commons.configuration.CompositeConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.io.FileUtils;
 
@@ -48,14 +50,25 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
   @SuppressWarnings("unchecked")
   @Override
   public IdGraph<Neo4jGraph> open(GraphUri gUri) {
-    Configuration conf = gUri.getConfig();
+    CompositeConfiguration conf = new CompositeConfiguration();
+    {// assume graph has indexes supporting IdGraph, so they are not recreated
+      for (Iterator<String> itr = OPEN_AFTER_BATCH_INSERT_CONFIG.getKeys(); itr.hasNext();) {
+        String key = itr.next();
+        conf.setProperty(CONFIG_PREFIX + key, OPEN_AFTER_BATCH_INSERT_CONFIG.getProperty(key));
+      }
+    }
+    
+    conf.addConfiguration(gUri.getConfig());
     /// copy properties to new keys that Neo4jGraph looks for
-    String[] keys = Iterators.toArray(conf.getKeys(), String.class);
-    for (String key : keys) {
+    for (Iterator<String> itr = gUri.getConfig().getKeys(); itr.hasNext();) {
+      String key = itr.next();
       if (key.startsWith("blueprints.neo4j"))
         continue;
-      conf.setProperty(CONFIG_PREFIX + key, conf.getProperty(key));
+      conf.setProperty(CONFIG_PREFIX + key, gUri.getConfig().getProperty(key));
     }
+    
+    conf.addConfiguration(OPEN_AFTER_BATCH_INSERT_CONFIG);
+    
     //		GraphUri.printConfig(conf);
 
     String path = gUri.getUriPath();

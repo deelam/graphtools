@@ -1,4 +1,4 @@
-package net.deelam.graphtools.jobqueue;
+package net.deelam.graphtools;
 
 import java.util.HashMap;
 import java.util.Map;

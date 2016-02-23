@@ -37,7 +37,10 @@ public class GraphCopier implements AutoCloseable {
 
   public GraphCopier(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException {
     this.dstGraphUri = dstGraphUri;
-    this.graph = dstGraphUri.openExistingIdGraph(); // graph will be open here so that close() can call shutdown()
+    if(dstGraphUri.exists())
+      graph = dstGraphUri.getOrOpenGraph(); //openExistingIdGraph(); // graph will be open here so that close() can call shutdown()
+    else
+      graph=dstGraphUri.createNewIdGraph(false);
 
     if (srcGraphUri.isOpen()) {
       srcGraph = srcGraphUri.getGraph();

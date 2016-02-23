@@ -90,8 +90,8 @@ public class GraphCopier implements AutoCloseable {
     Vertex newV = graph.getVertex(nodeId);
     if (newV == null) {
       newV = graph.addVertex(nodeId);
+      merger.mergeProperties(v, newV);
     }
-    merger.mergeProperties(v, newV);
     return newV;
   }
 
@@ -104,8 +104,8 @@ public class GraphCopier implements AutoCloseable {
       if (inV == null)
         inV = importVertex(e.getVertex(Direction.IN));
       newE = graph.addEdge(newId, outV, inV, e.getLabel());
+      merger.mergeProperties(e, newE);
     }
-    merger.mergeProperties(e, newE);
     return newE;
   }
 

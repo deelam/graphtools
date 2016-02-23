@@ -51,7 +51,7 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
   @Override
   public IdGraph<Neo4jGraph> open(GraphUri gUri) {
     CompositeConfiguration conf = new CompositeConfiguration();
-    {// assume graph has indexes supporting IdGraph, so they are not recreated
+    if(exists(gUri)){// assume graph has indexes supporting IdGraph, so they are not recreated
       for (Iterator<String> itr = OPEN_AFTER_BATCH_INSERT_CONFIG.getKeys(); itr.hasNext();) {
         String key = itr.next();
         conf.setProperty(CONFIG_PREFIX + key, OPEN_AFTER_BATCH_INSERT_CONFIG.getProperty(key));
@@ -60,24 +60,21 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
     
     conf.addConfiguration(gUri.getConfig());
     /// copy properties to new keys that Neo4jGraph looks for
-    for (Iterator<String> itr = gUri.getConfig().getKeys(); itr.hasNext();) {
-      String key = itr.next();
+    String[] keys = Iterators.toArray(gUri.getConfig().getKeys(), String.class); // avoids ConcurrentModificationException
+    for (String key : keys) {
       if (key.startsWith("blueprints.neo4j"))
         continue;
       conf.setProperty(CONFIG_PREFIX + key, gUri.getConfig().getProperty(key));
     }
     
-    conf.addConfiguration(OPEN_AFTER_BATCH_INSERT_CONFIG);
-    
-    //		GraphUri.printConfig(conf);
-
     String path = gUri.getUriPath();
     // open graph
     checkPath(path);
 
-    log.debug("Opening Neo4j graph at path=" + path);
+    log.debug("Opening Neo4j graph at path={}", path);
     // Set other settings using prefix "blueprints.neo4j.conf"
     conf.setProperty("blueprints.neo4j.directory", path);
+//    GraphUri.printConfig(conf);
     IdGraph<Neo4jGraph> graph = new IdGraph<>(new Neo4jGraph(conf));
     return graph;
   }

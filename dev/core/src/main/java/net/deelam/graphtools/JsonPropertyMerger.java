@@ -3,6 +3,8 @@
  */
 package net.deelam.graphtools;
 
+import static com.google.common.base.Preconditions.*;
+
 import java.lang.reflect.Array;
 import java.util.Date;
 import java.util.HashMap;
@@ -160,7 +162,13 @@ public class JsonPropertyMerger implements PropertyMerger {
       }
 
     } else {
+      checkNotNull(compClass, "key="+key+" for node="+toE.getId());
+      try{
       valueList = (List) mapper.parser().parseList(compClass, valueSetStr);
+      }catch(Exception e){
+        log.error("key="+key+" for node="+toE.getId()+" compClass="+compClass+" valueSetStr="+valueSetStr);
+        throw e;
+      }
     }
 
     /// check if fromValue is already in toValueList
@@ -195,16 +203,23 @@ public class JsonPropertyMerger implements PropertyMerger {
   public Map<String, Object> convertToJson(Map<String, Object> props){
     Map<String, Object> newMap=new HashMap<>();
     for(Entry<String, Object> e:props.entrySet()){
-      if (validPropertyClasses.contains(e.getValue().getClass())) {
+      if (e.getValue().equals(SET_VALUE)) { 
+        final String setKey = e.getKey() + SET_SUFFIX;
+        Object firstVal=((Set) props.get(setKey)).iterator().next();
+        if(firstVal==null){
+          log.error("Cannot determine class for this set: {}", e.getValue());
+        }else{
+          newMap.put(e.getKey(), SET_VALUE);
+          //mimics setPropertyValueClass(elem, e.getKey(), e.getValue());
+          newMap.put(e.getKey() + VALUE_CLASS_SUFFIX, firstVal.getClass().getCanonicalName());
+          newMap.put(setKey, mapper.toJson(props.get(setKey)));
+        }
+      } else if (e.getKey().endsWith(SET_SUFFIX)){
+          continue;
+      }else if (validPropertyClasses.contains(e.getValue().getClass())) {
         newMap.put(e.getKey(), e.getValue());
-      } else { // save as Json
-        newMap.put(e.getKey(), SET_VALUE);
-        
-        final String compClassPropKey = e.getKey() + VALUE_CLASS_SUFFIX;
-        newMap.put(compClassPropKey, e.getValue().getClass().getCanonicalName());
-        
-        String setPropertyKey = e.getKey() + SET_SUFFIX;
-        newMap.put(setPropertyKey, mapper.toJson(e.getValue()));
+      } else {// save as Json
+        newMap.put(e.getKey(), mapper.toJson(e.getValue()));
       }
     }
     return newMap;
@@ -212,7 +227,7 @@ public class JsonPropertyMerger implements PropertyMerger {
 
   public void convertFromJson(Map<String, Object> existingProps, GraphRecord tempGr) {
     for(Entry<String, Object> entry:existingProps.entrySet()){
-      if(entry.getKey().equals(SET_VALUE)){
+      if(entry.getValue().equals(SET_VALUE)){
         Class<?> compClass;
         {
           final String compClassPropKey = entry.getKey() + VALUE_CLASS_SUFFIX;

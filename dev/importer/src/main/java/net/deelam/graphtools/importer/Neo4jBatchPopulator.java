@@ -307,6 +307,7 @@ public class Neo4jBatchPopulator implements Populator {
       }
       ++createdEdges;
       addStringIdToIndex(edgeStringIdIndex, edgeLongId, edgeId);
+      idMap.put(edgeId, edgeLongId);
     } else {
       BatchRelationship newEdge = graph.getRelationshipById(edgeLongId);
       String label = newEdge.getType().name();

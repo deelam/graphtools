@@ -7,12 +7,16 @@ package net.deelam.graphtools.jobqueue;
  * @author dlam
  *
  */
-public interface JobProcessor {
+public interface JobProcessor<J extends DependentJob> {
 
-  boolean precheckJob();
-
-  void runJob(DependentJob job);
+  String getJobType();
+  
+  boolean precheckJob(J job);
 
   boolean cancelJob(String jobId);
+
+  boolean isJobReady(J job);
+
+  void runJob(J job);
 
 }

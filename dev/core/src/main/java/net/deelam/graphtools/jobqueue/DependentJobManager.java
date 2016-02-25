@@ -4,17 +4,12 @@
 package net.deelam.graphtools.jobqueue;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.FramedGraphProvider;
@@ -32,7 +27,6 @@ import com.tinkerpop.frames.FramedTransactionalGraph;
  * 
  * @author dlam
  */
-@RequiredArgsConstructor
 @Slf4j
 public class DependentJobManager {
 
@@ -47,7 +41,7 @@ public class DependentJobManager {
     String[] inputJobs;
   }
 
-  static class MyProc implements JobProcessor {
+  static class MyProc implements JobProcessor<DependentJob> {
     private boolean cancel;
 
     @Override
@@ -69,7 +63,7 @@ public class DependentJobManager {
     }
 
     @Override
-    public boolean precheckJob() {
+    public boolean precheckJob(DependentJob job) {
       return true;
     }
 
@@ -77,6 +71,16 @@ public class DependentJobManager {
     public boolean cancelJob(String jobId) {
       cancel = true;
       return true;
+    }
+
+    @Override
+    public boolean isJobReady(DependentJob job) {
+      return true;
+    }
+
+    @Override
+    public String getJobType() {
+      return null;
     }
   }
 
@@ -145,19 +149,21 @@ public class DependentJobManager {
     }
   }
 
-  private final Map<String, JobProcessor> processors = new HashMap<>();
+  private final Map<String, JobProcessor<?>> processors = new HashMap<>();
   private Map<String, DependentJob> waitingJobs = new HashMap<>();
 
-  public void addJobProcessor(String jobType, JobProcessor proc) {
+  public void addJobProcessor(String jobType, JobProcessor<?> proc) {
     processors.put(jobType, proc);
   }
 
+  @SuppressWarnings("unchecked")
   private boolean preCheckJob(DependentJob job) {
+    @SuppressWarnings("rawtypes")
     JobProcessor proc = processors.get(job.getJobType());
     if (proc == null) {
       throw new UnsupportedOperationException("type=" + job.getJobType());
     } else {
-      if (proc.precheckJob())
+      if (proc.precheckJob(job))
         return true;
     }
     return false;
@@ -235,10 +241,12 @@ public class DependentJobManager {
         break;
       case PROCESSING:
         // cancel running job
-        JobProcessor proc = processors.get(jobV.getJobType());
+        JobProcessor<?> proc = processors.get(jobV.getJobType());
         log.info("Cancelling job currently run on {}", proc);
         if (proc.cancelJob(jobId)) {
           setJobCancelled(jobV);
+        } else {
+          throw new RuntimeException("Could not cancel job: "+jobId);
         }
         break;
       default:
@@ -274,6 +282,7 @@ public class DependentJobManager {
     @Setter
     private boolean keepRunning = true;
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     @Override
     public void run() {
       while (keepRunning) {
@@ -301,24 +310,35 @@ public class DependentJobManager {
           DependentJobFrame jobV = jobMgr.graph.getVertex(job.getId(), DependentJobFrame.class);
           if (jobMgr.isJobReady(jobV)) {
             JobProcessor proc = jobMgr.processors.get(job.getJobType());
-            synchronized (jobMgr.graph) {
-              jobV.setState(STATE.PROCESSING);
+            if(proc.isJobReady(job)){
+              synchronized (jobMgr.graph) {
+                jobV.setState(STATE.PROCESSING);
+              }
+              log.info("Starting job={}", job);
+              proc.runJob(job);
+              jobMgr.jobDone(jobV);
+              log.info("Done " + jobV.getNodeId() + " \n" + jobMgr.toString());
+            } else {
+              synchronized (jobMgr.graph) {
+                log.warn("Job is not ready for processing: {}  Setting state=WAITING", job);
+                putJobInWaitingArea(job, jobV);
+              }
             }
-            log.info("Starting job={}", job);
-            proc.runJob(job);
-            jobMgr.jobDone(jobV);
-            log.info("Done " + jobV.getNodeId() + " \n" + jobMgr.toString());
           } else {
             synchronized (jobMgr.graph) {
-              log.warn("Job is not ready for processing: {}  Setting state=WAITING", job);
-              jobV.setState(STATE.WAITING);
-              jobMgr.waitingJobs.put(job.getId(), job);
+              log.warn("Input to job={} is not ready; setting state=WAITING", job);
+              putJobInWaitingArea(job, jobV);
             }
           }
         } catch (InterruptedException e) {
           e.printStackTrace();
         }
       }
+    }
+
+    private void putJobInWaitingArea(DependentJob job, DependentJobFrame jobV) {
+      jobV.setState(STATE.WAITING);
+      jobMgr.waitingJobs.put(job.getId(), job);
     }
   }
 

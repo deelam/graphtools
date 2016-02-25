@@ -18,6 +18,7 @@ import net.deelam.graphtools.GraphUtils;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryTinker;
 import net.deelam.graphtools.jobqueue.DependentJobFrame.STATE;
 
+import com.google.common.collect.Iterables;
 import com.tinkerpop.blueprints.TransactionalGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 import com.tinkerpop.frames.FramedTransactionalGraph;
@@ -31,14 +32,13 @@ import com.tinkerpop.frames.FramedTransactionalGraph;
 public class DependentJobManager {
 
   private static final String STOP_JOB_TYPE = "STOP";
-  private static final DependentJob STOP_THREAD_JOB = new DependentJobImpl("STOP", STOP_JOB_TYPE, null);
+  private static final DependentJob STOP_THREAD_JOB = new DependentJobImpl("STOP", STOP_JOB_TYPE);
 
   @AllArgsConstructor
   @Data
   static class DependentJobImpl implements DependentJob {
     String id;
     String jobType;
-    String[] inputJobs;
   }
 
   static class MyProc implements JobProcessor<DependentJob> {
@@ -92,17 +92,17 @@ public class DependentJobManager {
     mgr.addJobProcessor("typeA", new MyProc());
     mgr.addJobProcessor("typeB", new MyProc());
 
-    DependentJob jobA1 = new DependentJobImpl("nodeA1", "typeA", null);
+    DependentJob jobA1 = new DependentJobImpl("nodeA1", "typeA");
     mgr.addJob(jobA1);
-    DependentJob jobA2 = new DependentJobImpl("ALL_SRC", "typeA", new String[] {"nodeA1"});
-    mgr.addJob(jobA2);
-    DependentJob jobB = new DependentJobImpl("nodeB1", "typeB", new String[] {"ALL_SRC"});
-    mgr.addJob(jobB);
+    DependentJob jobA2 = new DependentJobImpl("ALL_SRC", "typeA");
+    mgr.addJob(jobA2, "nodeA1");
+    DependentJob jobB = new DependentJobImpl("nodeB1", "typeB");
+    mgr.addJob(jobB, "ALL_SRC");
 
-    DependentJob jobA3 = new DependentJobImpl("nodeA3", "typeA", new String[] {"nodeA1"});
-    mgr.addJob(jobA3);
-    DependentJob jobA22 = new DependentJobImpl("ALL_SRC", "typeA", new String[] {"nodeA3"});
-    mgr.updateJob(jobA22);
+    DependentJob jobA3 = new DependentJobImpl("nodeA3", "typeA");
+    mgr.addJob(jobA3, "nodeA1");
+    //DependentJob jobA22 = new DependentJobImpl("ALL_SRC", "typeA", new String[] {"nodeA3"});
+    mgr.addInputJobs("ALL_SRC", "nodeA3");
 
     mgr.addEndJobs();
 
@@ -131,7 +131,7 @@ public class DependentJobManager {
   }
 
   public void close() {
-    log.info("Closing " + this);
+    log.info("Closing {}", this);
     for (JobThread t : jobRunners) {
       t.setKeepRunning(false);
     }
@@ -169,17 +169,17 @@ public class DependentJobManager {
     return false;
   }
 
-  public void updateJob(DependentJob job) {
-    DependentJobFrame jobV = graph.getVertex(job.getId(), DependentJobFrame.class);
+  public void addInputJobs(String jobId, String... inJobIds) {
+    DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
     if (jobV == null) {
-      throw new IllegalArgumentException("Job with id does not exist: " + job);
+      throw new IllegalArgumentException("Job with id does not exist: " + jobId);
     } else {
-      log.info("Updating with " + job);
-      setInputJobs(job, jobV);
+      //log.info("addInputJobs " + jobId);
+      addInputJobs(jobV, inJobIds);
     }
   }
 
-  public boolean addJob(DependentJob job) {
+  public boolean addJob(DependentJob job, String... inJobIds) {
     if (preCheckJob(job)) {
       // add to graph
       DependentJobFrame jobV = graph.getVertex(job.getId(), DependentJobFrame.class);
@@ -190,7 +190,7 @@ public class DependentJobManager {
         throw new IllegalArgumentException("Job with id already exists: " + job);
       }
       // TODO: copy job fields to jobV
-      setInputJobs(job, jobV);
+      addInputJobs(jobV, inJobIds);
 
       // add to queue
       synchronized(graph){ // don't synchronize on queue
@@ -204,14 +204,14 @@ public class DependentJobManager {
     }
   }
 
-  void setInputJobs(DependentJob job, DependentJobFrame jobV) {
-    String[] inJobs = job.getInputJobs();
-    if (inJobs != null)
-      for (String inputJobId : inJobs) {
+  void addInputJobs(DependentJobFrame jobV, String... inJobIds) {
+    if (inJobIds != null)
+      for (String inputJobId : inJobIds) {
         DependentJobFrame inputJobV = graph.getVertex(inputJobId, DependentJobFrame.class);
         if (inputJobV == null)
           throw new IllegalArgumentException("Unknown input jobId=" + inputJobId);
-        jobV.addInputJob(inputJobV);
+        if(! Iterables.contains(jobV.getInputJobs(), inputJobV))
+          jobV.addInputJob(inputJobV);
       }
   }
 
@@ -267,7 +267,7 @@ public class DependentJobManager {
   }
 
   public String toString() {
-    return GraphUtils.toString(graph, 1000, "state");
+    return GraphUtils.toString(graph, 1000, "jobType", "state");
   }
 
   @Slf4j
@@ -321,13 +321,13 @@ public class DependentJobManager {
             } else {
               synchronized (jobMgr.graph) {
                 log.warn("Job is not ready for processing: {}  Setting state=WAITING", job);
-                putJobInWaitingArea(job, jobV);
+                jobMgr.putJobInWaitingArea(job, jobV);
               }
             }
           } else {
             synchronized (jobMgr.graph) {
               log.warn("Input to job={} is not ready; setting state=WAITING", job);
-              putJobInWaitingArea(job, jobV);
+              jobMgr.putJobInWaitingArea(job, jobV);
             }
           }
         } catch (InterruptedException e) {
@@ -336,12 +336,17 @@ public class DependentJobManager {
       }
     }
 
-    private void putJobInWaitingArea(DependentJob job, DependentJobFrame jobV) {
-      jobV.setState(STATE.WAITING);
-      jobMgr.waitingJobs.put(job.getId(), job);
-    }
   }
 
+  public void putJobInWaitingArea(DependentJob job) {
+    DependentJobFrame jobV = graph.getVertex(job.getId(), DependentJobFrame.class);
+    putJobInWaitingArea(job, jobV);
+  }
+  private void putJobInWaitingArea(DependentJob job, DependentJobFrame jobV) {
+    jobV.setState(STATE.WAITING);
+    waitingJobs.put(job.getId(), job);
+  }
+  
   public boolean isJobReady(DependentJobFrame jobV) {
     synchronized (graph) {
       for (DependentJobFrame inV : jobV.getInputJobs()) {

@@ -14,7 +14,7 @@
 		<bundle.import_package>
 			javassist.util.proxy, <!-- needed by frames; must manually import -->
 			com.tinkerpop.blueprints.impls.*;resolution:=optional,
-<!-- 			com.orientechnologies.orient.*;resolution:=optional, -->
+ 			com.orientechnologies.orient.*;resolution:=optional,
 			*
 		</bundle.import_package>
 	</properties>

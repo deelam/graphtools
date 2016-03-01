@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphRecord;
 import net.deelam.graphtools.GraphRecordImpl;
@@ -22,6 +23,7 @@ import com.tinkerpop.blueprints.Edge;
  * @author deelam, Created:Nov 10, 2015
  */
 @Slf4j
+@NoArgsConstructor // required by Hadoop
 public class GraphRecordWriteable extends GraphRecordImpl implements GraphRecord, WritableComparable<GraphRecordWriteable> {
   private static final long serialVersionUID = 201511100951L;
 

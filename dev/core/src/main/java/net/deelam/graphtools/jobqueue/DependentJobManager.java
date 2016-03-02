@@ -45,13 +45,12 @@ public class DependentJobManager {
     private boolean cancel;
 
     @Override
-    public void runJob(DependentJob job) {
+    public boolean runJob(DependentJob job) {
       for (int i = 0; i < 5; ++i) {
         if (cancel) {
           log.info("Cancelling: {}", i);
           //reset
           cancel = false;
-          return;
         }
         try {
           log.info(getClass().getSimpleName() + " Running: {}", i);
@@ -60,6 +59,7 @@ public class DependentJobManager {
           e.printStackTrace();
         }
       }
+      return true;
     }
 
     @Override
@@ -315,8 +315,11 @@ public class DependentJobManager {
                 jobV.setState(STATE.PROCESSING);
               }
               log.info("Starting job={}", job);
-              proc.runJob(job);
-              jobMgr.jobDone(jobV);
+              boolean success=proc.runJob(job);
+              if(success)
+                jobMgr.jobDone(jobV);
+              else 
+                jobMgr.jobFailed(jobV);
               log.info("Done " + jobV.getNodeId() + " \n" + jobMgr.toString());
             } else {
               synchronized (jobMgr.graph) {
@@ -345,6 +348,7 @@ public class DependentJobManager {
   private void putJobInWaitingArea(DependentJob job, DependentJobFrame jobV) {
     jobV.setState(STATE.WAITING);
     waitingJobs.put(job.getId(), job);
+    log.info("Waiting jobs: {}", waitingJobs);
   }
   
   public boolean isJobReady(DependentJobFrame jobV) {
@@ -368,6 +372,12 @@ public class DependentJobManager {
     }
   }
 
+  public void jobFailed(DependentJobFrame job) {
+    synchronized (graph) {
+      job.setState(STATE.FAILED);
+    }
+  }
+  
   private void markDependants(DependentJobFrame doneJob) throws InterruptedException {
     /**
      * When a task is DONE, it iterate through each dependee (i.e., task that it feeds):

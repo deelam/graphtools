@@ -17,6 +17,6 @@ public interface JobProcessor<J extends DependentJob> {
 
   boolean isJobReady(J job);
 
-  void runJob(J job);
+  boolean runJob(J job);
 
 }

@@ -323,13 +323,13 @@ public class DependentJobManager {
               log.info("Done " + jobV.getNodeId() + " \n" + jobMgr.toString());
             } else {
               synchronized (jobMgr.graph) {
-                log.warn("Job is not ready for processing: {}  Setting state=WAITING", job);
+                log.warn("Job is not ready for processing; setting state=WAITING.  {}", job);
                 jobMgr.putJobInWaitingArea(job, jobV);
               }
             }
           } else {
             synchronized (jobMgr.graph) {
-              log.warn("Input to job={} is not ready; setting state=WAITING", job);
+              log.warn("Input to job={} is not ready; setting state=WAITING.  {}", job);
               jobMgr.putJobInWaitingArea(job, jobV);
             }
           }
@@ -348,7 +348,7 @@ public class DependentJobManager {
   private void putJobInWaitingArea(DependentJob job, DependentJobFrame jobV) {
     jobV.setState(STATE.WAITING);
     waitingJobs.put(job.getId(), job);
-    log.info("Waiting jobs: {}", waitingJobs);
+    log.info("Waiting jobs: {}", waitingJobs.keySet());
   }
   
   public boolean isJobReady(DependentJobFrame jobV) {

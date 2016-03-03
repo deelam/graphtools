@@ -6,13 +6,8 @@ package net.deelam.graphtools;
 import static com.google.common.base.Preconditions.*;
 
 import java.lang.reflect.Array;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -30,9 +25,9 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 @Slf4j
 public class JsonPropertyMerger implements PropertyMerger {
 
-  private static final String VALUE_CLASS_SUFFIX = "__jsonClass";
-  static final String SET_VALUE = "[multivalued]";
-  static final String SET_SUFFIX = "__jsonSET";
+  static final String VALUE_CLASS_SUFFIX = JavaSetPropertyMerger.VALUE_CLASS_SUFFIX;
+  static final String SET_VALUE = JavaSetPropertyMerger.SET_VALUE;
+  static final String SET_SUFFIX = JavaSetPropertyMerger.SET_SUFFIX;
 
   @Override
   public void mergeProperties(Element fromE, Element toE) {
@@ -56,8 +51,20 @@ public class JsonPropertyMerger implements PropertyMerger {
         setElementProperty(toE, key, fromValue);
         if (fromValue.equals(SET_VALUE)) {
           String setPropertyKey = key + SET_SUFFIX;
-          String fromValueSetStr = fromE.getProperty(setPropertyKey);
-          toE.setProperty(setPropertyKey, fromValueSetStr);
+          Object fromValueSet = fromE.getProperty(setPropertyKey);
+          if(fromValueSet instanceof Set){ 
+            toE.setProperty(setPropertyKey, mapper.toJson(fromValueSet));
+
+            Object firstVal = ((Set) fromValueSet).iterator().next();
+            if (firstVal == null) {
+              log.error("Cannot determine class for this set: {}", fromValueSet);
+            } else {
+              setPropertyValueClass(toE, key, firstVal);
+            }
+          } else {
+            String fromValueSetStr = (String) fromValueSet;
+            toE.setProperty(setPropertyKey, fromValueSetStr);
+          }
         }
         continue;
       }
@@ -142,12 +149,12 @@ public class JsonPropertyMerger implements PropertyMerger {
 
     // check special SET_SUFFIX property and create a Set if needed
     final String valSetPropKey = key + SET_SUFFIX;
-    final String valueSetStr = toE.getProperty(valSetPropKey);
+    final Object valueSet = toE.getProperty(valSetPropKey);
     List valueList;
 
     Class<?> compClass = getPropertyValueClass(toE, key);
 
-    if (valueSetStr == null) {
+    if (valueSet == null) {
       valueList = new ValueList(false);
       Object existingVal = toE.getProperty(key);
       valueList.add(existingVal);
@@ -161,10 +168,24 @@ public class JsonPropertyMerger implements PropertyMerger {
         compClass = existingVal.getClass();
       }
 
+//    } else if(valueSet instanceof Set){ 
+//      // handle case where set is HashSet created by JavaSetPropertyMerger
+//      if (compClass == null) {
+//        Object firstVal=((Set) valueSet).iterator().next();
+//        if(firstVal==null){
+//          log.error("Cannot determine class for this set: {}", valueSet);
+//        }else{
+//          setPropertyValueClass(toE, key, firstVal);
+//          compClass = firstVal.getClass();
+//        }
+//      }
+//      valueList = new ValueList(false);
+//      valueList.addAll((Set) valueSet);
     } else {
-      checkNotNull(compClass, "key="+key+" for node="+toE.getId());
+      checkNotNull(compClass, "key="+key+" for node="+toE.getId()+" valueSet="+valueSet.getClass());
+      String valueSetStr=(String) valueSet;
       try{
-      valueList = (List) mapper.parser().parseList(compClass, valueSetStr);
+        valueList = (List) mapper.parser().parseList(compClass, valueSetStr);
       }catch(Exception e){
         log.error("key="+key+" for node="+toE.getId()+" compClass="+compClass+" valueSetStr="+valueSetStr);
         throw e;

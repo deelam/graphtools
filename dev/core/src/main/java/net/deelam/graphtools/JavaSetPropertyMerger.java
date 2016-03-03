@@ -15,6 +15,7 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 //@Slf4j
 public class JavaSetPropertyMerger implements PropertyMerger {
 
+  static final String VALUE_CLASS_SUFFIX = "__jsonClass";
   static final String SET_VALUE = "[multivalued]";
   static final String SET_SUFFIX = "__jsonSET";
 
@@ -71,6 +72,7 @@ public class JavaSetPropertyMerger implements PropertyMerger {
           Object existingVal = toE.getProperty(key);
           valueSet.add(existingVal);
           toE.setProperty(key, SET_VALUE);
+          //setPropertyValueClass(toE, key, existingVal);
         }
         if (fromValue.equals(SET_VALUE)) { // then 
           valueSet.addAll((Set<Object>) fromE.getProperty(setPropertyKey));
@@ -79,6 +81,12 @@ public class JavaSetPropertyMerger implements PropertyMerger {
         }
       }
     }
+  }
+  
+  
+  private void setPropertyValueClass(Element elem, String key, Object value) {
+    final String compClassPropKey = key + VALUE_CLASS_SUFFIX;
+    elem.setProperty(compClassPropKey, value.getClass().getCanonicalName());
   }
 
 }

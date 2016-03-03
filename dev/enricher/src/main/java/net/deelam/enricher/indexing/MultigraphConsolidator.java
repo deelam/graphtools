@@ -360,7 +360,12 @@ public class MultigraphConsolidator implements AutoCloseable {
       if (origId == null)
         origId = v.getProperty(IdGraph.ID); // If v instanceof IdElement, getProperty(IdGraph.ID) returns null
       if (origId == null)
-        origId = (String) v.getId();
+        if(v.getId() instanceof String)
+          origId = (String) v.getId();
+        else{
+          log.warn("Element id is not a String: {} is of class={}", v.getId(), v.getId().getClass());
+          origId = v.getId().toString();
+        }
 
       newV.setProperty(origIdPropKey, origId);
     }

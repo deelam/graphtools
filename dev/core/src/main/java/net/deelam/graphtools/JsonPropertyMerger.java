@@ -95,6 +95,8 @@ public class JsonPropertyMerger implements PropertyMerger {
     validPropertyClasses.add(Byte.class);
     validPropertyClasses.add(Character.class);
     validPropertyClasses.add(Short.class);
+    
+    //Titan supported property types: http://s3.thinkaurelius.com/docs/titan/0.5.0/schema.html#_defining_property_keys
   }
 
   // for Graphs (like Neo4j) that can only store primitives

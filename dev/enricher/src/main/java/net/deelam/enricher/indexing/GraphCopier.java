@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphTransaction;
 import net.deelam.graphtools.GraphUri;
+import net.deelam.graphtools.GraphUtils;
 import net.deelam.graphtools.PropertyMerger;
 
 import com.tinkerpop.blueprints.Direction;
@@ -51,8 +52,42 @@ public class GraphCopier implements AutoCloseable {
     }
     
     merger = dstGraphUri.createPropertyMerger();
+    
+    addEdgeFromSrcMetaDataNode(srcGraph);
+    importMetadataSubgraph();
   }
 
+  private void addEdgeFromSrcMetaDataNode(IdGraph<?> srcGraph) {
+    Vertex mdV = GraphUtils.getMetaDataNode(graph);
+    Vertex srcGraphMdV=GraphUtils.getMetaDataNode(srcGraph);
+    String srcGraphUri = srcGraphMdV.getProperty(GraphUtils.GRAPHURI_PROP);
+    Vertex importedSrcGraphMdV = graph.getVertex(srcGraphUri);
+    if(importedSrcGraphMdV==null){
+      importedSrcGraphMdV = importVertexWithId(srcGraphMdV, srcGraphUri);
+      String edgeId=srcGraphUri+"->"+mdV.getProperty(GraphUtils.GRAPHURI_PROP);
+      if(graph.getEdge(edgeId)==null){
+        Edge importedEdge = graph.addEdge(edgeId, importedSrcGraphMdV, mdV, "inputGraphTo");
+        importedEdge.setProperty(GraphUtils.GRAPH_METADATA_PROP, true);
+      }
+    }
+  }
+  
+  private void importMetadataSubgraph() {
+    Vertex srcGraphMdV = GraphUtils.getMetaDataNode(srcGraph);
+
+    int tx = GraphTransaction.begin(graph);
+    try {
+      String graphUri = srcGraphMdV.getProperty(GraphUtils.GRAPHURI_PROP);
+      Vertex importedMdV = importVertexWithId(srcGraphMdV, graphUri);
+
+      importSubgraphUsingOrigId(srcGraphMdV, importedMdV);
+      GraphTransaction.commit(tx);
+    } catch (RuntimeException re) {
+      GraphTransaction.rollback(tx);
+      throw re;
+    }
+  }
+  
   public Vertex importVertex(String nodeId) {
     Vertex v = srcGraph.getVertex(nodeId);
     checkNotNull(v, "Cannot find nodeId=" + nodeId + " in srcGraph");
@@ -87,7 +122,11 @@ public class GraphCopier implements AutoCloseable {
 
   public Vertex importVertex(Vertex v) {
     String nodeId = (String) v.getId();
-    Vertex newV = graph.getVertex(nodeId);
+    return importVertexWithId(v, nodeId);
+  }
+  
+  public Vertex importVertexWithId(Vertex v, Object nodeId) {
+    Vertex newV = graph.getVertex((String) nodeId);
     if (newV == null) {
       newV = graph.addVertex(nodeId);
       merger.mergeProperties(v, newV);
@@ -97,6 +136,10 @@ public class GraphCopier implements AutoCloseable {
 
   public Edge importEdge(Edge e, Vertex outV, Vertex inV) {
     String newId = (String) e.getId();
+    return importEdgeWithId(e, outV, inV, newId);
+  }
+  
+  public Edge importEdgeWithId(Edge e, Vertex outV, Vertex inV, Object newId) {
     Edge newE = graph.getEdge(newId);
     if (newE == null) {
       if (outV == null)
@@ -146,18 +189,25 @@ public class GraphCopier implements AutoCloseable {
   public void importGraph(int commitFreq) {
     IdGraph<?> from = srcGraph;
 
-    // TODO: 3: currently copies METADATA nodes from source graphs, which can make graph dirty
-
     int tx = GraphTransaction.begin(graph, commitFreq);
     try {
       for (final Vertex fromVertex : from.getVertices()) {
-        importVertex(fromVertex);
-        GraphTransaction.commitIfFull(tx);
+        // skip METADATA nodes from source graphs, which can make graph dirty
+        if(fromVertex.getProperty(GraphUtils.GRAPH_METADATA_PROP)==null){
+          importVertex(fromVertex);
+          GraphTransaction.commitIfFull(tx);
+        }else{
+          log.info("Skipping metadata node: {}", fromVertex);
+        }
       }
 
       for (final Edge fromEdge : from.getEdges()) {
-        importEdge(fromEdge, null, null);
-        GraphTransaction.commitIfFull(tx);
+        if(fromEdge.getProperty(GraphUtils.GRAPH_METADATA_PROP)==null){
+          importEdge(fromEdge, null, null);
+          GraphTransaction.commitIfFull(tx);
+        }else{
+          log.info("Skipping metadata edge: {}", fromEdge);
+        }
       }
 
       GraphTransaction.commit(tx);
@@ -167,4 +217,35 @@ public class GraphCopier implements AutoCloseable {
     }
   }
 
+  public void importSubgraphUsingOrigId(Vertex rootV, Vertex importedRootV) {
+    int tx = GraphTransaction.begin(graph);
+    try {
+      if(importedRootV==null){
+        importedRootV=importVertexWithId(rootV, rootV.getId());
+      }
+      recursiveImport(rootV, importedRootV, rootV);
+      GraphTransaction.commit(tx);
+    } catch (RuntimeException re) {
+      GraphTransaction.rollback(tx);
+      throw re;
+    }
+  }
+  
+  private void recursiveImport(Vertex v, Vertex importedV, Vertex rootV) {
+    for (Direction dir : GraphUtils.BOTHDIR)
+      for (Edge e : v.getEdges(dir)) {
+        Vertex oppV = e.getVertex(dir.opposite());
+        boolean alreadyVisited=(graph.getVertex(oppV.getId())!=null);
+        if(!alreadyVisited && !rootV.equals(oppV)){
+          Vertex importedOppV=importVertexWithId(oppV, oppV.getId());
+          if(dir==Direction.OUT)
+            importEdgeWithId(e, importedV, importedOppV, e.getId());
+          else
+            importEdgeWithId(e, importedOppV, importedV, e.getId());
+          
+          if(!alreadyVisited)
+            recursiveImport(oppV, importedOppV, rootV);
+        }
+      }
+  }
 }

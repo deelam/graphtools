@@ -3,6 +3,8 @@
  */
 package net.deelam.enricher.indexing;
 
+import static com.google.common.base.Preconditions.*;
+
 import java.io.*;
 import java.util.Map;
 import java.util.Set;
@@ -45,6 +47,7 @@ public class IdMapper implements AutoCloseable {
   }
 
   public void put(String shortStrId, String longStrId) {
+    checkNotNull(longStrId, "longId cannot be null"/*+shortStrId*/);
     map.put(shortStrId, longStrId);
   }
 

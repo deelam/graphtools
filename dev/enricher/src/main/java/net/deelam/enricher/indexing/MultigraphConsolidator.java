@@ -76,10 +76,17 @@ public class MultigraphConsolidator implements AutoCloseable {
   //  public MultigraphConsolidator(IdGraph<?> idGraph, PropertyMerger pmerger) throws IOException {
   //    
   //  }
-
   public MultigraphConsolidator(GraphUri graphUri) throws IOException {
+    this(graphUri, false);
+  }
+  
+  public MultigraphConsolidator(GraphUri graphUri, boolean shouldAlreadyExist) throws IOException {
     dstGraphUri=graphUri;
-    this.graph = dstGraphUri.openExistingIdGraph(); // graph will be open here so that close() can call shutdown()
+    if(shouldAlreadyExist || dstGraphUri.exists())
+      graph = dstGraphUri.getOrOpenGraph(); //openExistingIdGraph(); // graph will be open here so that close() can call shutdown()
+    else
+      graph=dstGraphUri.createNewIdGraph(false);
+
     merger = dstGraphUri.createPropertyMerger();
 
     srcGraphIdPropKey = GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
@@ -139,7 +146,7 @@ public class MultigraphConsolidator implements AutoCloseable {
     try {
       if (useFileBasedIdMapper) {
         GraphUtils.setMetaData(graph, GRAPHID_MAP_FILE, graphIdMapper.getFilename());
-      }
+      } 
       {
         // save mapper in META_DATA node
         Vertex mdV = GraphUtils.getMetaDataNode(graph);
@@ -170,15 +177,17 @@ public class MultigraphConsolidator implements AutoCloseable {
                 graphIdMapFile);
           }
         }
-      } else {
+      } else
+      { // TODO why doesn't this work?
         // load mapper from META_DATA node if it exists
         Integer graphIdMapSize = GraphUtils.getMetaData(graph, GRAPHID_MAP_SIZE);
         if (graphIdMapSize != null) {
           Vertex mdV = GraphUtils.getMetaDataNode(graph);
-          graphIdMapper = new IdMapper();
+          if (graphIdMapper == null)
+            graphIdMapper = new IdMapper();
           for (String k : mdV.getPropertyKeys()) {
             if (k.startsWith(GRAPHID_MAP_ENTRY_PREFIX)) {
-              String shortId = k.substring(GRAPHID_MAP_ENTRY_PREFIX.length() + 1);
+              String shortId = k.substring(GRAPHID_MAP_ENTRY_PREFIX.length());
               String longId = mdV.getProperty(k);
               graphIdMapper.put(shortId, longId);
             }
@@ -221,8 +230,43 @@ public class MultigraphConsolidator implements AutoCloseable {
       log.warn("Overriding existing graph: {} with shortGraphId={}", graph, shortGraphId);
     }
     srcGraphs.put(graphId, graph); // for lookup efficiency, so a shortGraphId is not created each time
+    
+    addEdgeFromSrcMetaDataNode(shortGraphId);
+    importMetadataSubgraph(graphIdMapper.longId(shortGraphId));
   }
 
+  private void addEdgeFromSrcMetaDataNode(String shortSrcGraphId) {
+    Vertex mdV = GraphUtils.getMetaDataNode(graph);
+    Vertex srcGraphMdV=GraphUtils.getMetaDataNode(getGraph(shortSrcGraphId));
+    String srcGraphUri = srcGraphMdV.getProperty(GraphUtils.GRAPHURI_PROP);
+    Vertex importedSrcGraphMdV = graph.getVertex(srcGraphUri);
+    if(importedSrcGraphMdV==null){
+      importedSrcGraphMdV = importVertexWithId(srcGraphMdV, shortSrcGraphId, srcGraphUri);
+      String edgeId=srcGraphUri+"->"+mdV.getProperty(GraphUtils.GRAPHURI_PROP);
+      if(graph.getEdge(edgeId)==null){
+        Edge importedEdge = graph.addEdge(edgeId, importedSrcGraphMdV, mdV, "inputGraphTo");
+        importedEdge.setProperty(GraphUtils.GRAPH_METADATA_PROP, true);
+      }
+    }
+  }
+
+  private void importMetadataSubgraph(String srcGraphId) {
+    Vertex srcGraphMdV = GraphUtils.getMetaDataNode(getGraph(srcGraphId));
+    String shortGraphId = getShortGraphId(srcGraphId);
+
+    int tx = GraphTransaction.begin(graph);
+    try {
+      String graphUri = srcGraphMdV.getProperty(GraphUtils.GRAPHURI_PROP);
+      Vertex importedMdV = importVertexWithId(srcGraphMdV, shortGraphId, graphUri);
+
+      importSubgraphUsingOrigId(srcGraphMdV, srcGraphId, importedMdV);
+      GraphTransaction.commit(tx);
+    } catch (RuntimeException re) {
+      GraphTransaction.rollback(tx);
+      throw re;
+    }
+  }
+  
   /**
    * Some graph implementations cannot handle multiple connections,
    * so this registers an existing graph connection to be used by this class 
@@ -311,11 +355,17 @@ public class MultigraphConsolidator implements AutoCloseable {
   private static final String GRAPH_ID_SEP = ":";
 
   private Vertex importVertexUsingShortId(Vertex v, String shortGraphId) {
-    String newId = (String) ((useOrigId) ? v.getId() : genNewId(shortGraphId, v.getId()));
-    Vertex newV = graph.getVertex(newId);
+    Object newId = ((useOrigId) ? v.getId() : genNewId(shortGraphId, v.getId()));
+    return importVertexWithId(v, shortGraphId, newId);
+  }
+  
+  private Vertex importVertexWithId(Vertex v, String shortGraphId, Object newId) {
+    Vertex newV = graph.getVertex((String) newId);
     if (newV == null) {
       newV = graph.addVertex(newId);
-      srcGraphNodeImportCount.get(shortGraphId).increment();
+      final MutableLong mutableLong = srcGraphNodeImportCount.get(shortGraphId);
+      if(mutableLong!=null) mutableLong.increment();
+      else log.error("{} not found in {}", shortGraphId, srcGraphNodeImportCount);
       setNewProperties(v, shortGraphId, newV);
     }
     merger.mergeProperties(v, newV);
@@ -339,8 +389,11 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
 
   private Edge importEdgeUsingShortId(Edge e, String shortGraphId, Vertex outV, Vertex inV) {
-    String newId = (String) ((useOrigId) ? e.getId() : genNewId(shortGraphId, e.getId()));
-    Edge newE = graph.getEdge(newId);
+    Object newId = ((useOrigId) ? e.getId() : genNewId(shortGraphId, e.getId()));
+    return importEdgeWithId(e, shortGraphId, outV, inV, newId);
+  }
+  private Edge importEdgeWithId(Edge e, String shortGraphId, Vertex outV, Vertex inV, Object newId) {
+    Edge newE = graph.getEdge((String) newId);
     if (newE == null) {
       if (outV == null)
         outV = importVertexUsingShortId(e.getVertex(Direction.OUT), shortGraphId);
@@ -409,21 +462,30 @@ public class MultigraphConsolidator implements AutoCloseable {
   ///
 
   public void importGraph(String srcGraphId, int commitFreq) {
-    IdGraph<?> from = getGraph(srcGraphId);
+    IdGraph<?> fromGraph = getGraph(srcGraphId);
     String shortGraphId = getShortGraphId(srcGraphId);
-
-    // TODO: 3: currently copies METADATA nodes from source graphs, which can make graph dirty
 
     int tx = GraphTransaction.begin(graph, commitFreq);
     try {
-      for (final Vertex fromVertex : from.getVertices()) {
-        importVertexUsingShortId(fromVertex, shortGraphId);
-        GraphTransaction.commitIfFull(tx);
+      for (final Vertex fromVertex : fromGraph.getVertices()) {
+        // skip METADATA nodes from source graphs, which can make graph dirty
+        if(fromVertex.getProperty(GraphUtils.GRAPH_METADATA_PROP)==null){
+          //Vertex newV = 
+              importVertexUsingShortId(fromVertex, shortGraphId);
+          //log.info("Importing node: {}", newV);
+          GraphTransaction.commitIfFull(tx);
+        }else{
+          log.info("Skipping metadata node: {}", fromVertex);
+        }
       }
 
-      for (final Edge fromEdge : from.getEdges()) {
-        importEdgeUsingShortId(fromEdge, shortGraphId, null, null);
-        GraphTransaction.commitIfFull(tx);
+      for (final Edge fromEdge : fromGraph.getEdges()) {
+        if(fromEdge.getProperty(GraphUtils.GRAPH_METADATA_PROP)==null){
+          importEdgeUsingShortId(fromEdge, shortGraphId, null, null);
+          GraphTransaction.commitIfFull(tx);
+        }else{
+          log.info("Skipping metadata edge: {}", fromEdge);
+        }
       }
 
       GraphTransaction.commit(tx);
@@ -431,6 +493,39 @@ public class MultigraphConsolidator implements AutoCloseable {
       GraphTransaction.rollback(tx);
       throw re;
     }
+  }
+  
+  public void importSubgraphUsingOrigId(Vertex rootV, String srcGraphId, Vertex importedRootV) {
+    String shortGraphId = getShortGraphId(srcGraphId);
+    int tx = GraphTransaction.begin(graph);
+    try {
+      if(importedRootV==null){
+        importedRootV=importVertexWithId(rootV, shortGraphId, rootV.getId());
+      }
+      recursiveImport(rootV, shortGraphId, importedRootV, rootV);
+      GraphTransaction.commit(tx);
+    } catch (RuntimeException re) {
+      GraphTransaction.rollback(tx);
+      throw re;
+    }
+  }
+  
+  private void recursiveImport(Vertex v, String shortGraphId, Vertex importedV, Vertex rootV) {
+    for (Direction dir : GraphUtils.BOTHDIR)
+      for (Edge e : v.getEdges(dir)) {
+        Vertex oppV = e.getVertex(dir.opposite());
+        boolean alreadyVisited=(graph.getVertex(oppV.getId())!=null);
+        if(!alreadyVisited && !rootV.equals(oppV)){
+          Vertex importedOppV=importVertexWithId(oppV, shortGraphId, oppV.getId());
+          if(dir==Direction.OUT)
+            importEdgeWithId(e, shortGraphId, importedV, importedOppV, e.getId());
+          else
+            importEdgeWithId(e, shortGraphId, importedOppV, importedV, e.getId());
+          
+          if(!alreadyVisited)
+            recursiveImport(oppV, shortGraphId, importedOppV, rootV);
+        }
+      }
   }
 
 }

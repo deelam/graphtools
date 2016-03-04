@@ -221,8 +221,9 @@ public final class GraphUtils {
   ///
 
   public static final String METADATA_VERTEXID = "_GRAPH_METADATA_";
+  public static final String GRAPH_METADATA_PROP = "_GRAPH_METADATA_";
   private static final String TIMESTAMP_PROP = "_TIMESTAMP_";
-  private static final String GRAPHURI_PROP = "_GRAPHURI_";
+  public static final String GRAPHURI_PROP = "_GRAPHURI_";
 
   //  private static final String VERTEXTYPES_PROP = "_VERTEXTYPES_";
   //  private static final String EDGELABELS_PROP = "_EDGELABELS_";
@@ -247,6 +248,7 @@ public final class GraphUtils {
     Vertex mdV = getMetaDataNode(graph);
     if (mdV == null) {
       mdV = graph.addVertex(METADATA_VERTEXID);
+      mdV.setProperty(GRAPH_METADATA_PROP, true);
       mdV.setProperty(TIMESTAMP_PROP, new Date().toString());
       mdV.setProperty(GRAPHURI_PROP, gUri.asString());
       //      mdV.setProperty(VERTEXTYPES_PROP, gUri.getVertexTypes());
@@ -266,6 +268,7 @@ public final class GraphUtils {
   public static void mergeNodesAndEdges(Vertex origV, Vertex targetV, boolean excludeNewSelfEdges, Graph graph, PropertyMerger propMerger) {
     propMerger.mergeProperties(origV, targetV);
     moveEdges(origV, targetV, excludeNewSelfEdges, graph);
+    //log.info("REMOVING vertex: {}", origV);
     graph.removeVertex(origV);
   }
 

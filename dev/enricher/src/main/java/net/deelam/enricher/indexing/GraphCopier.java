@@ -236,7 +236,7 @@ public class GraphCopier implements AutoCloseable {
       for (Edge e : v.getEdges(dir)) {
         Vertex oppV = e.getVertex(dir.opposite());
         boolean alreadyVisited=(graph.getVertex(oppV.getId())!=null);
-        if(!alreadyVisited && !rootV.equals(oppV)){
+        if(!rootV.equals(oppV)){
           Vertex importedOppV=importVertexWithId(oppV, oppV.getId());
           if(dir==Direction.OUT)
             importEdgeWithId(e, importedV, importedOppV, e.getId());

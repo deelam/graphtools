@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.google.common.base.Preconditions;
 import com.tinkerpop.blueprints.Graph;
 import com.tinkerpop.blueprints.TransactionalGraph;
+import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.impls.tg.TinkerGraph;
 import com.tinkerpop.blueprints.util.wrappers.WrapperGraph;
 import com.tinkerpop.blueprints.util.wrappers.readonly.ReadOnlyGraph;
@@ -62,22 +63,22 @@ public class FramedGraphProvider {
 //		return frameClassesMap.containsKey(type);
 //	}
 	
-//	public Class<? extends VertexFrame> getFrameClassOf(Vertex v){
-//		final String vertexType=v.getProperty(VertexFrame.TYPE_KEY);
-//		if(vertexType==null){
-//			log.error("getVertexType() returned null.  Does Frame class for vertex {} have a @TypeValue annotation?", v);
-//		}
-//		
-//		final Class<? extends VertexFrame> ret=frameClassesMap.get(vertexType);
-//		if(ret==null){
-//			log.error("Could not find class for "+v+".  Has it been registered in *FrameRegistry?");
-//		}
-//		return ret;
-//	}
+	public Class<?> getFrameClassOf(Vertex v, String typePropKey){
+		final String vertexType=v.getProperty(typePropKey);
+		if(vertexType==null){
+			log.error("getVertexType() returned null.  Does Frame class for vertex {} have a @TypeValue annotation?", v);
+		}
+		
+		final Class<?> ret=frameClassesMap.get(vertexType);
+		if(ret==null){
+			log.error("Could not find class for "+v+".  Has it been registered in *FrameRegistry?");
+		}
+		return ret;
+	}
 	
-//	public Class<? extends VertexFrame> getFrameClassOf(VertexFrame v){
-//		return getFrameClassOf(v.asVertex());
-//	}
+	public Class<?> getFrameClassOf(VertexFrame v, String typePropKey){
+		return getFrameClassOf(v.asVertex(), typePropKey);
+	}
 	
 	private void registerFrameClass(Class<?> clazz){
 		try{

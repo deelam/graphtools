@@ -36,6 +36,11 @@ public class GraphCopier implements AutoCloseable {
       srcGraphUriToShutdown.shutdown();
   }
 
+  // for opening existing graph created by GraphCopier
+  public GraphCopier(GraphUri dstGraphUri) throws IOException {
+    this(null, dstGraphUri);
+  }
+  
   public GraphCopier(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException {
     this.dstGraphUri = dstGraphUri;
     if(dstGraphUri.exists())
@@ -43,6 +48,13 @@ public class GraphCopier implements AutoCloseable {
     else
       graph=dstGraphUri.createNewIdGraph(false);
 
+    if(srcGraphUri==null){
+      final String sourceGraphUri = getSourceGraphUri();
+      if(sourceGraphUri==null)
+        throw new IllegalStateException(SRC_GRAPHURI+" property value of MetaData node is null!");
+      srcGraphUri=new GraphUri(sourceGraphUri);
+    } 
+    
     if (srcGraphUri.isOpen()) {
       srcGraph = srcGraphUri.getGraph();
       // do not close graph since I didn't open it
@@ -50,11 +62,20 @@ public class GraphCopier implements AutoCloseable {
       srcGraph = srcGraphUri.openExistingIdGraph();
       srcGraphUriToShutdown = srcGraphUri;//so that graph can be closed
     }
+    GraphUtils.setMetaData(graph, SRC_GRAPHURI, srcGraphUri);
     
     merger = dstGraphUri.createPropertyMerger();
     
+    GraphUtils.setMetaData(graph, GraphUtils.GRAPHBUILDER_PROPKEY, this.getClass().getSimpleName());
+    
     addEdgeFromSrcMetaDataNode(srcGraph);
     importMetadataSubgraph();
+  }
+  
+  private static final String SRC_GRAPHURI = "_SRC_GRAPHURI_";
+  
+  public String getSourceGraphUri(){
+    return GraphUtils.getMetaData(graph, SRC_GRAPHURI);
   }
 
   private void addEdgeFromSrcMetaDataNode(IdGraph<?> srcGraph) {
@@ -63,7 +84,7 @@ public class GraphCopier implements AutoCloseable {
     String srcGraphUri = srcGraphMdV.getProperty(GraphUtils.GRAPHURI_PROP);
     Vertex importedSrcGraphMdV = graph.getVertex(srcGraphUri);
     if(importedSrcGraphMdV==null){
-      importedSrcGraphMdV = importVertexWithId(srcGraphMdV, srcGraphUri);
+      importedSrcGraphMdV = importVertexWithId(srcGraphMdV, srcGraphUri, false);
       String edgeId=srcGraphUri+"->"+mdV.getProperty(GraphUtils.GRAPHURI_PROP);
       if(graph.getEdge(edgeId)==null){
         Edge importedEdge = graph.addEdge(edgeId, importedSrcGraphMdV, mdV, "inputGraphTo");
@@ -78,7 +99,7 @@ public class GraphCopier implements AutoCloseable {
     int tx = GraphTransaction.begin(graph);
     try {
       String graphUri = srcGraphMdV.getProperty(GraphUtils.GRAPHURI_PROP);
-      Vertex importedMdV = importVertexWithId(srcGraphMdV, graphUri);
+      Vertex importedMdV = importVertexWithId(srcGraphMdV, graphUri, false);
 
       importSubgraphUsingOrigId(srcGraphMdV, importedMdV);
       GraphTransaction.commit(tx);
@@ -122,14 +143,26 @@ public class GraphCopier implements AutoCloseable {
 
   public Vertex importVertex(Vertex v) {
     String nodeId = (String) v.getId();
-    return importVertexWithId(v, nodeId);
+    return importVertexWithId(v, nodeId, false);
   }
   
-  public Vertex importVertexWithId(Vertex v, Object nodeId) {
+  public Vertex importVertexWithDifferentId(Vertex v, Object nodeId) {
+    return importVertexWithId(v, nodeId, true);
+  }
+  
+  private static final String ORIGID_PROPKEY="__origId";
+  public String getOrigId(Vertex v){
+    return v.getProperty(ORIGID_PROPKEY);
+  }
+  
+  private Vertex importVertexWithId(Vertex v, Object nodeId, boolean storeOrigNodeId) {
     Vertex newV = graph.getVertex((String) nodeId);
     if (newV == null) {
       newV = graph.addVertex(nodeId);
       merger.mergeProperties(v, newV);
+      if(storeOrigNodeId){
+        newV.setProperty(ORIGID_PROPKEY, v.getId());
+      }
     }
     return newV;
   }
@@ -221,7 +254,7 @@ public class GraphCopier implements AutoCloseable {
     int tx = GraphTransaction.begin(graph);
     try {
       if(importedRootV==null){
-        importedRootV=importVertexWithId(rootV, rootV.getId());
+        importedRootV=importVertexWithId(rootV, rootV.getId(), false);
       }
       recursiveImport(rootV, importedRootV, rootV);
       GraphTransaction.commit(tx);
@@ -237,7 +270,7 @@ public class GraphCopier implements AutoCloseable {
         Vertex oppV = e.getVertex(dir.opposite());
         boolean alreadyVisited=(graph.getVertex(oppV.getId())!=null);
         if(!rootV.equals(oppV)){
-          Vertex importedOppV=importVertexWithId(oppV, oppV.getId());
+          Vertex importedOppV=importVertexWithId(oppV, oppV.getId(), false);
           if(dir==Direction.OUT)
             importEdgeWithId(e, importedV, importedOppV, e.getId());
           else

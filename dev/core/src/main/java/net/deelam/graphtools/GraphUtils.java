@@ -224,6 +224,7 @@ public final class GraphUtils {
   public static final String GRAPH_METADATA_PROP = "_GRAPH_METADATA_";
   private static final String TIMESTAMP_PROP = "_TIMESTAMP_";
   public static final String GRAPHURI_PROP = "_GRAPHURI_";
+  public static final String GRAPHBUILDER_PROPKEY = "_GRAPHBUILDER_PROPKEY_";
 
   //  private static final String VERTEXTYPES_PROP = "_VERTEXTYPES_";
   //  private static final String EDGELABELS_PROP = "_EDGELABELS_";

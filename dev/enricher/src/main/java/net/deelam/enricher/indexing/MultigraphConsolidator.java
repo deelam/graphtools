@@ -89,12 +89,13 @@ public class MultigraphConsolidator implements AutoCloseable {
 
     merger = dstGraphUri.createPropertyMerger();
 
+    GraphUtils.setMetaData(graph, GraphUtils.GRAPHBUILDER_PROPKEY, this.getClass().getSimpleName());
+    
     srcGraphIdPropKey = GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
     origIdPropKey = GraphUtils.getMetaData(graph, ORIGID_PROPKEY);
 
     loadIdMapperFromGraphMetaData();
   }
-
   private static final String SRCGRAPHID_PROPKEY = "_SRCGRAPHID_PROPKEY_";
   @Getter
   private String srcGraphIdPropKey;

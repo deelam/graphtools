@@ -120,7 +120,7 @@ public final class GraphUtils {
           } else {
             sb.append(delim);
           }
-          sb.append(propKey).append("=").append(n.getProperty(propKey));
+          sb.append(propKey).append("=").append(n.getProperty(propKey).toString());
         }
       }
     }
@@ -141,7 +141,7 @@ public final class GraphUtils {
         } else {
           sb.append(delim);
         }
-        sb.append(propKey).append("=").append(n.getProperty(propKey));
+        sb.append(propKey).append("=").append(n.getProperty(propKey).toString());
       }
     }
     return sb.toString();

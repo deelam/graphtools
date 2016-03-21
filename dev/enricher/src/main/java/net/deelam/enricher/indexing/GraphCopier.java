@@ -62,7 +62,7 @@ public class GraphCopier implements AutoCloseable {
       srcGraph = srcGraphUri.openExistingIdGraph();
       srcGraphUriToShutdown = srcGraphUri;//so that graph can be closed
     }
-    GraphUtils.setMetaData(graph, SRC_GRAPHURI, srcGraphUri);
+    GraphUtils.setMetaData(graph, SRC_GRAPHURI, srcGraphUri.asString());
     
     merger = dstGraphUri.createPropertyMerger();
     

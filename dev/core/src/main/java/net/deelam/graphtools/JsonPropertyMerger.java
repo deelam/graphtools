@@ -163,7 +163,7 @@ public class JsonPropertyMerger implements PropertyMerger {
       toE.setProperty(key, SET_VALUE);
       if(!allowedMultivaluedProps.contains(key)){
         log.warn("Property has multiple values which is inefficient: key="+key+" for node="+toE.getId()
-            + " existingVal="+existingVal+" newValue="+fromValue, new Throwable("Call stack"));
+            + " existingVal="+existingVal+" newValue="+fromValue/*, new Throwable("Call stack")*/);
       }
 
       if (compClass == null) {

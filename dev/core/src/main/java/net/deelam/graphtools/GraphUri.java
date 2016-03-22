@@ -156,7 +156,7 @@ public class GraphUri {
       graph=null;
     } else {
       //new IllegalArgumentException("Call shutdown(graph) instead since you didn't open the graph using this class.");
-      log.warn("Cannot shutdown; graph is not opened or you didn't open the graph using this GraphUri instance.");
+      log.warn("Cannot shutdown; graph is not opened or you didn't open the graph using this GraphUri instance.", new Throwable("Call stack"));
     }
   }
   

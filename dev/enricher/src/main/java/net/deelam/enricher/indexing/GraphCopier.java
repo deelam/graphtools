@@ -82,14 +82,12 @@ public class GraphCopier implements AutoCloseable {
     Vertex mdV = GraphUtils.getMetaDataNode(graph);
     Vertex srcGraphMdV=GraphUtils.getMetaDataNode(srcGraph);
     String srcGraphUri = srcGraphMdV.getProperty(GraphUtils.GRAPHURI_PROP);
-    Vertex importedSrcGraphMdV = graph.getVertex(srcGraphUri);
-    if(importedSrcGraphMdV==null){
-      importedSrcGraphMdV = importVertexWithId(srcGraphMdV, srcGraphUri, false);
-      String edgeId=srcGraphUri+"->"+mdV.getProperty(GraphUtils.GRAPHURI_PROP);
-      if(graph.getEdge(edgeId)==null){
-        Edge importedEdge = graph.addEdge(edgeId, importedSrcGraphMdV, mdV, "inputGraphTo");
-        importedEdge.setProperty(GraphUtils.GRAPH_METADATA_PROP, true);
-      }
+    Vertex importedSrcGraphMdV = importVertexWithId(srcGraphMdV, srcGraphUri, false);
+    
+    String edgeId=srcGraphUri+"->"+mdV.getProperty(GraphUtils.GRAPHURI_PROP);
+    if(graph.getEdge(edgeId)==null){
+      Edge importedEdge = graph.addEdge(edgeId, importedSrcGraphMdV, mdV, "inputGraphTo");
+      importedEdge.setProperty(GraphUtils.GRAPH_METADATA_PROP, true);
     }
   }
   

@@ -132,6 +132,7 @@ public class ConfidenceGraph {
 
   ////
 
+  // can be used in ingester as static method
   public static void setConfidence(Element elem, String propName, int conf) {
     elem.setProperty(propName + CONFIDENCE_SUFFIX, conf);
   }

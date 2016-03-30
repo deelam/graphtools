@@ -38,7 +38,7 @@ import net.deelam.graphtools.GraphUtils;
 @RequiredArgsConstructor
 @Slf4j
 public class ConfidenceGraph {
-  static final String CONFIDENCE_SUFFIX = "._confid";
+  static final String CONFIDENCE_SUFFIX = "._conf";
 
   private final IdGraph<?> graph;
 
@@ -49,7 +49,7 @@ public class ConfidenceGraph {
 
   public void setDatasourceDefaultConfidence(int conf) {
     Vertex md = GraphUtils.getMetaDataNode(graph);
-    String key = "graph." + CONFIDENCE_SUFFIX;
+    String key = "datasource" + CONFIDENCE_SUFFIX;
     if (md.getProperty(key) != null)
       throw new IllegalStateException("Default confidene already set for " + key);
     md.setProperty(key, conf);
@@ -57,7 +57,7 @@ public class ConfidenceGraph {
 
   public Integer getDatasourceDefaultConfidence() {
     Vertex md = GraphUtils.getMetaDataNode(graph);
-    String key = "graph." + CONFIDENCE_SUFFIX;
+    String key = "datasource" + CONFIDENCE_SUFFIX;
     Integer conf = md.getProperty(key);
     if (conf == null) {
       log.warn("No datasource confidence set; using 50%.");

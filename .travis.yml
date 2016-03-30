@@ -7,3 +7,8 @@ cache:
   directories:
   - $HOME/.m2
 
+# for CodeCov service
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+
+

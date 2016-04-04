@@ -1,4 +1,4 @@
-package net.deelam.enricher.indexing;
+package net.deelam.enricher.faceting;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -15,6 +15,7 @@ import org.apache.commons.lang.mutable.MutableLong;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.enricher.indexing.IdMapper;
 import net.deelam.graphtools.GraphTransaction;
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.GraphUtils;

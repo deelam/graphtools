@@ -1,4 +1,4 @@
-package net.deelam.enricher.indexing;
+package net.deelam.enricher.faceting;
 
 import static com.google.common.base.Preconditions.*;
 

@@ -3,7 +3,7 @@
  */
 package net.deelam.graphtools;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import com.tinkerpop.blueprints.Element;
@@ -45,7 +45,7 @@ public class JavaSetPropertyMerger implements PropertyMerger {
         if (fromValue.equals(SET_VALUE)) {
           String setPropertyKey = key + SET_SUFFIX;
           Set<Object> fromValueSet = (Set<Object>) fromE.getProperty(setPropertyKey);
-          toE.setProperty(setPropertyKey, new HashSet<>(fromValueSet));
+          toE.setProperty(setPropertyKey, new LinkedHashSet<>(fromValueSet));
         }
         continue;
       }
@@ -67,7 +67,7 @@ public class JavaSetPropertyMerger implements PropertyMerger {
         String setPropertyKey = key + SET_SUFFIX;
         Set<Object> valueSet = toE.getProperty(setPropertyKey);
         if (valueSet == null) {
-          valueSet = new HashSet<>();
+          valueSet = new LinkedHashSet<>();
           toE.setProperty(setPropertyKey, valueSet);
           Object existingVal = toE.getProperty(key);
           valueSet.add(existingVal);

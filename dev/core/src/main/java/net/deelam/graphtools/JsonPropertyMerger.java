@@ -3,14 +3,11 @@
  */
 package net.deelam.graphtools;
 
-import static com.google.common.base.Preconditions.*;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.lang.reflect.Array;
 import java.util.*;
 import java.util.Map.Entry;
-
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 
 import org.boon.core.value.ValueList;
 import org.boon.json.JsonFactory;
@@ -18,6 +15,9 @@ import org.boon.json.ObjectMapper;
 
 import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
+
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author deelam
@@ -135,7 +135,7 @@ public class JsonPropertyMerger implements PropertyMerger {
   }
 
   private ObjectMapper mapper = JsonFactory.create();
-  private static final Set<String> allowedMultivaluedProps=new HashSet<>();
+  private static final Set<String> allowedMultivaluedProps=new LinkedHashSet<>();
   public static void allowMultivaluedProperty(String propName){
     allowedMultivaluedProps.add(propName);
   }
@@ -172,7 +172,7 @@ public class JsonPropertyMerger implements PropertyMerger {
       }
 
 //    } else if(valueSet instanceof Set){ 
-//      // handle case where set is HashSet created by JavaSetPropertyMerger
+//      // handle case where set is LinkedHashSet created by JavaSetPropertyMerger
 //      if (compClass == null) {
 //        Object firstVal=((Set) valueSet).iterator().next();
 //        if(firstVal==null){
@@ -267,7 +267,7 @@ public class JsonPropertyMerger implements PropertyMerger {
         {
           valueSetStr = (String) existingProps.get(valSetPropKey);
         }
-        Set set=new HashSet((List) mapper.parser().parseList(compClass, valueSetStr));
+        Set set=new LinkedHashSet((List) mapper.parser().parseList(compClass, valueSetStr));
         tempGr.setProperty(entry.getKey(), entry.getValue());
         tempGr.setProperty(valSetPropKey, set);
       }else if(entry.getKey().endsWith(SET_SUFFIX)){
@@ -277,7 +277,7 @@ public class JsonPropertyMerger implements PropertyMerger {
       }
     }
   }
-
+  
   public static void main(String[] args) throws ClassNotFoundException {
     ObjectMapper mapper = JsonFactory.create();
     //    String jsonArray = "[0,1,2,3,4,5,6,7,8,7]";
@@ -299,7 +299,7 @@ public class JsonPropertyMerger implements PropertyMerger {
       System.out.println(mapper.parser().parse(json).getClass());
     }
     {
-      HashSet<Number> valueSet = new HashSet<>();
+      LinkedHashSet<Number> valueSet = new LinkedHashSet<>();
       valueSet.add(1L);
       valueSet.add(2.0);
       valueSet.add(2.0f);
@@ -310,7 +310,7 @@ public class JsonPropertyMerger implements PropertyMerger {
     }
 
     {
-      HashSet<Object> valueSet = new HashSet<>();
+      LinkedHashSet<Object> valueSet = new LinkedHashSet<>();
       valueSet.add("a");
       valueSet.add("2");
       valueSet.add("b");
@@ -330,7 +330,7 @@ public class JsonPropertyMerger implements PropertyMerger {
       }
     }
     {
-      HashSet<Date> valueSet = new HashSet<>();
+      LinkedHashSet<Date> valueSet = new LinkedHashSet<>();
       valueSet.add(new Date());
       valueSet.add(new Date());
       String inJson = mapper.toJson(valueSet);
@@ -339,7 +339,7 @@ public class JsonPropertyMerger implements PropertyMerger {
       System.out.println(list.get(0).getClass());
     }
     {
-      HashSet<Object> valueSet = new HashSet<>();
+      LinkedHashSet<Object> valueSet = new LinkedHashSet<>();
       valueSet.add(new JsonPropertyMerger());
       String inJson = mapper.toJson(valueSet);
       System.out.println(inJson);

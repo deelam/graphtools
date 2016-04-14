@@ -12,8 +12,8 @@ import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.neo4j.helpers.collection.Iterables;
 
+import com.google.common.collect.Iterables;
 import com.tinkerpop.blueprints.TransactionalGraph;
 import com.tinkerpop.blueprints.impls.neo4j.Neo4jGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
@@ -58,7 +58,7 @@ public class GraphTransactionTest {
     int tx = GraphTransaction.begin(outGraph);
     proc();
     GraphTransaction.commit(tx);
-    assertEquals(2, Iterables.count(outGraph.getVertices()));
+    assertEquals(2, Iterables.size(outGraph.getVertices()));
     //System.out.println(GraphUtils.toString(outGraph));
   }
 
@@ -67,17 +67,17 @@ public class GraphTransactionTest {
     int tx = GraphTransaction.begin(outGraph);
     proc();
     GraphTransaction.commit(tx);
-    assertEquals(2, Iterables.count(outGraph.getVertices()));
+    assertEquals(2, Iterables.size(outGraph.getVertices()));
 
     tx = GraphTransaction.begin(outGraph);
     proc();
     GraphTransaction.rollback(tx);
-    assertEquals(2, Iterables.count(outGraph.getVertices()));
+    assertEquals(2, Iterables.size(outGraph.getVertices()));
 
     tx = GraphTransaction.begin(outGraph);
     proc();
     GraphTransaction.commit(tx);
-    assertEquals(3, Iterables.count(outGraph.getVertices()));
+    assertEquals(3, Iterables.size(outGraph.getVertices()));
   }
 
   @Test
@@ -86,7 +86,7 @@ public class GraphTransactionTest {
     testExecuteTransaction();
     proc();
     GraphTransaction.commit(tx);
-    assertEquals(3, Iterables.count(outGraph.getVertices()));
+    assertEquals(3, Iterables.size(outGraph.getVertices()));
   }
 
   @SuppressWarnings("serial")
@@ -105,7 +105,7 @@ public class GraphTransactionTest {
 
   @Test
   public void testNestedExecuteTransactionFailure() throws Exception {
-    assertEquals(1, Iterables.count(outGraph.getVertices()));
+    assertEquals(1, Iterables.size(outGraph.getVertices()));
     int tx = GraphTransaction.begin(outGraph);
     try {
       testExecuteTransactionFailure();
@@ -115,7 +115,7 @@ public class GraphTransactionTest {
       // expect exception be thrown
       log.info("vertex1={}", outGraph.getVertex("_" + 1));
       GraphTransaction.rollback(tx);
-      assertEquals(1, Iterables.count(outGraph.getVertices()));
+      assertEquals(1, Iterables.size(outGraph.getVertices()));
     }
   }
 
@@ -131,7 +131,7 @@ public class GraphTransactionTest {
 
   @Test
   public void testNestedExecuteTransactionFailureNoNestedRollback() throws Exception {
-    assertEquals(1, Iterables.count(outGraph.getVertices()));
+    assertEquals(1, Iterables.size(outGraph.getVertices()));
     int tx = GraphTransaction.begin(outGraph);
     try {
       testExecuteTransactionFailureNoExplicitRollback();
@@ -141,7 +141,7 @@ public class GraphTransactionTest {
       // expect exception be thrown
       //log.info("vertex1={}", outGraph.getVertex("_" + 1));
       GraphTransaction.rollback(tx);
-      assertEquals(1, Iterables.count(outGraph.getVertices()));
+      assertEquals(1, Iterables.size(outGraph.getVertices()));
     }
   }
 

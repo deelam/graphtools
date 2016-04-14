@@ -17,11 +17,13 @@ import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author deelam
  */
+@RequiredArgsConstructor
 @Slf4j
 public class JsonPropertyMerger implements PropertyMerger {
 

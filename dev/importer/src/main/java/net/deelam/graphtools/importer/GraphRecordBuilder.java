@@ -156,9 +156,13 @@ public class GraphRecordBuilder<B> {
     }
     for(String key:keys){
       Object val = elem.getProperty(key);
-      elem.setProperty(key, ((Date)val).getTime()); // use this to deserialize
-      elem.setProperty(key+"_string", val.toString()); // this is for readability
+      dateAsProperties(elem, key, (Date) val);
     }
+  }
+
+  public static void dateAsProperties(Element elem, String key, Date val) {
+    elem.setProperty(key, val.getTime()); // use this to deserialize
+    elem.setProperty(key+"_string", val.toString()); // this is for readability
   }
 
   public static void main(String[] args) {

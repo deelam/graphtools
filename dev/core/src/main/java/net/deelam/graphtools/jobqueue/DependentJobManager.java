@@ -186,6 +186,7 @@ public class DependentJobManager {
       if (jobV == null) {
         jobV = graph.addVertex(job.getId(), DependentJobFrame.class);
         jobV.setJobType(job.getJobType());
+        graph.commit();
       } else {
         throw new IllegalArgumentException("Job with id already exists: " + job);
       }
@@ -197,6 +198,7 @@ public class DependentJobManager {
         log.info("Adding to queue: " + job);
         queue.add(job);
         jobV.setState(STATE.QUEUED);
+        graph.commit();
       }
       return true;
     } else {
@@ -205,7 +207,7 @@ public class DependentJobManager {
   }
 
   void addInputJobs(DependentJobFrame jobV, String... inJobIds) {
-    if (inJobIds != null)
+    if (inJobIds != null){
       for (String inputJobId : inJobIds) {
         DependentJobFrame inputJobV = graph.getVertex(inputJobId, DependentJobFrame.class);
         if (inputJobV == null)
@@ -213,6 +215,8 @@ public class DependentJobManager {
         if(! Iterables.contains(jobV.getInputJobs(), inputJobV))
           jobV.addInputJob(inputJobV);
       }
+      graph.commit();
+    }
   }
 
   public boolean cancelJob(String jobId) {
@@ -252,6 +256,7 @@ public class DependentJobManager {
       default:
         throw new IllegalStateException("Unhandled state=" + jobV.getState());
     }
+    graph.commit();
     return true;
   }
 
@@ -259,6 +264,7 @@ public class DependentJobManager {
     synchronized (graph) {
       jobV.setState(STATE.CANCELLED);
       log.info("Cancelled job={}", jobV);
+      graph.commit();
     }
   }
 
@@ -313,6 +319,7 @@ public class DependentJobManager {
             if(proc.isJobReady(job)){
               synchronized (jobMgr.graph) {
                 jobV.setState(STATE.PROCESSING);
+                jobMgr.graph.commit();
               }
               log.info("Starting job={}", job);
               boolean success=proc.runJob(job);
@@ -325,12 +332,14 @@ public class DependentJobManager {
               synchronized (jobMgr.graph) {
                 log.warn("Job is not ready for processing; setting state=WAITING.  {}", job);
                 jobMgr.putJobInWaitingArea(job, jobV);
+                jobMgr.graph.commit();
               }
             }
           } else {
             synchronized (jobMgr.graph) {
               log.warn("Input to job={} is not ready; setting state=WAITING.  {}", job);
               jobMgr.putJobInWaitingArea(job, jobV);
+              jobMgr.graph.commit();
             }
           }
         } catch (InterruptedException e) {
@@ -349,6 +358,7 @@ public class DependentJobManager {
     jobV.setState(STATE.WAITING);
     waitingJobs.put(job.getId(), job);
     log.info("Waiting jobs: {}", waitingJobs.keySet());
+    graph.commit();
   }
   
   public boolean isJobReady(DependentJobFrame jobV) {
@@ -357,6 +367,7 @@ public class DependentJobManager {
         if (inV.getState() != STATE.DONE)
           return false;
       }
+      graph.commit();
     }
     return true;
   }
@@ -369,12 +380,14 @@ public class DependentJobManager {
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
+      graph.commit();
     }
   }
 
   public void jobFailed(DependentJobFrame job) {
     synchronized (graph) {
       job.setState(STATE.FAILED);
+      graph.commit();
     }
   }
   

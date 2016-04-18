@@ -47,6 +47,9 @@ public class GraphRecordImpl extends GraphRecordElementImpl implements GraphReco
   public static String getType(Vertex v){
     return v.getProperty(NODE_TYPE_KEY);
   }
+  public static void setType(Vertex v, String type){
+    v.setProperty(NODE_TYPE_KEY, type);
+  }
   
   @Override
   public String getType(){

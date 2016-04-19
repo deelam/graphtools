@@ -33,6 +33,8 @@ public class DependentJobManager {
 
   private static final String STOP_JOB_TYPE = "STOP";
   private static final DependentJob STOP_THREAD_JOB = new DependentJobImpl("STOP", STOP_JOB_TYPE);
+  
+  // TODO: remove job and connected jobs
 
   @AllArgsConstructor
   @Data

@@ -268,14 +268,19 @@ public final class GraphUtils {
    * Removes original edges and node.
    * @param propMerger to merge node and edge properties
    */
-  public static void mergeNodesAndEdges(Vertex origV, Vertex targetV, boolean excludeNewSelfEdges, Graph graph, PropertyMerger propMerger) {
+  public static void mergeNodesAndEdges(Vertex origV, Vertex targetV, boolean excludeNewSelfEdges, IdGraph<?> graph, PropertyMerger propMerger) {
+    if(origV.equals(targetV)){
+      throw new IllegalArgumentException("origV and targetV are the same nodes (or at least have the same ids)");
+    }
     propMerger.mergeProperties(origV, targetV);
     moveEdges(origV, targetV, excludeNewSelfEdges, graph);
-    //log.info("REMOVING vertex: {}", origV);
+    
+    log.info("REMOVING vertex: {}", origV);
     graph.removeVertex(origV);
+    graph.commit(); // must commit since vertex was removed in case this is called in a getVertices() loop so it will skip removed node
   }
 
-  public static void moveEdges(Vertex origV, Vertex targetV, boolean excludeNewSelfEdges, Graph graph) {
+  public static void moveEdges(Vertex origV, Vertex targetV, boolean excludeNewSelfEdges, IdGraph<?> graph) {
     for (Direction dir : BOTHDIR)
       for (Edge edge : origV.getEdges(dir)) {
         Vertex neighbor = edge.getVertex(dir.opposite());

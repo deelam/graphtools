@@ -275,7 +275,7 @@ public final class GraphUtils {
     propMerger.mergeProperties(origV, targetV);
     moveEdges(origV, targetV, excludeNewSelfEdges, graph);
     
-    log.info("REMOVING vertex: {}", origV);
+    log.debug("Removing node={} that was merged into node={}", origV, targetV);
     graph.removeVertex(origV);
     graph.commit(); // must commit since vertex was removed in case this is called in a getVertices() loop so it will skip removed node
   }

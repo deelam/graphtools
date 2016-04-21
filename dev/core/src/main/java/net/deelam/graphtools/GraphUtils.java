@@ -86,22 +86,28 @@ public final class GraphUtils {
       // Note that IdGraph.ID is removed from the IdElement.propertyKeys() list
       if (numSamples < 0 || nodeCount < numSamples) {
         sb.append("  ").append(n.getId()).append(": ");
-        sb.append(n.getPropertyKeys()).append("\n    ");
-        if(propsToPrint!=null && propsToPrint.length>0)
-          sb.append(toString(n, "\n    ", propsToPrint)).append("\n");
+        sb.append(n.getPropertyKeys()).append("\n");
+        if(propsToPrint!=null && propsToPrint.length>0){
+          String propValuesStr=toString(n, "\n    ", propsToPrint);
+          if(propValuesStr.length()>0)
+            sb.append("    ").append(propValuesStr).append("\n");
+        }
       }
     }
     sb.append(" Edges:\n");
     int edgeCount = 0;
     for (Edge e : graph.getEdges()) {
       ++edgeCount;
-      if (numSamples < 0 || nodeCount < numSamples) {
+      if (numSamples < 0 || edgeCount < numSamples) {
         sb.append("  ").append(e.getLabel()).append(" ").append(e.getId()).append(" (");
         sb.append(e.getVertex(Direction.OUT)).append("->").append(e.getVertex(Direction.IN));
         sb.append("): ");
-        sb.append(e.getPropertyKeys()).append("\n    ");
-        if(propsToPrint!=null && propsToPrint.length>0)
-          sb.append(toString(e, "\n    ", propsToPrint)).append("\n");
+        sb.append(e.getPropertyKeys()).append("\n");
+        if(propsToPrint!=null && propsToPrint.length>0){
+          String propValuesStr=toString(e, "\n    ", propsToPrint);
+          if(propValuesStr.length()>0)
+            sb.append("    ").append(propValuesStr).append("\n");
+        }
       }
     }
     sb.append("(").append(nodeCount).append(" nodes, ").append(edgeCount).append(" edges)");

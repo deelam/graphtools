@@ -185,10 +185,13 @@ public class GraphUri {
     config.setProperty(URI_SCHEMA_PART, baseUri.getSchemeSpecificPart());
     parseQuery(baseUri.toString());
     log.info("Opening graphUri={}", this);
-    graph = factory.open(this);
-    log.info("  Opened graph={}", graph);
-    {
+    try{
+      graph = factory.open(this);
+      log.info("  Opened graph={}", graph);
       GraphUtils.addMetaDataNode(this, graph);
+    }catch(RuntimeException re){
+      log.error("Could not open graphUri="+this, re);
+      throw re;
     }
     return graph;
   }

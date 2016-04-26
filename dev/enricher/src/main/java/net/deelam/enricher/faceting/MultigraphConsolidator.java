@@ -5,10 +5,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.lang.mutable.MutableLong;
 
@@ -20,11 +22,18 @@ import net.deelam.graphtools.GraphTransaction;
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.GraphUtils;
 import net.deelam.graphtools.PropertyMerger;
+import net.deelam.graphtools.graphfactories.IdGraphFactoryNeo4j;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.blueprints.impls.neo4j.Neo4jGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
@@ -50,7 +59,9 @@ public class MultigraphConsolidator implements AutoCloseable {
   @Getter
   private IdGraph<?> graph;
 
-  private final Map<String, IdGraph<?>> srcGraphs = new HashMap<>();
+  //private final Map<String, IdGraph<?>> srcGraphs = new HashMap<>();
+  private final LoadingCache<String, IdGraph<?>> srcGraphs;
+
   private final Map<String, GraphUri> srcGraphUrisToShutdown = new HashMap<>();
   private final Map<String, MutableLong> srcGraphNodeImportCount = new HashMap<>();
   private final Map<String, MutableLong> srcGraphEdgeImportCount = new HashMap<>();
@@ -69,6 +80,10 @@ public class MultigraphConsolidator implements AutoCloseable {
       }
     }
     dstGraphUri.shutdown();
+    
+    srcGraphs.invalidateAll();
+    srcGraphs.cleanUp();
+    
     for (GraphUri gUri : new HashSet<>(srcGraphUrisToShutdown.values())) {
       gUri.shutdown();
     }
@@ -82,6 +97,28 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
   
   public MultigraphConsolidator(GraphUri graphUri, boolean shouldAlreadyExist) throws IOException {
+    srcGraphs = CacheBuilder.newBuilder()
+        .maximumSize(6)  // TODO: 0: make this configurable
+        .removalListener(notification -> {
+          log.info("============================================ "+notification.getKey());
+          GraphUri guri = srcGraphUrisToShutdown.remove(notification.getKey());
+          if(guri!=null)
+            guri.shutdown();
+          else {
+            IdGraph<?> graph = (IdGraph<?>) notification.getValue();
+            log.warn("Have to shutdown graph directly instead of using GraphUri.shutdown(): {}", graph);
+            graph.shutdown();
+          }
+        })
+        .build(
+            new CacheLoader<String, IdGraph<?>>() {
+              public IdGraph<?> load(String key) throws IOException {
+                GraphUri graphUri = new GraphUri(key);
+                IdGraph<?> graph = graphUri.openIdGraph();
+                return graph;
+              }
+            });
+    
     dstGraphUri=graphUri;
     if(shouldAlreadyExist || dstGraphUri.exists())
       graph = dstGraphUri.getOrOpenGraph(); //openExistingIdGraph(); // graph will be open here so that close() can call shutdown()
@@ -204,37 +241,42 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
 
   private IdGraph<?> getGraph(String graphId) {
-    IdGraph<?> graph = srcGraphs.get(graphId); // for lookup efficiency
-    if (graph != null)
-      return graph;
-
-    String shortGraphId = getShortGraphId(graphId);
-    graph = srcGraphs.get(shortGraphId);
-    if (graph == null) {
-      try {
-        GraphUri graphUri = new GraphUri(graphId);
-        graph = graphUri.openExistingIdGraph();
-        srcGraphUrisToShutdown.put(shortGraphId, graphUri); //so that graph can be closed
-        addSrcGraph(graphUri, graphId, shortGraphId, graph);
-      } catch (IOException e) {
-        e.printStackTrace();
+//    try{
+      IdGraph<?> graph = srcGraphs.getIfPresent(graphId); // in case graphId is already a shortGraphId
+      if (graph != null)
+        return graph;
+  
+      String shortGraphId = getShortGraphId(graphId);
+      graph = srcGraphs.getIfPresent(shortGraphId);
+      if (graph == null) {
+        try {
+          GraphUri graphUri = new GraphUri(graphId);
+          graph = graphUri.openExistingIdGraph();
+          srcGraphUrisToShutdown.put(shortGraphId, graphUri); //so that graph can be closed
+          addSrcGraph(graphUri, graphId, shortGraphId, graph);
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
       }
-    }
+//    }catch(ExecutionException ee){
+//      throw new RuntimeException(ee);
+//    }
     return graph;
   }
 
   private void addSrcGraph(GraphUri graphUri, String graphId, String shortGraphId, IdGraph<?> graph) {
-    srcGraphNodeImportCount.put(shortGraphId, new MutableLong(0));
-    srcGraphEdgeImportCount.put(shortGraphId, new MutableLong(0));
-    
-    IdGraph<?> existingGraph = srcGraphs.put(shortGraphId, graph);
+    IdGraph<?> existingGraph = srcGraphs.getIfPresent(shortGraphId);
+    srcGraphs.put(shortGraphId, graph);
     if (existingGraph != null) {
       log.warn("Overriding existing graph: {} with shortGraphId={}", graph, shortGraphId);
     }
-    srcGraphs.put(graphId, graph); // for lookup efficiency, so a shortGraphId is not created each time
     
-    addEdgeFromSrcMetaDataNode(shortGraphId);
-    importMetadataSubgraph(graphIdMapper.longId(shortGraphId));
+    if(!srcGraphNodeImportCount.containsKey(shortGraphId)){
+      srcGraphNodeImportCount.put(shortGraphId, new MutableLong(0));
+      srcGraphEdgeImportCount.put(shortGraphId, new MutableLong(0));
+      addEdgeFromSrcMetaDataNode(shortGraphId);
+      importMetadataSubgraph(graphIdMapper.longId(shortGraphId));
+    }
   }
 
   private void addEdgeFromSrcMetaDataNode(String shortSrcGraphId) {
@@ -274,7 +316,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   public void registerGraph(GraphUri graphUri) {
     String graphId = graphUri.asString();
     String shortGraphId = getShortGraphId(graphId);
-    IdGraph<?> graph = srcGraphs.get(shortGraphId);
+    IdGraph<?> graph = srcGraphs.getIfPresent(shortGraphId);
     if (graph == null) {
       try {
         if(graphUri.isOpen()){
@@ -528,4 +570,22 @@ public class MultigraphConsolidator implements AutoCloseable {
       }
   }
 
+/*  public static void main(String[] args) throws ExecutionException {
+    
+    IdGraphFactoryNeo4j.register();
+    ArrayList<GraphUri> uris=new ArrayList<>();
+    for(int i=0; i<15; ++i){
+      GraphUri uri = new GraphUri("neo4j:neo"+i);
+      uris.add(uri);
+    }
+
+    for(GraphUri uri:uris){
+      uri.openIdGraph();
+      //graphs.get(uri.asString());
+      uri.shutdown();
+    }
+
+    graphs.invalidateAll();
+    graphs.cleanUp();
+  }*/
 }

@@ -5,14 +5,21 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.lang.mutable.MutableLong;
+
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.tinkerpop.blueprints.Direction;
+import com.tinkerpop.blueprints.Edge;
+import com.tinkerpop.blueprints.Element;
+import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -22,19 +29,6 @@ import net.deelam.graphtools.GraphTransaction;
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.GraphUtils;
 import net.deelam.graphtools.PropertyMerger;
-import net.deelam.graphtools.graphfactories.IdGraphFactoryNeo4j;
-
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.cache.RemovalListener;
-import com.google.common.cache.RemovalNotification;
-import com.tinkerpop.blueprints.Direction;
-import com.tinkerpop.blueprints.Edge;
-import com.tinkerpop.blueprints.Element;
-import com.tinkerpop.blueprints.Vertex;
-import com.tinkerpop.blueprints.impls.neo4j.Neo4jGraph;
-import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 /**
  * Retrieves a node/edge by their ID from given graphId (both stored/provided by NodeIndexer),

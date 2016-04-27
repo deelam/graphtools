@@ -119,9 +119,6 @@ public class MultigraphConsolidator implements AutoCloseable {
     else
       graph=dstGraphUri.createNewIdGraph(false);
 
-    log.warn("Graph's cl: {}", graph.getClass().getClassLoader());
-    log.warn("tccl={}", Thread.currentThread().getContextClassLoader());
-    
     merger = dstGraphUri.createPropertyMerger();
 
     GraphUtils.setMetaData(graph, GraphUtils.GRAPHBUILDER_PROPKEY, this.getClass().getSimpleName());
@@ -178,7 +175,6 @@ public class MultigraphConsolidator implements AutoCloseable {
   private static final String GRAPHID_MAP_ENTRY_PREFIX = "_GRAPHID_MAP_ENTRY_";
 
   private void saveIdMapperAsGraphMetaData() {
-    log.warn("saveIdMapperAsGraphMetaData: "+graph);
     int tx = GraphTransaction.begin(graph);
     try {
       if (useFileBasedIdMapper) {

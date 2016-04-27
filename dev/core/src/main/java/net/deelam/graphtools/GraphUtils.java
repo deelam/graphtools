@@ -87,9 +87,9 @@ public final class GraphUtils {
       if (numSamples < 0 || nodeCount < numSamples) {
         sb.append("  ").append(n.getId()).append(": ");
         sb.append(n.getPropertyKeys()).append("\n");
-        if(propsToPrint!=null && propsToPrint.length>0){
-          String propValuesStr=toString(n, "\n    ", propsToPrint);
-          if(propValuesStr.length()>0)
+        if (propsToPrint != null && propsToPrint.length > 0) {
+          String propValuesStr = toString(n, "\n    ", propsToPrint);
+          if (propValuesStr.length() > 0)
             sb.append("    ").append(propValuesStr).append("\n");
         }
       }
@@ -103,9 +103,9 @@ public final class GraphUtils {
         sb.append(e.getVertex(Direction.OUT)).append("->").append(e.getVertex(Direction.IN));
         sb.append("): ");
         sb.append(e.getPropertyKeys()).append("\n");
-        if(propsToPrint!=null && propsToPrint.length>0){
-          String propValuesStr=toString(e, "\n    ", propsToPrint);
-          if(propValuesStr.length()>0)
+        if (propsToPrint != null && propsToPrint.length > 0) {
+          String propValuesStr = toString(e, "\n    ", propsToPrint);
+          if (propValuesStr.length() > 0)
             sb.append("    ").append(propValuesStr).append("\n");
         }
       }
@@ -274,13 +274,14 @@ public final class GraphUtils {
    * Removes original edges and node.
    * @param propMerger to merge node and edge properties
    */
-  public static void mergeNodesAndEdges(Vertex origV, Vertex targetV, boolean excludeNewSelfEdges, IdGraph<?> graph, PropertyMerger propMerger) {
-    if(origV.equals(targetV)){
+  public static void mergeNodesAndEdges(Vertex origV, Vertex targetV, boolean excludeNewSelfEdges, IdGraph<?> graph,
+      PropertyMerger propMerger) {
+    if (origV.equals(targetV)) {
       throw new IllegalArgumentException("origV and targetV are the same nodes (or at least have the same ids)");
     }
     propMerger.mergeProperties(origV, targetV);
     moveEdges(origV, targetV, excludeNewSelfEdges, graph);
-    
+
     log.debug("Removing node={} that was merged into node={}", origV, targetV);
     graph.removeVertex(origV);
     graph.commit(); // must commit since vertex was removed in case this is called in a getVertices() loop so it will skip removed node
@@ -297,7 +298,7 @@ public final class GraphUtils {
         graph.removeEdge(edge);
 
         Edge eCopy;
-        if(excludeNewSelfEdges && targetV.equals(neighbor)){ // whether to include the original edge from origV to targetV, which would be a self-edge
+        if (excludeNewSelfEdges && targetV.equals(neighbor)) { // whether to include the original edge from origV to targetV, which would be a self-edge
           // don't add edge back into graph
         } else {
           if (dir == Direction.OUT) {
@@ -308,6 +309,12 @@ public final class GraphUtils {
           ElementHelper.copyProperties(inMemEdge, eCopy);
         }
       }
+  }
+
+  public static void createIndex(IdGraph<?> graph, String propKey, Class<? extends Element> clazz, Parameter... params) {
+    if (!graph.getIndexedKeys(clazz).contains(propKey)) {
+      graph.createKeyIndex(propKey, clazz, params);
+    }
   }
 
 }

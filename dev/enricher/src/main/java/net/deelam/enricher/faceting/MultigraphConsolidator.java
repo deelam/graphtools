@@ -92,7 +92,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   
   public MultigraphConsolidator(GraphUri graphUri, boolean shouldAlreadyExist) throws IOException {
     srcGraphs = CacheBuilder.newBuilder()
-        .maximumSize(6)  // TODO: 0: make this configurable
+        .maximumSize(100)  // TODO: 0: make this configurable
         .removalListener(notification -> {
           log.info("============================================ "+notification.getKey());
           GraphUri guri = srcGraphUrisToShutdown.remove(notification.getKey());

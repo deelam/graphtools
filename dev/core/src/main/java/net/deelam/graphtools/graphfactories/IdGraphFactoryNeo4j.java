@@ -17,6 +17,7 @@ import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.commons.configuration.CompositeConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.io.FileUtils;
+import org.neo4j.backup.OnlineBackupSettings;
 
 import com.google.common.collect.Iterators;
 import com.tinkerpop.blueprints.impls.neo4j.Neo4jGraph;
@@ -74,7 +75,10 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
     log.debug("Opening Neo4j graph at path={}", path);
     // Set other settings using prefix "blueprints.neo4j.conf"
     conf.setProperty("blueprints.neo4j.directory", path);
-//    GraphUri.printConfig(conf);
+    
+    conf.setProperty("blueprints.neo4j.conf."+OnlineBackupSettings.online_backup_enabled.name(), "false");// if true, limits number of opened Neo4j graphs 
+    
+    //GraphUri.printConfig(conf);
     IdGraph<Neo4jGraph> graph = new IdGraph<>(new Neo4jGraph(conf));
     return graph;
   }

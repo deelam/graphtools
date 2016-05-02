@@ -3,25 +3,26 @@
  */
 package net.deelam.graphtools.jobqueue;
 
-import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
+
+import com.google.common.collect.Iterables;
+import com.tinkerpop.blueprints.TransactionalGraph;
+import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
+import com.tinkerpop.frames.FramedTransactionalGraph;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.FramedGraphProvider;
-import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.GraphUtils;
-import net.deelam.graphtools.graphfactories.IdGraphFactoryTinker;
 import net.deelam.graphtools.jobqueue.DependentJobFrame.STATE;
-
-import com.google.common.collect.Iterables;
-import com.tinkerpop.blueprints.TransactionalGraph;
-import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
-import com.tinkerpop.frames.FramedTransactionalGraph;
 
 /**
  * TODO: add GraphTransactions
@@ -34,8 +35,6 @@ public class DependentJobManager {
   private static final String STOP_JOB_TYPE = "STOP";
   private static final DependentJob STOP_THREAD_JOB = new DependentJobImpl("STOP", STOP_JOB_TYPE);
   
-  // TODO: remove job and connected jobs
-
   @AllArgsConstructor
   @Data
   static class DependentJobImpl implements DependentJob {
@@ -43,78 +42,7 @@ public class DependentJobManager {
     String jobType;
   }
 
-  static class MyProc implements JobProcessor<DependentJob> {
-    private boolean cancel;
-
-    @Override
-    public boolean runJob(DependentJob job) {
-      for (int i = 0; i < 5; ++i) {
-        if (cancel) {
-          log.info("Cancelling: {}", i);
-          //reset
-          cancel = false;
-        }
-        try {
-          log.info(getClass().getSimpleName() + " Running: {}", i);
-          Thread.sleep(500);
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-      }
-      return true;
-    }
-
-    @Override
-    public boolean precheckJob(DependentJob job) {
-      return true;
-    }
-
-    @Override
-    public boolean cancelJob(String jobId) {
-      cancel = true;
-      return true;
-    }
-
-    @Override
-    public boolean isJobReady(DependentJob job) {
-      return true;
-    }
-
-    @Override
-    public String getJobType() {
-      return null;
-    }
-  }
-
-  public static void main(String[] args) throws IOException, InterruptedException {
-    IdGraphFactoryTinker.register();
-    GraphUri gUri = new GraphUri("tinker:"/*"neo4j:depJobGraph"*/);
-    DependentJobManager mgr = new DependentJobManager(5, gUri.createNewIdGraph(true));
-
-    mgr.addJobProcessor("typeA", new MyProc());
-    mgr.addJobProcessor("typeB", new MyProc());
-
-    DependentJob jobA1 = new DependentJobImpl("nodeA1", "typeA");
-    mgr.addJob(jobA1);
-    DependentJob jobA2 = new DependentJobImpl("ALL_SRC", "typeA");
-    mgr.addJob(jobA2, "nodeA1");
-    DependentJob jobB = new DependentJobImpl("nodeB1", "typeB");
-    mgr.addJob(jobB, "ALL_SRC");
-
-    DependentJob jobA3 = new DependentJobImpl("nodeA3", "typeA");
-    mgr.addJob(jobA3, "nodeA1");
-    //DependentJob jobA22 = new DependentJobImpl("ALL_SRC", "typeA", new String[] {"nodeA3"});
-    mgr.addInputJobs("ALL_SRC", "nodeA3");
-
-    mgr.addEndJobs();
-
-    Thread.sleep(3000);
-    //    mgr.cancelJob(jobA1.getId());
-
-    //    Thread.sleep(1000);
-    //    mgr.close();
-  }
-
+  // TODO: remove job and connected jobs
   private final BlockingDeque<DependentJob> queue = new LinkedBlockingDeque<>();
   private final FramedTransactionalGraph<TransactionalGraph> graph;
   private final List<JobThread> jobRunners;

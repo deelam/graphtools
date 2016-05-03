@@ -80,4 +80,8 @@ public class JobJO extends JsonObject {
     return new JobJO((JsonObject) message.body());
   }
 
+  public static JobJO wrap(JsonObject obj) {
+    return new JobJO(obj);
+  }
+
 }

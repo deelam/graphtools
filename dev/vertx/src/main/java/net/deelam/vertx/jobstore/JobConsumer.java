@@ -8,6 +8,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +28,7 @@ public class JobConsumer extends AbstractVerticle {
     log.info("Ready: " + this);
   }
 
-  public void listJobs(Handler<AsyncResult<Message<JsonObject>>> replyH) {
+  public void listJobs(Handler<AsyncResult<Message<JsonArray>>> replyH) {
     vertx.eventBus().send(listJobsBusAddr, null, replyH);
   }
 

@@ -12,6 +12,8 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.TestSuite;
@@ -74,13 +76,38 @@ public class JobConsignerTest {
   }
   
   @Test
+  public void testConsumer(TestContext context) {
+    for(int i=0; i<10; ++i){
+      JobJO job = new JobJO("job"+i);
+      prod.addJob(job);
+    }
+    for(int i=0; i<10; ++i){
+      cons.listJobs(reply->{
+        reply.result().body().forEach(job->{
+          log.info("job: "+job);
+        });
+        JsonObject obj = ((JsonArray) reply.result().body()).getJsonObject(0);
+        JobJO job = JobJO.wrap(obj);
+        cons.startedJob(job);
+        try {
+          Thread.sleep(1000);
+        } catch (Exception e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+        cons.completedJob(job);
+      });
+    }    
+  }
+  
+  @Test
   public void testConsignerInVertx(TestContext context) {
     int numAsserts = 4;
     Async async = context.async(numAsserts);
     
     prod.addJobCompletionHandler(msg -> {
       log.info("!!!!!!!!!! Job complete={}", msg.body());
-      log.error("Checking false assertion");
+      log.error("Checking false assertion ");
       context.assertTrue(true);
       async.countDown();
     });
@@ -134,5 +161,7 @@ public class JobConsignerTest {
     
     async.await(3000); // fails when timeout occurs
   }
+  
+  
 
 }

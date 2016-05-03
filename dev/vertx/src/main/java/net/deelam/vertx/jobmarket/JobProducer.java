@@ -7,6 +7,7 @@ import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.vertx.jobmarket.JobMarket.BUS_ADDR;
 
@@ -20,7 +21,7 @@ public class JobProducer extends AbstractVerticle {
   
   private static final String JOBCOMPLETE_ADDRESS_SUFFIX = "-jobComplete";
   
-  private final String jcPrefix;
+  private final String jmPrefix;
   private String jobCompletionAddress;
 
   @Override
@@ -29,21 +30,25 @@ public class JobProducer extends AbstractVerticle {
     log.info("Ready: " + this +" jobCompletionAddress="+jobCompletionAddress);
   }
 
-  public void addJobCompletionHandler(Handler<Message<Object>> jobCompletionHandler) {
-    log.info("add jobCompletionHandler={}", jobCompletionHandler);
-    vertx.eventBus().consumer(jobCompletionAddress, jobCompletionHandler);
-  }
-  
   public void addJob(String jobId, JsonObject job) {
     DeliveryOptions producerDeliveryOpts = JobMarket.createProducerHeader(jobId, jobCompletionAddress);
-    vertx.eventBus().send(jcPrefix + BUS_ADDR.ADD_JOB, job, producerDeliveryOpts, defaultAddJobReplyHandler);
+    vertx.eventBus().send(jmPrefix + BUS_ADDR.ADD_JOB, job, producerDeliveryOpts, addJobReplyHandler);
   }
 
-  private Handler<AsyncResult<Message<JsonObject>>> defaultAddJobReplyHandler = (reply) -> {
-    if (reply.succeeded()) {
-      log.info("addJob reply={}", reply.result().body());
-    } else if (reply.failed()) {
-      log.error("addJob Failed: " + reply.cause());
+  public void getProgress(String jobId, Handler<AsyncResult<Message<JsonObject>>> handler) {
+    DeliveryOptions producerDeliveryOpts = JobMarket.createProducerHeader(jobId, jobCompletionAddress);
+    vertx.eventBus().send(jmPrefix + BUS_ADDR.GET_PROGRESS, null, producerDeliveryOpts, handler);
+  }
+
+  @Setter
+  private Handler<Message<JsonObject>> jobCompletionHandler = (msg) -> {
+    log.info("Job complete={}", msg.body());
+  };
+  
+  @Setter
+  private Handler<AsyncResult<Message<JsonObject>>> addJobReplyHandler = (reply) -> {
+    if (reply.failed()) {
+      log.error("addJob Failed: ", reply.cause());
     } else {
       log.info("addJob unknown reply: " + reply);
     }

@@ -22,7 +22,7 @@ import net.deelam.vertx.jobmarket.JobMarket.JobItem.JobState;
  * -addJob(id,completionAddr,job)
  * -getProgress(id)
  * 
- * -register(consumerAddr)
+ * -register(workerAddr)
  * -setProgress(job)
  * -done(job)
  * -fail(job)
@@ -59,137 +59,146 @@ public class JobMarket extends AbstractVerticle {
 
   enum BUS_ADDR {
     ADD_JOB, GET_PROGRESS, // for producers 
-    REGISTER, SET_PROGRESS, DONE, FAIL // for consumers
+    REGISTER, SET_PROGRESS, DONE, FAIL // for workers
   };
 
   private static final Object OK_REPLY = null;
-  
-  // don't need to synchronize Set since Vert.x ensures single thread
-//  TreeMap<String, JobJO> jobs = new TreeMap<>();
-
-  // consumerAddr -> jobId
-  private Map<String, String> consumers = new HashMap<>();
 
   // jobId -> JobItem
   private Map<String, JobItem> jobItems = new HashMap<>();
+  
+  private Queue<String> idleWorkers = new LinkedList<>();
 
-  private static final String IDLE_JOBID = "";
-  
-  private Queue<String> idleConsumers=new LinkedList<>();
-  
   @Override
   public void start() throws Exception {
     initAddressPrefix();
 
     EventBus eb = vertx.eventBus();
     eb.consumer(addressPrefix + BUS_ADDR.REGISTER, message -> {
-      String consumerAddr=getConsumerAddress(message);
-      log.info("Received REGISTER message from " + consumerAddr);
-      addIdleConsumer(consumerAddr);
-      sendJobsTo(consumerAddr);
+      String workerAddr = getWorkerAddress(message);
+      log.info("Received REGISTER message from " + workerAddr);
+      idleWorkers.add(workerAddr);
+      sendJobsTo(workerAddr);
     });
+
     eb.consumer(addressPrefix + BUS_ADDR.ADD_JOB, message -> {
-      log.info("Received ADD_JOB message: " + message);
+      log.info("Received ADD_JOB message: {}", message.body());
       JobItem ji = new JobItem(message);
-      ji.state=JobState.AVAILABLE;
-      if(jobItems.containsKey(ji.jobId)){
-        message.fail(-11, "Job with id="+ji.jobId+" already exists!");
+      ji.state = JobState.AVAILABLE;
+      if (jobItems.containsKey(ji.jobId)) {
+        message.fail(-11, "Job with id=" + ji.jobId + " already exists!");
       } else {
+        message.reply(OK_REPLY);
         jobItems.put(ji.jobId, ji);
-        sendJobsToNextIdleConsumer();
+        sendJobsToNextIdleWorker();
       }
     });
-    eb.consumer(addressPrefix + BUS_ADDR.DONE, message -> {
-      log.info("Received DONE message: " + message);
-      consumerEndedJob(message, JobState.DONE);
-      String consumerAddr=getConsumerAddress(message);
-      sendJobsTo(consumerAddr);
-      
+
+    eb.consumer(addressPrefix + BUS_ADDR.SET_PROGRESS, message -> {
+      log.info("Received SET_PROGRESS message: {}", message.body());
       JsonObject jobJO = (JsonObject) message.body();
       JobItem job = getJobItem(jobJO);
-      vertx.eventBus().send(job.completionAddr, job.jobJO);
+      job.mergeIn(jobJO);
+      job.state = JobState.PROGRESSING;
+    });
+    eb.consumer(addressPrefix + BUS_ADDR.GET_PROGRESS, message -> {
+      log.info("Received GET_PROGRESS message: {}", message.body());
+      String jobId = message.headers().get(JOBID_ATTRIBUTE);
+      //String jobId = (String) message.body();
+      JobItem job = jobItems.get(jobId);
+      checkNotNull(job, "Cannot find job with id=" + jobId);
+      message.reply(job.jobJO.copy().put("JOB_STATE", job.state));
+    });
+
+    eb.consumer(addressPrefix + BUS_ADDR.DONE, message -> {
+      log.info("Received DONE message: {}", message.body());
+      JobItem ji = workerEndedJob(message, JobState.DONE);
+      String workerAddr = getWorkerAddress(message);
+      sendJobsTo(workerAddr);
+
+      vertx.eventBus().send(ji.completionAddr, ji.jobJO);
     });
     eb.consumer(addressPrefix + BUS_ADDR.FAIL, message -> {
-      log.info("Received FAIL message: " + message);
-      consumerEndedJob(message, JobState.AVAILABLE);
-      String consumerAddr=getConsumerAddress(message);
-      sendJobsTo(consumerAddr);
+      log.info("Received FAIL message: {}", message.body());
+      JobItem ji = workerEndedJob(message, JobState.AVAILABLE);
+      incrementFailCount(ji);
+
+      String workerAddr = getWorkerAddress(message);
+      sendJobsTo(workerAddr);
     });
-    
+
     log.info("Ready: " + this + " addressPrefix=" + addressPrefix);
   }
 
-  private void addIdleConsumer(String consumerAddr) {
-    consumers.put(consumerAddr, IDLE_JOBID);
-    idleConsumers.add(consumerAddr);
-  }
-  private void removeIdleConsumer(String consumerAddr, JobItem job) {
-    consumers.put(consumerAddr, job.jobId);
-    idleConsumers.remove(consumerAddr);
+  public static final String JOB_FAILEDCOUNT_ATTRIBUTE = "_jobFailedCount";
+
+  private void incrementFailCount(JobItem ji) {
+    Integer count = ji.jobJO.getInteger(JOB_FAILEDCOUNT_ATTRIBUTE, Integer.valueOf(0));
+    ji.jobJO.put(JOB_FAILEDCOUNT_ATTRIBUTE, count.intValue() + 1);
   }
 
-  private void sendJobsToNextIdleConsumer() {
-    String idleCons = idleConsumers.peek();
-    if(idleCons!=null){
+  private void sendJobsToNextIdleWorker() {
+    String idleCons = idleWorkers.peek();
+    if (idleCons != null) {
       sendJobsTo(idleCons);
     }
   }
 
-  private void sendJobsTo(String consumerAddr) {
-    JsonArray jobList = new JsonArray();
+  private void sendJobsTo(String workerAddr) {
+    final JsonArray jobList = new JsonArray();
     jobItems.forEach((k, v) -> {
-      if (v.state==JobState.AVAILABLE){
+      if (v.state == JobState.AVAILABLE) {
         jobList.add(v.jobJO.copy());
       }
     });
-    log.info("jobList="+jobList);
-    if(jobList.size()>0){
-      vertx.eventBus().send(consumerAddr, jobList, selectedJobReply -> {
-        if(selectedJobReply.failed())
+    log.info("jobList=" + jobList);
+    {
+      vertx.eventBus().send(workerAddr, jobList, selectedJobReply -> {
+        if (selectedJobReply.failed()) {
           log.error("selectedJobReply ", selectedJobReply.cause());
-        else 
-          consumerStartedJob(selectedJobReply.result());
+        } else if (selectedJobReply.result().body() == null) {
+          if (jobList.size() > 0)
+            log.info("Worker did not choose a job: {}", jobList);
+        } else {
+          workerStartedJob(selectedJobReply.result());
+        }
       });
     }
   }
 
-  private void consumerStartedJob(Message<?> selectedJobMsg) {
-    String consumerAddr = getConsumerAddress(selectedJobMsg);
+  private JobItem workerStartedJob(Message<?> selectedJobMsg) {
     JsonObject jobJO = (JsonObject) selectedJobMsg.body();
     JobItem job = getJobItem(jobJO);
-    log.info("STARTED {} on {}",consumerAddr, job.jobId);
-    {
-      removeIdleConsumer(consumerAddr, job);
-      job.mergeIn(jobJO);
-      job.state=JobState.STARTED;
-    }
+
+    String workerAddr = getWorkerAddress(selectedJobMsg);
+    idleWorkers.remove(workerAddr);
+    log.info("STARTED {} on {}", workerAddr, job.jobId);
+    job.mergeIn(jobJO);
+    job.state = JobState.STARTED;
+    return job;
   }
 
-  private void consumerEndedJob(Message<?> jobMsg, JobState newState) {
+  private JobItem workerEndedJob(Message<?> jobMsg, JobState newState) {
     JsonObject jobJO = (JsonObject) jobMsg.body();
     JobItem job = getJobItem(jobJO);
-    {
-      String consumerAddr = getConsumerAddress(jobMsg);
-      addIdleConsumer(consumerAddr);
-      job.mergeIn(jobJO);
-      job.state=newState;
-    }
+
+    String workerAddr = getWorkerAddress(jobMsg);
+    idleWorkers.add(workerAddr);
+    job.mergeIn(jobJO);
+    job.state = newState;
+    return job;
   }
 
   private JobItem getJobItem(JsonObject jobJO) {
     String jobId = JobItem.getJobId(jobJO);
     JobItem job = jobItems.get(jobId);
-    checkNotNull(job, "Cannot find job with id="+jobId);
+    checkNotNull(job, "Cannot find job with id=" + jobId);
     return job;
   }
-  
-  ////
-  
-  public static final String JOB_FAILEDCOUNT_ATTRIBUTE = "jobFailedCount";
 
   ////
 
-  static class JobItem {
+  protected static class JobItem {
 
     enum JobState {
       AVAILABLE, STARTED, PROGRESSING, DONE
@@ -204,7 +213,7 @@ public class JobMarket extends AbstractVerticle {
     JobItem.JobState state;
     final String jobId;
     final String completionAddr;
-    //String consumerAddr;
+    //String workerAddr;
     final JsonObject jobJO;
 
     JobItem(Message<?> message) {
@@ -225,10 +234,10 @@ public class JobMarket extends AbstractVerticle {
     }
 
   }
-  
+
   private static final String JOBID_ATTRIBUTE = "jobId";
 
-  public static final String JOB_COMPLETE_ADDRESS = "jobCompleteAddress";
+  private static final String JOB_COMPLETE_ADDRESS = "jobCompleteAddress";
 
   public static DeliveryOptions createProducerHeader(String jobId, String jobCompletionAddress) {
     DeliveryOptions opts = new DeliveryOptions();
@@ -238,14 +247,14 @@ public class JobMarket extends AbstractVerticle {
     return opts;
   }
 
-  public static final String CONSUMER_ADDRESS = "consumerAddress";
+  private static final String WORKER_ADDRESS = "workerAddress";
 
-  public static DeliveryOptions createConsumerHeader(String consumerAddress) {
-    return new DeliveryOptions().addHeader(CONSUMER_ADDRESS, consumerAddress);
+  public static DeliveryOptions createWorkerHeader(String workerAddress) {
+    return new DeliveryOptions().addHeader(WORKER_ADDRESS, workerAddress);
   }
-  
-  public static String getConsumerAddress(Message<?> message) {
-    return message.headers().get(CONSUMER_ADDRESS);
+
+  public static String getWorkerAddress(Message<?> message) {
+    return message.headers().get(WORKER_ADDRESS);
   }
 
 }

@@ -22,10 +22,10 @@ public class JobMarketTest {
 
   private Vertx vertx;
 
-  static final String jcPrefix = "net.deelam.jm";
+  static final String jcPrefix = "net.deelam.jm-";
 
   JobProducer prod;
-  JobConsumer cons;
+  JobWorker cons;
 
   @Before
   public void before(final TestContext context) {
@@ -39,16 +39,27 @@ public class JobMarketTest {
     };
 
     JobMarket jm = new JobMarket(jcPrefix);
-    prod = new JobProducer(jcPrefix);
-    cons = new JobConsumer(jcPrefix){
+    prod = new JobProducer(jm.getAddressPrefix());
+    cons = new JobWorker(jm.getAddressPrefix()){
       int count=0;
       public boolean doWork(JsonObject job) {
+        boolean success=++count % 2 == 0;
         try {
-          Thread.sleep(3000);
+          job.put("progress", "10%");
+          sendJobProgress();
+          Thread.sleep(2000);
+          job.put("progress2", "50%");
+          sendJobProgress();
+          prod.getProgress("id-A", reply -> log.info("Progress="+reply.result().body()));
+          if(success){
+            Thread.sleep(2000);
+            job.put("progress", "100%");
+            sendJobProgress();
+          }
         } catch (InterruptedException e) {
           e.printStackTrace();
         }
-        return ++count % 2 == 0;
+        return success;
       }
     };
 
@@ -73,7 +84,7 @@ public class JobMarketTest {
     Async async = context.async(numAsserts);
     async.countDown();
 
-    prod.addJobCompletionHandler(msg -> {
+    prod.setJobCompletionHandler(msg -> {
       log.info("!!!!!!!!!! Job complete={}", msg.body());
       log.error("Checking false assertion ");
       context.assertTrue(true);
@@ -104,7 +115,7 @@ public class JobMarketTest {
     cons.jobDone();
 */
     try {
-      Thread.sleep(15000);
+      Thread.sleep(150000);
     } catch (InterruptedException e) {
       e.printStackTrace();
     }

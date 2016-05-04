@@ -22,35 +22,37 @@ public class JobProducer extends AbstractVerticle {
   private static final String JOBCOMPLETE_ADDRESS_SUFFIX = "-jobComplete";
   
   private final String jmPrefix;
-  private String jobCompletionAddress;
+  private String jobCompletionAddress=null;
 
   @Override
   public void start() throws Exception {
-    jobCompletionAddress=deploymentID()+JOBCOMPLETE_ADDRESS_SUFFIX;
-    log.info("Ready: " + this +" jobCompletionAddress="+jobCompletionAddress);
+    log.info("Ready: " + this +" deploymentID="+deploymentID());
   }
 
+  public void addJobCompletionHandler(Handler<Message<Object>> jobCompletionHandler) {
+    jobCompletionAddress=deploymentID()+JOBCOMPLETE_ADDRESS_SUFFIX;
+    log.info("add jobCompletionHandler={}", jobCompletionHandler);
+    vertx.eventBus().consumer(jobCompletionAddress, jobCompletionHandler);
+  }
+  
   public void addJob(String jobId, JsonObject job) {
-    DeliveryOptions producerDeliveryOpts = JobMarket.createProducerHeader(jobId, jobCompletionAddress);
-    vertx.eventBus().send(jmPrefix + BUS_ADDR.ADD_JOB, job, producerDeliveryOpts, addJobReplyHandler);
+    DeliveryOptions deliveryOpts = JobMarket.createProducerHeader(jobId, jobCompletionAddress);
+    vertx.eventBus().send(jmPrefix + BUS_ADDR.ADD_JOB, job, deliveryOpts, addJobReplyHandler);
   }
 
   public void getProgress(String jobId, Handler<AsyncResult<Message<JsonObject>>> handler) {
-    DeliveryOptions producerDeliveryOpts = JobMarket.createProducerHeader(jobId, jobCompletionAddress);
-    vertx.eventBus().send(jmPrefix + BUS_ADDR.GET_PROGRESS, null, producerDeliveryOpts, handler);
+    DeliveryOptions deliveryOpts = JobMarket.createProducerHeader(jobId, jobCompletionAddress);
+    vertx.eventBus().send(jmPrefix + BUS_ADDR.GET_PROGRESS, null, deliveryOpts, handler);
   }
 
   @Setter
-  private Handler<Message<JsonObject>> jobCompletionHandler = (msg) -> {
-    log.info("Job complete={}", msg.body());
-  };
-  
-  @Setter
   private Handler<AsyncResult<Message<JsonObject>>> addJobReplyHandler = (reply) -> {
-    if (reply.failed()) {
-      log.error("addJob Failed: ", reply.cause());
+    if (reply.succeeded()) {
+      log.debug("Job added: {}", reply.result().body());
+    } else if (reply.failed()) {
+      log.error("addJob failed: ", reply.cause());
     } else {
-      log.info("addJob unknown reply: " + reply);
+      log.warn("addJob unknown reply: {}", reply);
     }
   };
 

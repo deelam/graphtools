@@ -17,18 +17,29 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.vertx.jobmarket.JobMarket.JobItem.JobState;
 
 /**
+ * JobProducer calls:
  * -addJob(id,completionAddr,job)
  * -getProgress(id)
+ * -removeJob(id)
  * 
+ * JobWorker calls:
  * -register(workerAddr)
  * -setProgress(job)
  * -done(job)
  * -fail(job)
+ * 
+ * JobWorkers register and JobProducers addJobs.  For each of these events, a list of available jobs are sent to an idle Worker to choose a job.
+ * (If no job is chosen and the availableJobList has changed, the latest list is sent to the Worker.)
+ * When a Worker is done or has failed the job, it is sent the latest availableJobList.
+ * 
+ * Workers can submit setProgress to update the job JsonObject.  100% progress can be set by sending a final setProgress(job) or done(job).
+ * A job is simply marked as DONE.  To delete the job entry, call removeJob(id). 
+ * 
+ * If job fails, a failCount is incremented and the JOB_FAILEDCOUNT_ATTRIBUTE property set on the job JsonObject.
  * 
  * @author dd
  */
@@ -60,8 +71,8 @@ public class JobMarket extends AbstractVerticle {
     checkNotNull(addressPrefix, "Must set '" + EVENT_BUS_PREFIX + "' config since not provided in constructor!");
   }
 
-  enum BUS_ADDR {
-    ADD_JOB, GET_PROGRESS, // for producers 
+  public enum BUS_ADDR {
+    ADD_JOB, REMOVE_JOB, GET_PROGRESS, // for producers 
     REGISTER, SET_PROGRESS, DONE, FAIL // for workers
   };
 
@@ -106,6 +117,16 @@ public class JobMarket extends AbstractVerticle {
         sendJobsToNextIdleWorker();
       }
     });
+    eb.consumer(addressPrefix + BUS_ADDR.REMOVE_JOB, message -> {
+      String jobId = readJobId(message);
+      log.debug("Received REMOVE_JOB message: jobId={}", jobId);
+      if(jobItems.containsKey(jobId)){
+        jobItems.remove(jobId);
+        message.reply(OK_REPLY);
+      } else {
+        message.fail(-12, "Cannot find job with id=" + jobId);
+      }
+    });
 
     eb.consumer(addressPrefix + BUS_ADDR.SET_PROGRESS, message -> {
       log.debug("Received SET_PROGRESS message: {}", message.body());
@@ -115,9 +136,8 @@ public class JobMarket extends AbstractVerticle {
       job.state = JobState.PROGRESSING;
     });
     eb.consumer(addressPrefix + BUS_ADDR.GET_PROGRESS, message -> {
-      String jobId = message.headers().get(JOBID_ATTRIBUTE);
-      //String jobId = (String) message.body();
-      log.debug("Received GET_PROGRESS message: {}", jobId);
+      String jobId = readJobId(message);
+      log.debug("Received GET_PROGRESS message: jobId={}", jobId);
       JobItem job = jobItems.get(jobId);
       checkNotNull(job, "Cannot find job with id=" + jobId);
       message.reply(job.jobJO.copy().put("JOB_STATE", job.state));
@@ -126,12 +146,13 @@ public class JobMarket extends AbstractVerticle {
     eb.consumer(addressPrefix + BUS_ADDR.DONE, message -> {
       log.debug("Received DONE message: {}", message.body());
       JobItem ji = workerEndedJob(message, JobState.DONE);
+      
       String workerAddr = getWorkerAddress(message);
       sendJobsTo(workerAddr);
 
       if(ji.completionAddr!=null){
         log.debug("Notifying {} that job is done: {}", ji.completionAddr, ji.jobJO);
-        vertx.eventBus().send(ji.completionAddr, ji.jobJO);
+        vertx.eventBus().send(ji.completionAddr, ji.jobJO.copy());
       }
     });
     eb.consumer(addressPrefix + BUS_ADDR.FAIL, message -> {
@@ -141,9 +162,18 @@ public class JobMarket extends AbstractVerticle {
 
       String workerAddr = getWorkerAddress(message);
       sendJobsTo(workerAddr);
+      
+      // TODO: add optional settable functor/Callable/Runnable to notify of job failure
     });
 
     log.info("Ready: " + this + " addressPrefix=" + addressPrefix);
+  }
+
+  private String readJobId(Message<Object> message) {
+    String jobId = message.headers().get(JOBID_HEADERATTRIBUTE);
+    if(jobId==null && (message.body() instanceof String)) 
+      jobId = (String) message.body();
+    return jobId;
   }
 
   public static final String JOB_FAILEDCOUNT_ATTRIBUTE = "_jobFailedCount";
@@ -234,8 +264,6 @@ public class JobMarket extends AbstractVerticle {
       AVAILABLE, STARTED, PROGRESSING, DONE
     };
 
-    private static final String JOBID = "_jobId";
-
     public static String getJobId(JsonObject jobJO) {
       return jobJO.getString(JOBID);
     }
@@ -247,7 +275,7 @@ public class JobMarket extends AbstractVerticle {
     final JsonObject jobJO;
 
     JobItem(Message<?> message) {
-      jobId = message.headers().get(JOBID_ATTRIBUTE);
+      jobId = message.headers().get(JOBID_HEADERATTRIBUTE);
       checkNotNull(jobId);
       completionAddr = message.headers().get(JOB_COMPLETE_ADDRESS);
       jobJO = ((JsonObject) message.body()).copy();
@@ -265,13 +293,15 @@ public class JobMarket extends AbstractVerticle {
 
   }
 
-  private static final String JOBID_ATTRIBUTE = "jobId";
+  public static final String JOBID = "_jobId";
+
+  private static final String JOBID_HEADERATTRIBUTE = "jobId";
 
   private static final String JOB_COMPLETE_ADDRESS = "jobCompleteAddress";
 
   public static DeliveryOptions createProducerHeader(String jobId, String jobCompletionAddress) {
     DeliveryOptions opts = new DeliveryOptions();
-    opts.addHeader(JOBID_ATTRIBUTE, jobId);
+    opts.addHeader(JOBID_HEADERATTRIBUTE, jobId);
     if (jobCompletionAddress != null)
       opts.addHeader(JOB_COMPLETE_ADDRESS, jobCompletionAddress);
     return opts;

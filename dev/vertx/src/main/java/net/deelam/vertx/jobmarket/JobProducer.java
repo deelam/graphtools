@@ -29,7 +29,7 @@ public class JobProducer extends AbstractVerticle {
     log.info("Ready: " + this +" deploymentID="+deploymentID());
   }
 
-  public void addJobCompletionHandler(Handler<Message<Object>> jobCompletionHandler) {
+  public <T> void addJobCompletionHandler(Handler<Message<T>> jobCompletionHandler) {
     jobCompletionAddress=deploymentID()+JOBCOMPLETE_ADDRESS_SUFFIX;
     log.info("add jobCompletionHandler={}", jobCompletionHandler);
     vertx.eventBus().consumer(jobCompletionAddress, jobCompletionHandler);
@@ -40,8 +40,13 @@ public class JobProducer extends AbstractVerticle {
     vertx.eventBus().send(jmPrefix + BUS_ADDR.ADD_JOB, job, deliveryOpts, addJobReplyHandler);
   }
 
-  public void getProgress(String jobId, Handler<AsyncResult<Message<JsonObject>>> handler) {
-    DeliveryOptions deliveryOpts = JobMarket.createProducerHeader(jobId, jobCompletionAddress);
+  public void removeJob(String jobId) {
+    DeliveryOptions deliveryOpts = JobMarket.createProducerHeader(jobId, null);
+    vertx.eventBus().send(jmPrefix + BUS_ADDR.REMOVE_JOB, null, deliveryOpts, removeJobReplyHandler);
+  }
+
+  public <T> void getProgress(String jobId, Handler<AsyncResult<Message<T>>> handler) {
+    DeliveryOptions deliveryOpts = JobMarket.createProducerHeader(jobId, null);
     vertx.eventBus().send(jmPrefix + BUS_ADDR.GET_PROGRESS, null, deliveryOpts, handler);
   }
 
@@ -55,5 +60,15 @@ public class JobProducer extends AbstractVerticle {
       log.warn("addJob unknown reply: {}", reply);
     }
   };
-
+  
+  @Setter
+  private Handler<AsyncResult<Message<JsonObject>>> removeJobReplyHandler = (reply) -> {
+    if (reply.succeeded()) {
+      log.debug("Job removed: {}", reply.result().body());
+    } else if (reply.failed()) {
+      log.error("removeJob failed: ", reply.cause());
+    } else {
+      log.warn("removeJob unknown reply: {}", reply);
+    }
+  };
 }

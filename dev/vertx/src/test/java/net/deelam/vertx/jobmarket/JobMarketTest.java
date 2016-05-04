@@ -9,6 +9,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -85,9 +86,10 @@ public class JobMarketTest {
     int numAsserts = 2;
     Async async = context.async(numAsserts);
 
-    prod.addJobCompletionHandler(msg -> {
+    prod.addJobCompletionHandler( (Message<JsonObject> msg) -> {
       log.info("==========> Job complete={}", msg.body());
-      log.info("Checking false assertion ");
+      prod.removeJob(msg.body().getString(JobMarket.JOBID));
+      //log.info("Checking false assertion ");
       async.countDown();
     });
 

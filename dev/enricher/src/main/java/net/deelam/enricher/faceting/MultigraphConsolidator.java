@@ -94,14 +94,13 @@ public class MultigraphConsolidator implements AutoCloseable {
     srcGraphs = CacheBuilder.newBuilder()
         .maximumSize(100)  // TODO: 0: make this configurable
         .removalListener(notification -> {
-          log.info("============================================ "+notification.getKey());
           GraphUri guri = srcGraphUrisToShutdown.remove(notification.getKey());
+          log.debug("cache element removal: {}={}", notification.getKey(), guri);
           if(guri!=null)
             guri.shutdown();
           else {
             IdGraph<?> graph = (IdGraph<?>) notification.getValue();
-            log.warn("Not shutting down graph probably because registerGraph(): {}", graph);
-            //graph.shutdown();
+            log.info("Not shutting down graph probably because registerGraph() was used for graph={}", graph);
           }
         })
         .build(
@@ -511,7 +510,7 @@ public class MultigraphConsolidator implements AutoCloseable {
           //log.info("Importing node: {}", newV);
           GraphTransaction.commitIfFull(tx);
         }else{
-          log.info("Skipping metadata node: {}", fromVertex);
+          log.debug("Skipping metadata node: {}", fromVertex);
         }
       }
 
@@ -520,7 +519,7 @@ public class MultigraphConsolidator implements AutoCloseable {
           importEdgeUsingShortId(fromEdge, shortGraphId, null, null);
           GraphTransaction.commitIfFull(tx);
         }else{
-          log.info("Skipping metadata edge: {}", fromEdge);
+          log.debug("Skipping metadata edge: {}", fromEdge);
         }
       }
 

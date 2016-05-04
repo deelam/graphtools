@@ -167,7 +167,7 @@ public class GraphUri {
     } catch (Exception e) {
       throw new RuntimeException(e);
     } finally {
-      log.info("  Shut down graphUri={}", this);
+      log.debug("  Shut down graphUri={}", this);
       System.gc(); // addresses problem with NFS files still being held by JVM 
     }
   }
@@ -187,7 +187,7 @@ public class GraphUri {
     log.info("Opening graphUri={}", this);
     try{
       graph = factory.open(this);
-      log.info("  Opened graph={}", graph);
+      log.debug("  Opened graph={}", graph);
       GraphUtils.addMetaDataNode(this, graph);
     }catch(RuntimeException re){
       log.error("Could not open graphUri="+this, re);

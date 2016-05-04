@@ -13,6 +13,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 
 import com.google.common.collect.Iterables;
 import com.tinkerpop.blueprints.TransactionalGraph;
+import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 import com.tinkerpop.frames.FramedTransactionalGraph;
 
@@ -125,7 +126,7 @@ public class DependentJobManager {
 
       // add to queue
       synchronized(graph){ // don't synchronize on queue
-        log.info("Adding to queue: " + job);
+        log.debug("Adding to queue: {}", job);
         queue.add(job);
         jobV.setState(STATE.QUEUED);
         graph.commit();
@@ -205,6 +206,26 @@ public class DependentJobManager {
   public String toString() {
     return GraphUtils.toString(graph, 1000, "jobType", "state");
   }
+  
+  public String toStringRemainingJobs(String... propsToPrint) {
+    StringBuilder sb = new StringBuilder("Nodes:\n");
+    int nodeCount = 0;
+    for (DependentJobFrame jobV : graph.getVertices(BaseConcept.TYPE_KEY, DependentJobFrame.TYPE_VALUE, DependentJobFrame.class)) {
+      if (jobV.getState()!=STATE.DONE) {
+        ++nodeCount;
+        Vertex n = jobV.asVertex();
+        sb.append("  ").append(n.getId()).append(": ");
+        sb.append(n.getPropertyKeys()).append("\n");
+        if (propsToPrint != null && propsToPrint.length > 0) {
+          String propValuesStr = GraphUtils.toString(n, "\n    ", propsToPrint);
+          if (propValuesStr.length() > 0)
+            sb.append("    ").append(propValuesStr).append("\n");
+        }
+      }
+    }
+    sb.append(" (").append(nodeCount).append(" remaining jobs)");
+    return (sb.toString());
+  }
 
   @Slf4j
   static class JobThread extends Thread {
@@ -234,7 +255,7 @@ public class DependentJobManager {
           DependentJob job;
           synchronized (jobMgr.queue) {
             job = jobMgr.queue.takeFirst(); // blocks
-            log.info(Thread.currentThread().getName() + " takeJob: {} size={}", job, jobMgr.queue.size());
+            log.debug(Thread.currentThread().getName() + " takeJob: {} size={}", job, jobMgr.queue.size());
           }
           if (job == null)
             continue;
@@ -251,23 +272,24 @@ public class DependentJobManager {
                 jobV.setState(STATE.PROCESSING);
                 jobMgr.graph.commit();
               }
-              log.info("Starting job={}", job);
+              log.info("Starting jobId={}", jobV.getNodeId());
               boolean success=proc.runJob(job);
               if(success)
                 jobMgr.jobDone(jobV);
               else 
                 jobMgr.jobFailed(jobV);
-              log.info("Done " + jobV.getNodeId() + " \n" + jobMgr.toString());
+              log.info("Done jobId={} \n {}", jobV.getNodeId(), jobMgr.toStringRemainingJobs("state", "jobType"));
+              log.debug("All jobs: {}", jobMgr);
             } else {
               synchronized (jobMgr.graph) {
-                log.warn("Job is not ready for processing; setting state=WAITING.  {}", job);
+                log.info("Job is not ready for processing; setting state=WAITING.  {}", job);
                 jobMgr.putJobInWaitingArea(job, jobV);
                 jobMgr.graph.commit();
               }
             }
           } else {
             synchronized (jobMgr.graph) {
-              log.warn("Input to job={} is not ready; setting state=WAITING.  {}", job);
+              log.info("Input to job={} is not ready; setting state=WAITING.  {}", job);
               jobMgr.putJobInWaitingArea(job, jobV);
               jobMgr.graph.commit();
             }
@@ -284,6 +306,7 @@ public class DependentJobManager {
     DependentJobFrame jobV = graph.getVertex(job.getId(), DependentJobFrame.class);
     putJobInWaitingArea(job, jobV);
   }
+
   private void putJobInWaitingArea(DependentJob job, DependentJobFrame jobV) {
     jobV.setState(STATE.WAITING);
     waitingJobs.put(job.getId(), job);
@@ -359,7 +382,7 @@ public class DependentJobManager {
   private void pushAheadInQueue(DependentJobFrame outV) throws InterruptedException {
     synchronized (queue) {
       outV.setState(STATE.QUEUED);
-      log.info("pushAheadInQueue: {}", outV);
+      log.debug("pushAheadInQueue: {}", outV);
       queue.putFirst(waitingJobs.remove(outV.getNodeId()));
     }
   }

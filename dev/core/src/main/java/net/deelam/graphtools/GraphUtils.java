@@ -267,6 +267,12 @@ public final class GraphUtils {
 
   ///
 
+  public static void createIndex(IdGraph<?> graph, String propKey, Class<? extends Element> clazz, Parameter... params) {
+    if (!graph.getIndexedKeys(clazz).contains(propKey)) {
+      graph.createKeyIndex(propKey, clazz, params);
+    }
+  }
+
   public static final Direction[] BOTHDIR = {Direction.OUT, Direction.IN};
 
   /**
@@ -284,6 +290,17 @@ public final class GraphUtils {
 
     log.debug("Removing node={} that was merged into node={}", origV, targetV);
     graph.removeVertex(origV);
+    graph.commit(); // must commit since vertex was removed in case this is called in a getVertices() loop so it will skip removed node
+  }
+  
+  public static void copyNodesAndEdges(Vertex origV, Vertex targetV, String edgePrefix, boolean excludeNewSelfEdges, IdGraph<?> graph,
+      PropertyMerger propMerger) {
+    if (origV.equals(targetV)) {
+      throw new IllegalArgumentException("origV and targetV are the same nodes (or at least have the same ids)");
+    }
+    propMerger.mergeProperties(origV, targetV);
+    copyEdges(origV, targetV, edgePrefix, excludeNewSelfEdges, graph);
+
     graph.commit(); // must commit since vertex was removed in case this is called in a getVertices() loop so it will skip removed node
   }
 
@@ -310,11 +327,28 @@ public final class GraphUtils {
         }
       }
   }
+  
+  public static void copyEdges(Vertex origV, Vertex targetV, String edgePrefix, boolean excludeNewSelfEdges, IdGraph<?> graph) {
+    for (Direction dir : BOTHDIR)
+      for (Edge edge : origV.getEdges(dir)) {
+        Vertex neighbor = edge.getVertex(dir.opposite());
+        // copy edge in memory before removing from graph
+        GraphRecordEdge inMemEdge = new GraphRecordEdgeImpl((String) edge.getId(), edge.getLabel(),
+            (String) targetV.getId(), (String) neighbor.getId());
+        ElementHelper.copyProperties(edge, inMemEdge);
 
-  public static void createIndex(IdGraph<?> graph, String propKey, Class<? extends Element> clazz, Parameter... params) {
-    if (!graph.getIndexedKeys(clazz).contains(propKey)) {
-      graph.createKeyIndex(propKey, clazz, params);
-    }
+        Edge eCopy;
+        if (excludeNewSelfEdges && targetV.equals(neighbor)) { // whether to include the original edge from origV to targetV, which would be a self-edge
+          // don't add edge back into graph
+        } else {
+          if (dir == Direction.OUT) {
+            eCopy = graph.addEdge(edgePrefix+inMemEdge.getId(), targetV, neighbor, inMemEdge.getLabel());
+          } else {
+            eCopy = graph.addEdge(edgePrefix+inMemEdge.getId(), neighbor, targetV, inMemEdge.getLabel());
+          }
+          ElementHelper.copyProperties(inMemEdge, eCopy);
+        }
+      }
   }
-
+  
 }

@@ -103,7 +103,7 @@ public class JobMarketTest {
     async.await(150000); // fails when timeout occurs
     
     try {
-      Thread.sleep(13000);
+      Thread.sleep(3000);
     } catch (InterruptedException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();

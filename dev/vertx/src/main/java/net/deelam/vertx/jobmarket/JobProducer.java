@@ -31,7 +31,7 @@ public class JobProducer extends AbstractVerticle {
 
   public <T> void addJobCompletionHandler(Handler<Message<T>> jobCompletionHandler) {
     jobCompletionAddress=deploymentID()+JOBCOMPLETE_ADDRESS_SUFFIX;
-    log.info("add jobCompletionHandler={}", jobCompletionHandler);
+    log.info("add jobCompletionHandler to address={}", jobCompletionAddress);
     vertx.eventBus().consumer(jobCompletionAddress, jobCompletionHandler);
   }
   

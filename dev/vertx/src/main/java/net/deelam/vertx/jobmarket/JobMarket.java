@@ -2,7 +2,6 @@ package net.deelam.vertx.jobmarket;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -103,7 +102,7 @@ public class JobMarket extends AbstractVerticle {
       String workerAddr = getWorkerAddress(message);
       log.debug("Received REGISTER message from {}", workerAddr);
       idleWorkers.add(workerAddr);
-      sendJobsTo(workerAddr);
+      asyncSendJobsToNextIdleWorker();
     });
 
     eb.consumer(addressPrefix + BUS_ADDR.ADD_JOB, message -> {
@@ -115,7 +114,7 @@ public class JobMarket extends AbstractVerticle {
       } else {
         message.reply(OK_REPLY);
         jobItems.put(ji.jobId, ji);
-        sendJobsToNextIdleWorker();
+        asyncSendJobsToNextIdleWorker();
       }
     });
     eb.consumer(addressPrefix + BUS_ADDR.REMOVE_JOB, message -> {
@@ -151,8 +150,8 @@ public class JobMarket extends AbstractVerticle {
       log.debug("Received DONE message: {}", message.body());
       JobItem ji = workerEndedJob(message, JobState.DONE);
       
-      String workerAddr = getWorkerAddress(message);
-      sendJobsTo(workerAddr);
+      //String workerAddr = getWorkerAddress(message);
+      asyncSendJobsToNextIdleWorker();//(workerAddr);
 
       if(ji.completionAddr!=null){
         log.debug("Notifying {} that job is done: {}", ji.completionAddr, ji.jobJO);
@@ -161,13 +160,25 @@ public class JobMarket extends AbstractVerticle {
     });
     eb.consumer(addressPrefix + BUS_ADDR.FAIL, message -> {
       log.info("Received FAIL message: {}", message.body());
-      JobItem ji = workerEndedJob(message, JobState.AVAILABLE);
-      incrementFailCount(ji);
-
-      String workerAddr = getWorkerAddress(message);
-      sendJobsTo(workerAddr);
+      JsonObject jobJO = (JsonObject) message.body();
+      JobItem job = getJobItem(jobJO);
+      int failCount = incrementFailCount(job);
       
-      // TODO: add optional settable functor/Callable/Runnable to notify of job failure
+      JobState endState;
+      if(failCount>=job.retryLimit){
+        endState=JobState.FAILED;
+      }else{
+        endState=JobState.AVAILABLE;
+      }
+      JobItem ji = workerEndedJob(message, endState);
+
+      //String workerAddr = getWorkerAddress(message);
+      asyncSendJobsToNextIdleWorker(); //(workerAddr);
+      
+      if(endState==JobState.FAILED && ji.failureAddr!=null){
+        log.debug("Notifying {} that job failed: {}", ji.failureAddr, ji.jobJO);
+        vertx.eventBus().send(ji.failureAddr, ji.jobJO.copy());
+      }
     });
 
     log.info("Ready: " + this + " addressPrefix=" + addressPrefix);
@@ -182,43 +193,63 @@ public class JobMarket extends AbstractVerticle {
 
   public static final String JOB_FAILEDCOUNT_ATTRIBUTE = "_jobFailedCount";
 
-  private void incrementFailCount(JobItem ji) {
+  private int incrementFailCount(JobItem ji) {
     Integer count = ji.jobJO.getInteger(JOB_FAILEDCOUNT_ATTRIBUTE, Integer.valueOf(0));
-    ji.jobJO.put(JOB_FAILEDCOUNT_ATTRIBUTE, count.intValue() + 1);
+    int newCount = count.intValue() + 1;
+    ji.jobJO.put(JOB_FAILEDCOUNT_ATTRIBUTE, newCount);
+    return newCount;
   }
 
-  private void sendJobsToNextIdleWorker() {
-    String idleWorker = idleWorkers.peek();
-    if (idleWorker != null) {
-      sendJobsTo(idleWorker);
+  //negotiate with one worker at a time so workers don't choose the same job
+  private boolean isNegotiating=false; 
+  private void asyncSendJobsToNextIdleWorker() {
+    if(!isNegotiating){
+      isNegotiating=true; // make sure all code paths reset this to false
+      log.info("idleWorkers={}", idleWorkers);
+      String idleWorker = idleWorkers.poll();
+      if (idleWorker == null) // no workers available
+        isNegotiating=false;
+      else
+        asyncSendJobsTo(idleWorker);
     }
   }
 
-  private void sendJobsTo(String workerAddr) {
-    if(!idleWorkers.remove(workerAddr))
-      log.error("Could not remove {} from idleWorkers={}", workerAddr, idleWorkers);
+  private void asyncSendJobsTo(String workerAddr) {
     final JsonArray jobList = getAvailableJobs();
     log.debug("available jobs={}", jobList);
-    vertx.eventBus().send(workerAddr, jobList, selectedJobReply -> {
-      if (selectedJobReply.failed()) {
-        log.error("selectedJobReply ", selectedJobReply.cause());
-      } else if (selectedJobReply.result().body() == null) {
-        if (jobList.size() > 0){
-          log.info("Worker did not choose a job: {}", jobList);
+    if(jobList.size()==0){  // no jobs available
+      isNegotiating=false;
+      if (!idleWorkers.add(workerAddr))
+        log.error("Could not add {} to idleWorkers={}", workerAddr, idleWorkers);
+    } else {
+      vertx.eventBus().send(workerAddr, jobList, selectedJobReply -> {
+        if (selectedJobReply.failed()) {
+          log.error("selectedJobReply failed: {}.  Removing worker={} permanently -- have worker register again if appropriate", 
+              workerAddr, selectedJobReply.cause());
+        } else if (selectedJobReply.succeeded()) {
+          if (selectedJobReply.result().body() == null) {
+            if (jobList.size() > 0) {
+              log.info("Worker did not choose a job: {}", jobList);
+            }
+            if (!idleWorkers.add(workerAddr))
+              log.error("Could not add {} to idleWorkers={}", workerAddr, idleWorkers);
+
+            /*          // jobItems may have changed by the time this reply is received
+                      final JsonArray jobList2 = getAvailableJobs();
+                      if(!jobList.equals(jobList2)){
+            log.info("jobList has since changed; sending updated jobList to {}", workerAddr);
+            sendJobsTo(workerAddr);
+                      }
+            */
+          } else {
+            workerStartedJob(selectedJobReply.result());
+          }
         }
-        if(!idleWorkers.add(workerAddr))
-          log.error("Could not add {} to idleWorkers={}", workerAddr, idleWorkers);
-        log.info("idleWorkers={}", idleWorkers);
-        // jobItems may have changed by the time this reply is received
-        final JsonArray jobList2 = getAvailableJobs();
-        if(!jobList.equals(jobList2)){
-          log.info("jobList has since changed; sending updated jobList to {}", workerAddr);
-          sendJobsTo(workerAddr);
-        }
-      } else {
-        workerStartedJob(selectedJobReply.result());
-      }
-    });
+        
+        isNegotiating=false;
+        asyncSendJobsToNextIdleWorker();
+      });
+    }
   }
 
   private JsonArray getAvailableJobs() {
@@ -265,7 +296,7 @@ public class JobMarket extends AbstractVerticle {
   protected static class JobItem {
 
     enum JobState {
-      AVAILABLE, STARTED, PROGRESSING, DONE
+      AVAILABLE, STARTED, PROGRESSING, DONE, FAILED
     };
 
     public static String getJobId(JsonObject jobJO) {
@@ -275,14 +306,24 @@ public class JobMarket extends AbstractVerticle {
     JobItem.JobState state;
     final String jobId;
     final String completionAddr;
+    final String failureAddr;
     //String workerAddr;
     final JsonObject jobJO;
+    final int retryLimit; // 0 means don't retry
 
     JobItem(Message<?> message) {
       jobId = message.headers().get(JOBID_HEADERATTRIBUTE);
       checkNotNull(jobId);
       completionAddr = message.headers().get(JOB_COMPLETE_ADDRESS);
+      failureAddr = message.headers().get(JOB_FAILURE_ADDRESS);
       jobJO = ((JsonObject) message.body()).copy();
+
+      String retryLimitStr = message.headers().get(JOB_RETRY_LIMIT);
+      if(retryLimitStr==null)
+        retryLimit=0; 
+      else
+        retryLimit=Integer.parseInt(retryLimitStr);
+      
 
       String existingJobId = jobJO.getString(JOBID);
       if (existingJobId == null)
@@ -302,12 +343,23 @@ public class JobMarket extends AbstractVerticle {
   private static final String JOBID_HEADERATTRIBUTE = "jobId";
 
   private static final String JOB_COMPLETE_ADDRESS = "jobCompleteAddress";
+  
+  private static final String JOB_FAILURE_ADDRESS = "jobFailureAddress";
+  
+  private static final String JOB_RETRY_LIMIT = "jobRetryLimit";
 
   public static DeliveryOptions createProducerHeader(String jobId, String jobCompletionAddress) {
+    return createProducerHeader(jobId, jobCompletionAddress, null, 0);
+  }
+  
+  public static DeliveryOptions createProducerHeader(String jobId, String jobCompletionAddress, String jobFailureAddress, int jobRetryLimit) {
     DeliveryOptions opts = new DeliveryOptions();
     opts.addHeader(JOBID_HEADERATTRIBUTE, jobId);
     if (jobCompletionAddress != null)
       opts.addHeader(JOB_COMPLETE_ADDRESS, jobCompletionAddress);
+    if (jobFailureAddress != null)
+      opts.addHeader(JOB_FAILURE_ADDRESS, jobFailureAddress);
+    opts.addHeader(JOB_RETRY_LIMIT, Integer.toString(jobRetryLimit));
     return opts;
   }
 

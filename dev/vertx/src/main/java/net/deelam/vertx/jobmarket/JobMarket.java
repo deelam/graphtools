@@ -3,6 +3,7 @@ package net.deelam.vertx.jobmarket;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
@@ -79,7 +80,7 @@ public class JobMarket extends AbstractVerticle {
   private static final Object OK_REPLY = "ACK";
 
   // jobId -> JobItem
-  private Map<String, JobItem> jobItems = new HashMap<>();
+  private Map<String, JobItem> jobItems = new LinkedHashMap<>();
 
   private Queue<String> idleWorkers = new LinkedList<>();
 
@@ -139,8 +140,11 @@ public class JobMarket extends AbstractVerticle {
       String jobId = readJobId(message);
       log.debug("Received GET_PROGRESS message: jobId={}", jobId);
       JobItem job = jobItems.get(jobId);
-      checkNotNull(job, "Cannot find job with id=" + jobId);
-      message.reply(job.jobJO.copy().put("JOB_STATE", job.state));
+      if(job==null){
+        message.fail(-13, "Cannot find job with id=" + jobId);
+      }else{
+        message.reply(job.jobJO.copy().put("JOB_STATE", job.state));
+      }
     });
 
     eb.consumer(addressPrefix + BUS_ADDR.DONE, message -> {

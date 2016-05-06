@@ -64,13 +64,14 @@ public abstract class JobWorker extends AbstractVerticle {
     checkState(pickedJob==null, "Job in progress! "+pickedJob);
     pickedJob=pickJob(jobs);
     
+    // reply immediately so conversation doesn't timeout
     msg.reply(pickedJob, deliveryOptions);  // must reply even if picked==null
 
     if (pickedJob != null) {
       if (doWork(pickedJob))
-        jobDone();
+        jobDone(); // creates new conversation
       else
-        jobFailed();
+        jobFailed(); // creates new conversation
     }
   };
 

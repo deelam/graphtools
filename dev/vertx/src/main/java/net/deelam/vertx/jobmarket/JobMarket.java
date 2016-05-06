@@ -73,7 +73,7 @@ public class JobMarket extends AbstractVerticle {
 
   public enum BUS_ADDR {
     ADD_JOB, REMOVE_JOB, GET_PROGRESS, // for producers 
-    REGISTER, SET_PROGRESS, DONE, FAIL // for workers
+    REGISTER, UNREGISTER, SET_PROGRESS, DONE, FAIL // for workers
   };
 
   private static final Object OK_REPLY = "ACK";
@@ -101,8 +101,15 @@ public class JobMarket extends AbstractVerticle {
     eb.consumer(addressPrefix + BUS_ADDR.REGISTER, message -> {
       String workerAddr = getWorkerAddress(message);
       log.debug("Received REGISTER message from {}", workerAddr);
-      idleWorkers.add(workerAddr);
+      if (!idleWorkers.add(workerAddr))
+        log.error("Could not add {} to idleWorkers={}", workerAddr, idleWorkers);
       asyncSendJobsToNextIdleWorker();
+    });
+    eb.consumer(addressPrefix + BUS_ADDR.UNREGISTER, message -> {
+      String workerAddr = getWorkerAddress(message);
+      log.debug("Received UNREGISTER message from {}", workerAddr);
+      if (!idleWorkers.remove(workerAddr))
+        log.error("Could not remove {} from idleWorkers={}", workerAddr, idleWorkers);
     });
 
     eb.consumer(addressPrefix + BUS_ADDR.ADD_JOB, message -> {
@@ -128,11 +135,10 @@ public class JobMarket extends AbstractVerticle {
       }
     });
 
-    eb.consumer(addressPrefix + BUS_ADDR.SET_PROGRESS, message -> {
+    eb.consumer(addressPrefix + BUS_ADDR.SET_PROGRESS, (Message<JsonObject> message) -> {
       log.debug("Received SET_PROGRESS message: {}", message.body());
-      JsonObject jobJO = (JsonObject) message.body();
-      JobItem job = getJobItem(jobJO);
-      job.mergeIn(jobJO);
+      JobItem job = getJobItem(message.body());
+      job.mergeIn(message.body());
       job.state = JobState.PROGRESSING;
     });
     eb.consumer(addressPrefix + BUS_ADDR.GET_PROGRESS, message -> {
@@ -146,7 +152,7 @@ public class JobMarket extends AbstractVerticle {
       }
     });
 
-    eb.consumer(addressPrefix + BUS_ADDR.DONE, message -> {
+    eb.consumer(addressPrefix + BUS_ADDR.DONE, (Message<JsonObject> message) -> {
       log.debug("Received DONE message: {}", message.body());
       JobItem ji = workerEndedJob(message, JobState.DONE);
       
@@ -158,9 +164,9 @@ public class JobMarket extends AbstractVerticle {
         vertx.eventBus().send(ji.completionAddr, ji.jobJO.copy());
       }
     });
-    eb.consumer(addressPrefix + BUS_ADDR.FAIL, message -> {
+    eb.consumer(addressPrefix + BUS_ADDR.FAIL, (Message<JsonObject> message) -> {
       log.info("Received FAIL message: {}", message.body());
-      JsonObject jobJO = (JsonObject) message.body();
+      JsonObject jobJO = message.body();
       JobItem job = getJobItem(jobJO);
       int failCount = incrementFailCount(job);
       
@@ -206,7 +212,7 @@ public class JobMarket extends AbstractVerticle {
     if(!isNegotiating){
       isNegotiating=true; // make sure all code paths reset this to false
       log.info("idleWorkers={}", idleWorkers);
-      String idleWorker = idleWorkers.poll();
+      String idleWorker = idleWorkers.peek();
       if (idleWorker == null) // no workers available
         isNegotiating=false;
       else
@@ -219,20 +225,18 @@ public class JobMarket extends AbstractVerticle {
     log.debug("available jobs={}", jobList);
     if(jobList.size()==0){  // no jobs available
       isNegotiating=false;
-      if (!idleWorkers.add(workerAddr))
-        log.error("Could not add {} to idleWorkers={}", workerAddr, idleWorkers);
     } else {
-      vertx.eventBus().send(workerAddr, jobList, selectedJobReply -> {
+      vertx.eventBus().send(workerAddr, jobList, (AsyncResult<Message<JsonObject>> selectedJobReply) -> {
         if (selectedJobReply.failed()) {
           log.error("selectedJobReply failed: {}.  Removing worker={} permanently -- have worker register again if appropriate", 
               workerAddr, selectedJobReply.cause());
+          if (!idleWorkers.remove(workerAddr))
+            log.error("Could not remove {} from idleWorkers={}", workerAddr, idleWorkers);
         } else if (selectedJobReply.succeeded()) {
           if (selectedJobReply.result().body() == null) {
             if (jobList.size() > 0) {
               log.info("Worker did not choose a job: {}", jobList);
             }
-            if (!idleWorkers.add(workerAddr))
-              log.error("Could not add {} to idleWorkers={}", workerAddr, idleWorkers);
 
             /*          // jobItems may have changed by the time this reply is received
                       final JsonArray jobList2 = getAvailableJobs();
@@ -262,24 +266,28 @@ public class JobMarket extends AbstractVerticle {
     return jobList;
   }
 
-  private JobItem workerStartedJob(Message<?> selectedJobMsg) {
+  private JobItem workerStartedJob(Message<JsonObject> selectedJobMsg) {
     JsonObject jobJO = (JsonObject) selectedJobMsg.body();
     JobItem job = getJobItem(jobJO);
 
     String workerAddr = getWorkerAddress(selectedJobMsg);
     log.debug("Started job: worker={} on jobId={}", workerAddr, job.jobId);
+    if (!idleWorkers.remove(workerAddr))
+      log.error("Could not remove {} from idleWorkers={}", workerAddr, idleWorkers);
+    
     job.mergeIn(jobJO);
     job.state = JobState.STARTED;
     return job;
   }
 
-  private JobItem workerEndedJob(Message<?> jobMsg, JobState newState) {
-    JsonObject jobJO = (JsonObject) jobMsg.body();
-    JobItem job = getJobItem(jobJO);
+  private JobItem workerEndedJob(Message<JsonObject> jobMsg, JobState newState) {
+    JobItem job = getJobItem(jobMsg.body());
 
     String workerAddr = getWorkerAddress(jobMsg);
-    idleWorkers.add(workerAddr);
-    job.mergeIn(jobJO);
+    if (!idleWorkers.add(workerAddr))
+      log.error("Could not add {} to idleWorkers={}", workerAddr, idleWorkers);
+    
+    job.mergeIn(jobMsg.body());
     job.state = newState;
     return job;
   }

@@ -20,9 +20,11 @@ import net.deelam.vertx.jobmarket.JobMarket.BUS_ADDR;
 public class JobProducer extends AbstractVerticle {
   
   private static final String JOBCOMPLETE_ADDRESS_SUFFIX = "-jobComplete";
+  private static final String JOBFAILED_ADDRESS_SUFFIX = "-jobFailed";
   
   private final String jmPrefix;
   private String jobCompletionAddress=null;
+  private String jobFailureAddress=null;
 
   @Override
   public void start() throws Exception {
@@ -34,9 +36,15 @@ public class JobProducer extends AbstractVerticle {
     log.info("add jobCompletionHandler to address={}", jobCompletionAddress);
     vertx.eventBus().consumer(jobCompletionAddress, jobCompletionHandler);
   }
-  
+
+  public <T> void addJobFailureHandler(Handler<Message<T>> jobFailureHandler) {
+    jobFailureAddress=deploymentID()+JOBFAILED_ADDRESS_SUFFIX;
+    log.info("add jobFailureHandler to address={}", jobFailureAddress);
+    vertx.eventBus().consumer(jobFailureAddress, jobFailureHandler);
+  }
+
   public void addJob(String jobId, JsonObject job) {
-    DeliveryOptions deliveryOpts = JobMarket.createProducerHeader(jobId, jobCompletionAddress);
+    DeliveryOptions deliveryOpts = JobMarket.createProducerHeader(jobId, jobCompletionAddress, jobFailureAddress, 0);
     vertx.eventBus().send(jmPrefix + BUS_ADDR.ADD_JOB, job, deliveryOpts, addJobReplyHandler);
   }
 

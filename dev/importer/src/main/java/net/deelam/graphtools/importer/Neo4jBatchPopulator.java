@@ -161,7 +161,7 @@ public class Neo4jBatchPopulator implements Populator {
     log.info("Using default maxMapSize: 1000000");
     idMap = createIdMap(1000000); // TODO: make this configurable
 
-    log.info("Creating BatchInserter={}", graphUri);
+    log.debug("Creating BatchInserter={}", graphUri);
     inserter = createBatchInserter(graphUri);
   }
 
@@ -354,7 +354,7 @@ public class Neo4jBatchPopulator implements Populator {
   private GraphRecord tempGr = new GraphRecordImpl("temp");
 
   private Map<String, Object> copyProperties(Element grElem, Map<String, Object> existingProps) {
-    log.info("Copy props from grElement={} \n\t existing={}", grElem.getPropertyKeys(), existingProps.keySet());
+    log.debug("Copy props from grElement={} \n\t existing={}", grElem.getPropertyKeys(), existingProps.keySet());
     //log.info("Copy props from existing element={} \n\t existing={}", fromE, existingProps);
     tempGr.clearProperties();
     jsonPropMerger.convertFromJson(existingProps, tempGr);

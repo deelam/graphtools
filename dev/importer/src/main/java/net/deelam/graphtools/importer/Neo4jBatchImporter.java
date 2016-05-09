@@ -60,18 +60,19 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
           mergeRecords(gRecordsBuffered, gRecords);
 
           if (gRecCounter > bufferThreshold) {
-            log.info("Incremental graph populate and transaction commit: {}", recordNum);
+            log.debug("Incremental graph populate and transaction commit: {}", recordNum);
             populateAndCommit(graphUri, gRecordsBuffered);
-            log.info("  commit done.");
+            log.debug("  commit done.");
             gRecCounter = 0;
           }
         }catch(Exception e){
           log.info("Skipping record; got exception for recordNum=~"+recordNum+": "+inRecord, e);
         }
       }
-      log.info("Last graph populate and transaction commit: {}", recordNum);
+      log.debug("Last graph populate and transaction commit: {}", recordNum);
       populateAndCommit(graphUri, gRecordsBuffered);
-      log.info("  commit done.");
+      log.debug("  commit done.");
+      log.info("Importer counts: {} records", recordNum);
     } catch (RuntimeException re) {
       log.warn("Done reading records but got exception during graph population", re);
       throw re;

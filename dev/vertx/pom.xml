@@ -49,6 +49,20 @@
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
 		</dependency>
+
+
+	<dependency>
+		<groupId>com.tinkerpop.blueprints</groupId>
+		<artifactId>blueprints-core</artifactId>
+		<scope>provided</scope>
+	</dependency>
+
+	<dependency>
+		<groupId>com.tinkerpop</groupId>
+		<artifactId>frames</artifactId>
+		<scope>provided</scope>
+	</dependency>
+		
 <!--
 		<dependency>
 			<groupId>org.apache.commons</groupId>
@@ -69,16 +83,6 @@
 			<version>0.33</version>
 		</dependency>
 
-		<dependency>
-			<groupId>com.tinkerpop.blueprints</groupId>
-			<artifactId>blueprints-core</artifactId>
-		</dependency>
-
-	<dependency>
-      <groupId>com.tinkerpop</groupId>
-      <artifactId>frames</artifactId>
-      <scope>provided</scope>
-    </dependency>
 		<dependency>
 			<groupId>com.tinkerpop.blueprints</groupId>
 			<artifactId>blueprints-neo4j-graph</artifactId>

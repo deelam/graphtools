@@ -127,9 +127,14 @@ public class JobMarket extends AbstractVerticle {
     eb.consumer(addressPrefix + BUS_ADDR.REMOVE_JOB, message -> {
       String jobId = readJobId(message);
       log.debug("Received REMOVE_JOB message: jobId={}", jobId);
-      if(jobItems.containsKey(jobId)){
-        jobItems.remove(jobId);
-        message.reply(OK_REPLY);
+      JobItem ji = jobItems.get(jobId);
+      if(ji!=null){
+        if(ji.state==JobItem.JobState.AVAILABLE){
+          jobItems.remove(jobId);
+          message.reply(OK_REPLY);
+        } else {
+          message.fail(-121, "Cannot remove job id=" + jobId +" with state="+ji.state);
+        }
       } else {
         message.fail(-12, "Cannot find job with id=" + jobId);
       }

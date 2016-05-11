@@ -83,6 +83,18 @@ public class DependentJobManagerTest {
     public String getJobType() {
       return null;
     }
+
+    @Override
+    public Class<DependentJob> getJobClass() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public boolean runJobJO(DependentJob jobObj) {
+      // TODO Auto-generated method stub
+      return false;
+    }
   }
 
 

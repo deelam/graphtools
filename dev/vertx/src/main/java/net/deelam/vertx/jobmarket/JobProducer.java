@@ -48,9 +48,10 @@ public class JobProducer extends AbstractVerticle {
     vertx.eventBus().send(jmPrefix + BUS_ADDR.ADD_JOB, job, deliveryOpts, addJobReplyHandler);
   }
 
-  public void removeJob(String jobId) {
+  public void removeJob(String jobId, Handler<AsyncResult<Message<JsonObject>>> removeJobReplyHandler) {
     DeliveryOptions deliveryOpts = JobMarket.createProducerHeader(jobId, null);
-    vertx.eventBus().send(jmPrefix + BUS_ADDR.REMOVE_JOB, null, deliveryOpts, removeJobReplyHandler);
+    vertx.eventBus().send(jmPrefix + BUS_ADDR.REMOVE_JOB, null, deliveryOpts, 
+        (removeJobReplyHandler == null) ? this.removeJobReplyHandler : removeJobReplyHandler);
   }
 
   public <T> void getProgress(String jobId, Handler<AsyncResult<Message<T>>> handler) {

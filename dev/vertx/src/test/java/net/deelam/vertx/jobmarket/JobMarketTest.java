@@ -89,7 +89,7 @@ public class JobMarketTest {
     prod.addJobCompletionHandler( (Message<JsonObject> msg) -> {
       log.info("==========> Job complete={}", msg.body());
       if(false)
-        prod.removeJob(msg.body().getString(JobMarket.JOBID));
+        prod.removeJob(msg.body().getString(JobMarket.JOBID), null);
       //log.info("Checking false assertion ");
       async.countDown();
     });

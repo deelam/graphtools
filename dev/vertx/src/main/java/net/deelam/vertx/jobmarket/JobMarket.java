@@ -116,9 +116,24 @@ public class JobMarket extends AbstractVerticle {
       log.debug("Received ADD_JOB message: {}", message.body());
       JobItem ji = new JobItem(message);
       ji.state = JobState.AVAILABLE;
-      if (jobItems.containsKey(ji.jobId)) {
-        message.fail(-11, "Job with id=" + ji.jobId + " already exists!");
-      } else {
+      JobItem existingJI = jobItems.get(ji.jobId);
+      boolean addJob=true;
+      if (existingJI!=null) {
+        switch(existingJI.state){
+          case AVAILABLE:
+          case DONE:
+          case FAILED:
+            log.info("Job with id=" + ji.jobId + " already exists but has state="+existingJI.state+".  Adding job again.");
+            addJob=true;
+            break;
+          case STARTED:
+          case PROGRESSING:
+            message.fail(-11, "Job with id=" + ji.jobId + " already exists and has started!");
+            addJob=false;
+            break;
+        }
+      }
+      if(addJob){
         message.reply(OK_REPLY);
         jobItems.put(ji.jobId, ji);
         asyncSendJobsToNextIdleWorker();
@@ -128,15 +143,20 @@ public class JobMarket extends AbstractVerticle {
       String jobId = readJobId(message);
       log.debug("Received REMOVE_JOB message: jobId={}", jobId);
       JobItem ji = jobItems.get(jobId);
-      if(ji!=null){
-        if(ji.state==JobItem.JobState.AVAILABLE){
-          jobItems.remove(jobId);
-          message.reply(OK_REPLY);
-        } else {
-          message.fail(-121, "Cannot remove job id=" + jobId +" with state="+ji.state);
-        }
-      } else {
+      if(ji==null){
         message.fail(-12, "Cannot find job with id=" + jobId);
+      } else {
+        switch (ji.state) {
+          case AVAILABLE:
+          case DONE:
+          case FAILED:
+            jobItems.remove(jobId);
+            message.reply(OK_REPLY);
+            break;
+          case STARTED:
+          case PROGRESSING:
+            message.fail(-121, "Cannot remove job id=" + jobId + " with state=" + ji.state);
+        }
       }
     });
 

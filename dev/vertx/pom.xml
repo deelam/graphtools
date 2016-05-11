@@ -9,9 +9,10 @@
 	</parent>
 	<artifactId>graphtools-vertx</artifactId>
 	<packaging>bundle</packaging>
-	<name>Vertx trial</name>
+	<name>Vertx components</name>
 	<properties>
 		<bundle.import_package>
+			javassist.util.proxy, <!-- needed by frames; must manually import -->
 			*
 		</bundle.import_package>
 		<vertx.version>3.2.1</vertx.version>

@@ -21,6 +21,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <module>importer</module>
     <module>hadoop</module>
     <module>enricher</module>
+    <module>vertx</module>
   </modules>
   <profiles>
     <profile>

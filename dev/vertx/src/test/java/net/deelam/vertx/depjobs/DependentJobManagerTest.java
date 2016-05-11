@@ -86,7 +86,7 @@ public class DependentJobManagerTest {
     }
     log.info("Before done: ---------------------" + vertx.eventBus());
     
-    mgr = new DependentJobManager(new IdGraph(new TinkerGraph()), prod);
+    mgr = new VertxDependentJobManager(new IdGraph(new TinkerGraph()), prod);
   }
 
   @After
@@ -94,7 +94,7 @@ public class DependentJobManagerTest {
     vertx.close();
   }
 
-  DependentJobManager mgr;
+  VertxDependentJobManager mgr;
   
   @AllArgsConstructor
   @Data
@@ -133,7 +133,9 @@ public class DependentJobManagerTest {
     DependentJobImpl jobA3b = new DependentJobImpl("nodeA3b", "typeA");
     mgr.addJob("nodeA3b", jobA3b, "nodeA1");
     //DependentJob jobA22 = new DependentJobImpl("ALL_SRC", "typeA", new String[] {"nodeA3"});
-    mgr.setDependentJobs("ALL_SRC", "nodeA3a", "nodeA3b");
+    mgr.addDependentJobs("ALL_SRC", "nodeA3a", "nodeA3b");
+    
+    mgr.reAddJob("ALL_SRC");
 
     //FIXME: idle threads die if jobs are blocked: mgr.addEndJobThreads();
 //    async.await(150000); // fails when timeout occurs

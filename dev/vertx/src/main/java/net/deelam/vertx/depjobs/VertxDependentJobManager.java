@@ -5,6 +5,7 @@ package net.deelam.vertx.depjobs;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedSet;
@@ -32,13 +33,13 @@ import net.deelam.vertx.jobmarket.JobProducer;
  * @author dlam
  */
 @Slf4j
-public class DependentJobManager {
+public class VertxDependentJobManager<T> {
 
   private final FramedTransactionalGraph<TransactionalGraph> graph;
   
   private final JobProducer jobProd;
 
-  public DependentJobManager(IdGraph<?> dependencyGraph, JobProducer vertxJobProducer) {
+  public VertxDependentJobManager(IdGraph<?> dependencyGraph, JobProducer vertxJobProducer) {
     FramedGraphFactory factory = new FramedGraphFactory(new JavaHandlerModule());
     graph = factory.create(dependencyGraph);
     
@@ -47,7 +48,7 @@ public class DependentJobManager {
       log.info("==========> Job complete: {}", msg.body());
       String jobId = msg.body().getString(JobMarket.JOBID);
       if(false)
-        jobProd.removeJob(jobId);
+        jobProd.removeJob(jobId, null);
       DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
       log.debug("all jobs: "+this);
       log.info("Done jobId={} \n {}", jobId, toStringRemainingJobs("state", "jobType"));
@@ -57,7 +58,7 @@ public class DependentJobManager {
       log.info("==========> Job failed: {}", msg.body());
       String jobId = msg.body().getString(JobMarket.JOBID);
       if(false)
-        jobProd.removeJob(jobId);
+        jobProd.removeJob(jobId, null);
       DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
       log.debug("all jobs: "+this);
       log.info("Failed jobId={} \n {}", jobId, toStringRemainingJobs("state", "jobType"));
@@ -72,8 +73,8 @@ public class DependentJobManager {
     }
   }
 
-  private Map<String, Object> waitingJobs = new HashMap<>();
-  private Map<String, DependentJobFrame> submittedJobs = new HashMap<>();
+  private Map<String, T> waitingJobs = Collections.synchronizedMap(new HashMap<>());
+  private Map<String, T> submittedJobs = Collections.synchronizedMap(new HashMap<>());
 
 
   public String toString() {
@@ -125,7 +126,7 @@ public class DependentJobManager {
 
   public int counter=0;
   
-  public synchronized void addJob(String jobId, Object job, String... inJobIds) {
+  public synchronized void addJob(String jobId, T job, String... inJobIds) {
     // add to graph
     DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
     if (jobV == null) {
@@ -136,7 +137,7 @@ public class DependentJobManager {
     } else {
       throw new IllegalArgumentException("Job with id already exists: " + job);
     }
-    setDependentJobs(jobV, inJobIds);
+    addDependentJobs(jobV, inJobIds);
 
     synchronized (graph) {
       if (isJobReady(jobV)) {
@@ -149,19 +150,61 @@ public class DependentJobManager {
     }
   }
 
-  public synchronized void setDependentJobs(String jobId, String... inJobIds) {
+  /**
+   * If job is waiting, move job to end of queue.
+   * If job has been submitted, 
+   * @param jobId
+   */
+  public synchronized void reAddJob(String jobId) {
+    // add to graph
+    DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
+    if (jobV == null) {
+      throw new IllegalArgumentException("Job doesn't exist: " + jobId);
+    }
+    
+    T job;
+    switch(jobV.getState()){
+      case CANCELLED:
+      case DONE:
+      case FAILED:
+      case NEEDS_UPDATE:
+        log.info("re-add job: {}", jobId);
+        job=submittedJobs.get(jobId);
+        break;
+      case WAITING:
+        jobV.setOrder(++counter);
+        log.info("re-add job: {} is currently waiting; adjusting order to {}", jobId, counter);
+        return;
+      case SUBMITTED:
+      case PROCESSING:
+      default:
+        throw new IllegalStateException("Cannot re-add job "+jobId+" with state="+jobV.getState());
+    }
+    
+    synchronized (graph) {
+      if (isJobReady(jobV)) {
+        log.info("Submitting jobId={}", jobV.getNodeId());
+        submitJob(jobV, job);
+      } else {
+        log.info("Input to job={} is not ready; setting state=WAITING.  {}", job);
+        putJobInWaitingArea(jobV, job);
+      }
+    }
+  }
+  
+  public synchronized void addDependentJobs(String jobId, String... inJobIds) {
     synchronized (graph) {
       DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
       if (jobV == null) {
         throw new IllegalArgumentException("Job with id does not exist: " + jobId);
       } else {
         //log.info("addInputJobs " + jobId);
-        setDependentJobs(jobV, inJobIds);
+        addDependentJobs(jobV, inJobIds);
       }
     }
   }
 
-  private void setDependentJobs(DependentJobFrame jobV, String... inJobIds) {
+  private void addDependentJobs(DependentJobFrame jobV, String... inJobIds) {
     if (inJobIds != null){
       for (String inputJobId : inJobIds) {
         DependentJobFrame inputJobV = graph.getVertex(inputJobId, DependentJobFrame.class);
@@ -191,7 +234,7 @@ public class DependentJobManager {
         setJobCancelled(jobV);
         break;
       case SUBMITTED:
-        jobProd.removeJob(jobId); // may fail
+        jobProd.removeJob(jobId, null); // may fail
         submittedJobs.remove(jobId);
         setJobCancelled(jobV);
         break;
@@ -207,16 +250,20 @@ public class DependentJobManager {
     }
   }
   
-  private void submitJob(DependentJobFrame jobV, Object job) {
+  private void submitJob(DependentJobFrame jobV, T job) {
     synchronized (graph) {
       log.debug("submitJob: {}", jobV);
       jobV.setState(STATE.SUBMITTED);
       graph.commit();
     }
     
+    //log.debug("----------------------  submitJob: {} {}", job.getClass(), job);
+    if(submittedJobs.containsKey(jobV.getNodeId())){
+      jobProd.removeJob(jobV.getNodeId(), null);
+    }
+    submittedJobs.put(jobV.getNodeId(), job);
     JsonObject jobJO=new JsonObject(Json.encode(job));
     jobProd.addJob(jobV.getNodeId(), jobJO);
-    submittedJobs.put(jobV.getNodeId(), jobV);
   }
   
   public STATE getJobStatus(String jobId){
@@ -232,20 +279,21 @@ public class DependentJobManager {
     Map<String,Object> map=new HashMap<>();
     if(jobV.getState() == STATE.PROCESSING){
       jobProd.getProgress(jobId, reply -> {
-        synchronized (this) {
+        synchronized (map) {
           JsonObject bodyJO=(JsonObject) reply.result().body();
           //job = Json.decodeValue(bodyJO.toString(), DependentJob.class);
           map.putAll(bodyJO.getMap());
-          notify();
+          map.notify();
         }
       });
       // wait for reply
-      synchronized (this) {
-        try {
-          wait();
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
+      synchronized (map) {
+        while(map.size()==0) 
+          try {
+            map.wait();
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
         return map;
       }
     } else {
@@ -255,7 +303,7 @@ public class DependentJobManager {
     }
   }
 
-  private void putJobInWaitingArea(DependentJobFrame jobV, Object job) {
+  private void putJobInWaitingArea(DependentJobFrame jobV, T job) {
     synchronized (graph) {
       jobV.setState(STATE.WAITING);
       graph.commit();
@@ -278,11 +326,7 @@ public class DependentJobManager {
   private void jobDone(DependentJobFrame job) {
     synchronized (graph) {
       job.setState(STATE.DONE);
-      try {
-        markDependants(job);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
+      markDependants(job);
       graph.commit();
     }
   }
@@ -294,7 +338,7 @@ public class DependentJobManager {
     }
   }
   
-  private void markDependants(DependentJobFrame doneJob) throws InterruptedException {
+  private void markDependants(DependentJobFrame doneJob) {
     /**
      * When a task is DONE, it iterate through each dependee (i.e., task that it feeds):
     If dependee is DONE, change its state to NEEDS_UPDATE if it is not QUEUED.
@@ -302,38 +346,41 @@ public class DependentJobManager {
     If dependee NEEDS_UPDATE, do nothing; Client would have to check for task with this state after all submitted relevant requests are complete.
     If dependee is WAITING (was popped earlier), put it in head of queue to be assessed next and if possible processed.
      */
-    Iterable<DependentJobFrame> outJobs = doneJob.getOutputJobs();
-    if (outJobs != null){
-      SortedSet<DependentJobFrame> readyJobs=new TreeSet<>( (e1,e2) -> {
-        return Integer.compare(e1.getOrder(), e2.getOrder()); });
-      for (DependentJobFrame outV : outJobs) {
-        switch (outV.getState()) {
-          case SUBMITTED:
-          case DONE:
-            log.info("Job dependent on {} has state={}. Marking {} as NEEDS_UPDATE.", doneJob.getNodeId(), outV.getState(), outV.getNodeId());
-            outV.setState(STATE.NEEDS_UPDATE);
-            break;
-          case NEEDS_UPDATE:
-            break;
-          case WAITING:
-            if (isJobReady(outV))
-              readyJobs.add(outV);
-            break;
-          case PROCESSING:
-            log.info("Job dependent on {} is currently processing. Marking {} as NEEDS_UPDATE.", doneJob.getNodeId(), outV.getNodeId());
-            outV.setState(STATE.NEEDS_UPDATE);
-            break;
-          case CANCELLED:
-          case FAILED:
-            log.info("Not marking job={} as NEEDS_UPDATE since job's current state={}", outV.getNodeId(), outV.getState());
-            break;
+    synchronized(waitingJobs){
+      Iterable<DependentJobFrame> outJobs = doneJob.getOutputJobs();
+      if (outJobs != null){
+        SortedSet<DependentJobFrame> readyJobs=new TreeSet<>( (e1,e2) -> {
+          return Integer.compare(e1.getOrder(), e2.getOrder()); });
+        for (DependentJobFrame outV : outJobs) {
+          switch (outV.getState()) {
+            case SUBMITTED:
+            case DONE:
+              log.info("Job dependent on {} has state={}. Marking {} as NEEDS_UPDATE.", doneJob.getNodeId(), outV.getState(), outV.getNodeId());
+              outV.setState(STATE.NEEDS_UPDATE);
+              break;
+            case NEEDS_UPDATE:
+              break;
+            case WAITING:
+              if (isJobReady(outV))
+                readyJobs.add(outV);
+              break;
+            case PROCESSING:
+              log.info("Job dependent on {} is currently processing. Marking {} as NEEDS_UPDATE.", doneJob.getNodeId(), outV.getNodeId());
+              outV.setState(STATE.NEEDS_UPDATE);
+              break;
+            case CANCELLED:
+            case FAILED:
+              log.info("Not marking job={} as NEEDS_UPDATE since job's current state={}", outV.getNodeId(), outV.getState());
+              break;
+          }
         }
+        for (DependentJobFrame readyV : readyJobs) { // submit in order
+          log.info("Waiting job is now ready; submitting: {}", readyV.getNodeId());
+          T job = waitingJobs.remove(readyV.getNodeId());
+          submitJob(readyV, job);
+        }
+        log.info("Waiting jobs: {}", waitingJobs.keySet());
       }
-      for (DependentJobFrame readyV : readyJobs) { // submit in order
-        Object job = waitingJobs.remove(readyV.getNodeId());
-        submitJob(readyV, job);
-      }
-      log.info("Waiting jobs: {}", waitingJobs.keySet());
     }
   }
 

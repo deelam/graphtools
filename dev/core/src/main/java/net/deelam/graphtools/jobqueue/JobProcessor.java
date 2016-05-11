@@ -11,12 +11,17 @@ public interface JobProcessor<J extends DependentJob> {
 
   String getJobType();
   
-  boolean precheckJob(J job);
+  Class<J> getJobClass();
+  
+  default boolean precheckJob(J job){ return true; }
 
-  boolean cancelJob(String jobId);
+  default boolean cancelJob(String jobId){return false;}
 
-  boolean isJobReady(J job);
+  default boolean isJobReady(J job){ return true; }
 
   boolean runJob(J job);
 
+  boolean runJobJO(DependentJob jobObj);
+
+  
 }

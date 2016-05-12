@@ -51,21 +51,22 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
   @SuppressWarnings("unchecked")
   @Override
   public IdGraph<Neo4jGraph> open(GraphUri gUri) {
-    CompositeConfiguration conf = new CompositeConfiguration();
+    BaseConfiguration conf = new BaseConfiguration();
     if(exists(gUri)){// assume graph has indexes supporting IdGraph, so they are not recreated
       for (Iterator<String> itr = OPEN_AFTER_BATCH_INSERT_CONFIG.getKeys(); itr.hasNext();) {
         String key = itr.next();
-        conf.setProperty(CONFIG_PREFIX + key, OPEN_AFTER_BATCH_INSERT_CONFIG.getProperty(key));
+        conf.setProperty(CONFIG_PREFIX + key, OPEN_AFTER_BATCH_INSERT_CONFIG.getString(key));
       }
     }
     
-    conf.addConfiguration(gUri.getConfig());
     /// copy properties to new keys that Neo4jGraph looks for
     String[] keys = Iterators.toArray(gUri.getConfig().getKeys(), String.class); // avoids ConcurrentModificationException
     for (String key : keys) {
       if (key.startsWith("blueprints.neo4j"))
         continue;
-      conf.setProperty(CONFIG_PREFIX + key, gUri.getConfig().getProperty(key));
+      String val = gUri.getConfig().getString(key);
+      conf.setProperty(CONFIG_PREFIX + key, val);
+      conf.setProperty(key, val);
     }
     
     String path = gUri.getUriPath();
@@ -79,8 +80,59 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
     conf.setProperty("blueprints.neo4j.conf."+OnlineBackupSettings.online_backup_enabled.name(), "false");// if true, limits number of opened Neo4j graphs 
     
     //GraphUri.printConfig(conf);
-    IdGraph<Neo4jGraph> graph = new IdGraph<>(new Neo4jGraph(conf));
-    return graph;
+    
+    while(true){
+      try{
+        IdGraph<Neo4jGraph> graph = new IdGraph<>(new Neo4jGraph(conf));
+        return graph;
+      }catch(RuntimeException re){
+        if(re.getCause().getCause() instanceof org.neo4j.kernel.lifecycle.LifecycleException){
+          log.warn("Graph already opened; waiting for it to close: {}", gUri);
+          try {
+            Thread.sleep(5000);
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+        }else{
+          log.error("Exception cause={}", re.getCause().getCause().getClass());
+          throw re;
+        }
+      }
+    }
+  }
+  
+  public static void main(String[] args) throws InterruptedException {
+    IdGraphFactoryNeo4j.register();
+    
+    new Thread(new Runnable(){
+      public  void run() {
+        log.info("Started 1");
+        GraphUri guri = new GraphUri("neo4j:neoOneAtATime");
+        IdGraph graph1 = guri.openIdGraph();
+        try {
+          Thread.sleep(5000);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+        guri.shutdown();
+      }
+    }).start();
+    
+    
+    new Thread(new Runnable(){
+      public  void run() {
+        log.info("Started 2");
+        GraphUri guri = new GraphUri("neo4j:neoOneAtATime");
+        IdGraph graph1 = guri.openIdGraph();
+        try {
+          Thread.sleep(5000);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+        guri.shutdown();
+      }
+    }).start();
+    
   }
 
   public void shutdown(GraphUri gUri, IdGraph<?> graph){

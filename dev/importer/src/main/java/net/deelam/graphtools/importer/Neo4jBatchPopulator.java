@@ -187,7 +187,11 @@ public class Neo4jBatchPopulator implements Populator {
     try{
       GraphUri tmpGraphUri = new GraphUri(graphUri.asString(), IdGraphFactoryNeo4j.OPEN_AFTER_BATCH_INSERT_CONFIG);
       IdGraph<?> idGraph = tmpGraphUri.openExistingIdGraph();
-      idGraph.removeVertex(idGraph.getVertex(ROOT_ID));
+      Vertex neo4jRootNode = idGraph.getBaseGraph().getVertex(0l);
+      if(neo4jRootNode==null)
+        log.warn("Could not find Neo4j's root node to remove");
+      else 
+        idGraph.getBaseGraph().removeVertex(neo4jRootNode);
       
       Vertex mdV = GraphUtils.getMetaDataNode(idGraph);
       mdV.setProperty("createdNodes", createdNodes);

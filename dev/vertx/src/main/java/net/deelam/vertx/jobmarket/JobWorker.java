@@ -11,6 +11,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.vertx.jobmarket.JobMarket.BUS_ADDR;
 
@@ -20,6 +21,7 @@ import net.deelam.vertx.jobmarket.JobMarket.BUS_ADDR;
  */
 @Slf4j
 @RequiredArgsConstructor
+@ToString
 public abstract class JobWorker extends AbstractVerticle {
   private final String jmPrefix;
   private DeliveryOptions deliveryOptions;
@@ -81,7 +83,9 @@ public abstract class JobWorker extends AbstractVerticle {
     if (jobs.size() > 0) {
       picked = jobs.getJsonObject(0);
     }
-    log.info("pickedJob={} from jobs={}", picked, jobs);
+    StringBuilder jobsSb=new StringBuilder();
+    jobs.forEach( j -> jobsSb.append(" "+((JsonObject) j).getString(JobMarket.JOBID)));
+    log.info("pickedJob={} from jobs={}", picked, jobsSb);
     return picked;
   }
 

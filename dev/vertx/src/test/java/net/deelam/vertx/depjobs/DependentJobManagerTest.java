@@ -137,7 +137,7 @@ public class DependentJobManagerTest {
     
     mgr.reAddJob("ALL_SRC");
 
-    //FIXME: idle threads die if jobs are blocked: mgr.addEndJobThreads();
+    //TODO: idle threads die if jobs are blocked: mgr.addEndJobThreads();
 //    async.await(150000); // fails when timeout occurs
 
     Thread.sleep(30000);

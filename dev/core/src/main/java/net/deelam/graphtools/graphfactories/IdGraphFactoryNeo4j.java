@@ -53,9 +53,11 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
   public IdGraph<Neo4jGraph> open(GraphUri gUri) {
     BaseConfiguration conf = new BaseConfiguration();
     if(exists(gUri)){// assume graph has indexes supporting IdGraph, so they are not recreated
-      for (Iterator<String> itr = OPEN_AFTER_BATCH_INSERT_CONFIG.getKeys(); itr.hasNext();) {
-        String key = itr.next();
-        conf.setProperty(CONFIG_PREFIX + key, OPEN_AFTER_BATCH_INSERT_CONFIG.getString(key));
+      synchronized(OPEN_AFTER_BATCH_INSERT_CONFIG){ // otherwise throws ConcurrentModificationException
+        for (Iterator<String> itr = OPEN_AFTER_BATCH_INSERT_CONFIG.getKeys(); itr.hasNext();) {
+          String key = itr.next();
+          conf.setProperty(CONFIG_PREFIX + key, OPEN_AFTER_BATCH_INSERT_CONFIG.getString(key));
+        }
       }
     }
     

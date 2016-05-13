@@ -176,6 +176,7 @@ public class Neo4jBatchPopulator implements Populator {
       }
       inserter.shutdown();
       inserter = null;
+      System.gc(); // addresses problem with NFS files still being held by JVM 
     }
 
     if (idMap != null) {

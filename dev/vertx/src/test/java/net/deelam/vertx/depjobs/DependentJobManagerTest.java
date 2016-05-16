@@ -33,7 +33,7 @@ public class DependentJobManagerTest {
 
   private Vertx vertx;
 
-  static final String jcPrefix = "net.deelam.jm-";
+  static final String svcType = "DependentJobManagerTest";
 
   JobProducer prod;
   List<JobWorker> cons=new ArrayList<>();
@@ -42,7 +42,7 @@ public class DependentJobManagerTest {
     static int counter=0;
     final int name=++counter;
     public MyWorker() {
-      super(jcPrefix);
+      super(svcType);
     }
       public boolean doWork(JsonObject job) {
         for (int i = 0; i < 5; ++i) {
@@ -59,8 +59,8 @@ public class DependentJobManagerTest {
   @Before
   public void before() throws InterruptedException {
     vertx = Vertx.vertx();
-    JobMarket jm = new JobMarket(jcPrefix);
-    prod = new JobProducer(jm.getAddressPrefix());
+    JobMarket jm = new JobMarket(svcType);
+    prod = new JobProducer(svcType);
     cons.add(new MyWorker());
     cons.add(new MyWorker());
 
@@ -106,7 +106,7 @@ public class DependentJobManagerTest {
   @Test
   public void test() throws IOException, InterruptedException {
     log.info("Verticles: " + vertx.deploymentIDs() + " " + vertx.eventBus());
-    cons.forEach(c->c.register());
+    //cons.forEach(c->c.register());
     
 //    prod.addJobCompletionHandler( (Message<JsonObject> msg) -> {
 //      log.info("==========> Job complete={}", msg.body());

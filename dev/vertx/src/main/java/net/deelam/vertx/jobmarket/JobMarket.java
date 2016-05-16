@@ -3,9 +3,12 @@ package net.deelam.vertx.jobmarket;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+
+import com.google.common.collect.Iterables;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
@@ -18,6 +21,7 @@ import io.vertx.core.json.JsonObject;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.vertx.VerticleUtils;
 import net.deelam.vertx.jobmarket.JobMarket.JobItem.JobState;
 
 /**
@@ -44,36 +48,37 @@ import net.deelam.vertx.jobmarket.JobMarket.JobItem.JobState;
  * @author dd
  */
 @Slf4j
-@NoArgsConstructor
 public class JobMarket extends AbstractVerticle {
+  private final String serviceType;
 
   @Getter
-  private String addressPrefix;
+  private String addressBase;
 
-  public JobMarket(String addressPrefix) {
-    this.addressPrefix = addressPrefix;
+  public JobMarket(String serviceType/*, String addressPrefix*/) {
+    this.serviceType=serviceType;
+    //this.addressBase = "JobMarket-"+System.currentTimeMillis(); //addressPrefix;
   }
 
   public static final String EVENT_BUS_PREFIX = "eventBusPrefix";
 
   private void initAddressPrefix() {
     final String configAddrPrefix = config().getString(EVENT_BUS_PREFIX);
-    if (addressPrefix == null) {
-      addressPrefix = configAddrPrefix;
-      if (addressPrefix == null) {
-        addressPrefix = deploymentID();
-        log.info("Using deploymentID() as addressPrefix={}", addressPrefix);
+    if (addressBase == null) {
+      addressBase = configAddrPrefix;
+      if (addressBase == null) {
+        addressBase = deploymentID();
+        log.info("Using deploymentID() as addressBase={}", addressBase);
       }
     } else if (configAddrPrefix != null) {
-      log.warn("Ignoring {} configuration since already set (in constructor): {}", EVENT_BUS_PREFIX, addressPrefix);
+      log.warn("Ignoring {} configuration since already set (in constructor): {}", EVENT_BUS_PREFIX, addressBase);
     }
 
-    checkNotNull(addressPrefix, "Must set '" + EVENT_BUS_PREFIX + "' config since not provided in constructor!");
+    checkNotNull(addressBase, "Must set '" + EVENT_BUS_PREFIX + "' config since not provided in constructor!");
   }
 
   public enum BUS_ADDR {
     ADD_JOB, REMOVE_JOB, GET_PROGRESS, // for producers 
-    REGISTER, UNREGISTER, SET_PROGRESS, DONE, FAIL // for workers
+    /*REGISTER,*/ UNREGISTER, SET_PROGRESS, DONE, FAIL // for workers
   };
 
   private static final Object OK_REPLY = "ACK";
@@ -81,7 +86,7 @@ public class JobMarket extends AbstractVerticle {
   // jobId -> JobItem
   private Map<String, JobItem> jobItems = new LinkedHashMap<>();
 
-  private Queue<String> idleWorkers = new LinkedList<>();
+  private LinkedHashSet<String> idleWorkers = new LinkedHashSet<>();
 
   private Handler<AsyncResult<Message<JsonObject>>> debugReplyHandler = (reply) -> {
     if (reply.succeeded()) {
@@ -98,21 +103,28 @@ public class JobMarket extends AbstractVerticle {
     initAddressPrefix();
 
     EventBus eb = vertx.eventBus();
-    eb.consumer(addressPrefix + BUS_ADDR.REGISTER, message -> {
+    
+    VerticleUtils.announceServiceType(vertx, serviceType, addressBase);
+    
+    eb.consumer(addressBase/* + BUS_ADDR.REGISTER*/, message -> {
       String workerAddr = getWorkerAddress(message);
-      log.debug("Received REGISTER message from {}", workerAddr);
-      if (!idleWorkers.add(workerAddr))
-        log.error("Could not add {} to idleWorkers={}", workerAddr, idleWorkers);
+      log.debug("Received initial message from {}", workerAddr);
+      if(idleWorkers.contains(workerAddr))
+        log.debug("Worker already registered and is idle: {}", workerAddr);
+      else
+        if (!idleWorkers.add(workerAddr))
+          log.error("Could not add {} to idleWorkers={}", workerAddr, idleWorkers);
+      
       asyncSendJobsToNextIdleWorker();
     });
-    eb.consumer(addressPrefix + BUS_ADDR.UNREGISTER, message -> {
+    eb.consumer(addressBase + BUS_ADDR.UNREGISTER, message -> {
       String workerAddr = getWorkerAddress(message);
       log.debug("Received UNREGISTER message from {}", workerAddr);
       if (!idleWorkers.remove(workerAddr))
         log.error("Could not remove {} from idleWorkers={}", workerAddr, idleWorkers);
     });
 
-    eb.consumer(addressPrefix + BUS_ADDR.ADD_JOB, message -> {
+    eb.consumer(addressBase + BUS_ADDR.ADD_JOB, message -> {
       log.debug("Received ADD_JOB message: {}", message.body());
       JobItem ji = new JobItem(message);
       ji.state = JobState.AVAILABLE;
@@ -139,7 +151,7 @@ public class JobMarket extends AbstractVerticle {
         asyncSendJobsToNextIdleWorker();
       }
     });
-    eb.consumer(addressPrefix + BUS_ADDR.REMOVE_JOB, message -> {
+    eb.consumer(addressBase + BUS_ADDR.REMOVE_JOB, message -> {
       String jobId = readJobId(message);
       log.debug("Received REMOVE_JOB message: jobId={}", jobId);
       JobItem ji = jobItems.get(jobId);
@@ -160,13 +172,13 @@ public class JobMarket extends AbstractVerticle {
       }
     });
 
-    eb.consumer(addressPrefix + BUS_ADDR.SET_PROGRESS, (Message<JsonObject> message) -> {
+    eb.consumer(addressBase + BUS_ADDR.SET_PROGRESS, (Message<JsonObject> message) -> {
       log.debug("Received SET_PROGRESS message: {}", message.body());
       JobItem job = getJobItem(message.body());
       job.mergeIn(message.body());
       job.state = JobState.PROGRESSING;
     });
-    eb.consumer(addressPrefix + BUS_ADDR.GET_PROGRESS, message -> {
+    eb.consumer(addressBase + BUS_ADDR.GET_PROGRESS, message -> {
       String jobId = readJobId(message);
       log.debug("Received GET_PROGRESS message: jobId={}", jobId);
       JobItem job = jobItems.get(jobId);
@@ -177,7 +189,7 @@ public class JobMarket extends AbstractVerticle {
       }
     });
 
-    eb.consumer(addressPrefix + BUS_ADDR.DONE, (Message<JsonObject> message) -> {
+    eb.consumer(addressBase + BUS_ADDR.DONE, (Message<JsonObject> message) -> {
       log.debug("Received DONE message: {}", message.body());
       JobItem ji = workerEndedJob(message, JobState.DONE);
       
@@ -189,7 +201,7 @@ public class JobMarket extends AbstractVerticle {
         vertx.eventBus().send(ji.completionAddr, ji.jobJO.copy());
       }
     });
-    eb.consumer(addressPrefix + BUS_ADDR.FAIL, (Message<JsonObject> message) -> {
+    eb.consumer(addressBase + BUS_ADDR.FAIL, (Message<JsonObject> message) -> {
       log.info("Received FAIL message: {}", message.body());
       JsonObject jobJO = message.body();
       JobItem job = getJobItem(jobJO);
@@ -212,7 +224,7 @@ public class JobMarket extends AbstractVerticle {
       }
     });
 
-    log.info("Ready: " + this + " addressPrefix=" + addressPrefix);
+    log.info("Ready: " + this + " addressPrefix=" + addressBase);
   }
 
   private String readJobId(Message<Object> message) {
@@ -237,7 +249,7 @@ public class JobMarket extends AbstractVerticle {
     if(!isNegotiating){
       isNegotiating=true; // make sure all code paths reset this to false
       log.info("idleWorkers={}", idleWorkers);
-      String idleWorker = idleWorkers.peek();
+      String idleWorker = Iterables.getFirst(idleWorkers, null);
       if (idleWorker == null) // no workers available
         isNegotiating=false;
       else

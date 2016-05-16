@@ -22,7 +22,7 @@ public class JobMarketTest {
 
   private Vertx vertx;
 
-  static final String jcPrefix = "net.deelam.jm-";
+  static final String svcType = "typeTestA";
 
   JobProducer prod;
   JobWorker cons;
@@ -38,9 +38,9 @@ public class JobMarketTest {
       log.info("Async.complete " + async.count());
     };
 
-    JobMarket jm = new JobMarket(jcPrefix);
-    prod = new JobProducer(jm.getAddressPrefix());
-    cons = new JobWorker(jm.getAddressPrefix()){
+    JobMarket jm = new JobMarket(svcType);
+    prod = new JobProducer(svcType);
+    cons = new JobWorker(svcType){
       int count=0;
       public boolean doWork(JsonObject job) {
         boolean success=true; //++count % 2 == 0;
@@ -81,7 +81,7 @@ public class JobMarketTest {
   @Test
   public void test(TestContext context) {
     log.info("Verticles: " + vertx.deploymentIDs() + " " + vertx.eventBus());
-    cons.register();
+    //cons.register();
     
     int numAsserts = 2;
     Async async = context.async(numAsserts);

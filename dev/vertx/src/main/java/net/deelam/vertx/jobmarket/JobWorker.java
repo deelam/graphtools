@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.vertx.VerticleUtils;
 import net.deelam.vertx.jobmarket.JobMarket.BUS_ADDR;
 
 /**
@@ -23,11 +24,12 @@ import net.deelam.vertx.jobmarket.JobMarket.BUS_ADDR;
 @RequiredArgsConstructor
 @ToString
 public abstract class JobWorker extends AbstractVerticle {
-  private final String jmPrefix;
+  private final String serviceType;
   private DeliveryOptions deliveryOptions;
 
   private JsonObject pickedJob=null;
 
+  private String jmPrefix=null;
   @Override
   public void start() throws Exception {
     String myAddr = deploymentID();
@@ -35,11 +37,17 @@ public abstract class JobWorker extends AbstractVerticle {
     deliveryOptions = JobMarket.createWorkerHeader(myAddr);
 
     vertx.eventBus().consumer(myAddr, jobListHandler);
+    
+    VerticleUtils.announceClientType(vertx, serviceType, msg->{
+      jmPrefix=msg.body();
+      vertx.eventBus().send(jmPrefix, null, deliveryOptions);
+    });
   }
 
-  public void register() {
-    vertx.eventBus().send(jmPrefix + BUS_ADDR.REGISTER, null, deliveryOptions);
-  }
+//  @Deprecated
+//  public void register() {
+//    vertx.eventBus().send(jmPrefix + BUS_ADDR.REGISTER, null, deliveryOptions);
+//  }
 
   public void sendJobProgress() {
     checkNotNull(pickedJob, "No job picked!");

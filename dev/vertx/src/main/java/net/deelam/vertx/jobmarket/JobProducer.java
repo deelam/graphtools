@@ -9,6 +9,7 @@ import io.vertx.core.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.vertx.VerticleUtils;
 import net.deelam.vertx.jobmarket.JobMarket.BUS_ADDR;
 
 /**
@@ -18,17 +19,22 @@ import net.deelam.vertx.jobmarket.JobMarket.BUS_ADDR;
 @RequiredArgsConstructor
 @Slf4j
 public class JobProducer extends AbstractVerticle {
+  private final String serviceType;
   
   private static final String JOBCOMPLETE_ADDRESS_SUFFIX = "-jobComplete";
   private static final String JOBFAILED_ADDRESS_SUFFIX = "-jobFailed";
   
-  private final String jmPrefix;
+  private String jmPrefix=null;
   private String jobCompletionAddress=null;
   private String jobFailureAddress=null;
 
   @Override
   public void start() throws Exception {
     log.info("Ready: " + this +" deploymentID="+deploymentID());
+    
+    VerticleUtils.announceClientType(vertx, serviceType, msg->{
+      jmPrefix=msg.body();
+    });
   }
 
   public <T> void addJobCompletionHandler(Handler<Message<T>> jobCompletionHandler) {

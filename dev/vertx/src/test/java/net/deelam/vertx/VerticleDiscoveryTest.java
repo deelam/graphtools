@@ -33,7 +33,7 @@ public class VerticleDiscoveryTest {
       String serviceContactInfo = serverEventBusAddr;
       VerticleUtils.announceServiceType(vertx, "typeA", serviceContactInfo);
       vertx.eventBus().consumer(serverEventBusAddr, msg -> {
-        log.info("Discovered client: " + msg.body());
+        log.info(serverEventBusAddr+": Discovered client: " + msg.body());
         clients.add((String) msg.body());
       });
     }
@@ -96,6 +96,19 @@ public class VerticleDiscoveryTest {
       e.printStackTrace();
     }
     assertEquals(3, clients.size());
+  }
+  @Test
+  public void test2Servers(TestContext context) {
+    try {
+      Thread.sleep(1000);
+      assertEquals(1, clients.size());
+      vertx.deployVerticle(Server.class.getName());
+      vertx.deployVerticle(Client.class.getName());
+      Thread.sleep(3000);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
+    assertEquals(2, clients.size());
   }
 
 }

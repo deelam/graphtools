@@ -98,7 +98,7 @@ public final class VerticleUtils {
    * Both need announcement publisher.
    */
 
-  private static final String YP_ADDRESS_PREFIX = "net.deelam.vertx.";
+  private static final String YP_ADDRESS_PREFIX = "net.deelam.";
 
   public static MessageConsumer<Object> announceServiceType(Vertx vertx, String type, String serviceContactInfo){
     log.info("Announcing service type={}: {}", type, serviceContactInfo);
@@ -118,25 +118,25 @@ public final class VerticleUtils {
   /**
    * 
    * @param vertx
-   * @param type
+   * @param serviceType
    * @param serverRespHandler may be called more than once for the same server
    * @return client's inbox event bus address
    */
-  public synchronized static String announceClientType(Vertx vertx, String type, Handler<Message<String>> serverRespHandler){
-    log.info("Announcing client type={}", type);
+  public synchronized static String announceClientType(Vertx vertx, String serviceType, Handler<Message<String>> serverRespHandler){
+    log.info("Announcing client of serviceType={}", serviceType);
     
-    vertx.eventBus().consumer(YP_ADDRESS_PREFIX+"servers."+type, (Message<String> msg) ->{
-      log.info("Got server broadcast: {}", msg.body());
+    vertx.eventBus().consumer(YP_ADDRESS_PREFIX+"servers."+serviceType, (Message<String> msg) ->{
+      log.debug("Got server broadcast: {}", msg.body());
       serverRespHandler.handle(msg); 
     }); // handle server's broadcast
     
-    String myAddress=YP_ADDRESS_PREFIX+type+".clientInbox_"+(++clientCount)+"_"+(System.currentTimeMillis()-startMillis);
+    String myAddress=YP_ADDRESS_PREFIX+serviceType+".clientInbox_"+(++clientCount)+"_"+(System.currentTimeMillis()-startMillis);
     vertx.eventBus().consumer(myAddress, (Message<String> msg) ->{
-      log.info("{}: Got server reply: {}", myAddress, msg.body());
+      log.debug("{}: Got server reply: {}", myAddress, msg.body());
       serverRespHandler.handle(msg); 
     }); // handle server response to client's broadcast
     
-    vertx.eventBus().publish(YP_ADDRESS_PREFIX+"clients."+type, myAddress); // client's broadcast
+    vertx.eventBus().publish(YP_ADDRESS_PREFIX+"clients."+serviceType, myAddress); // client's broadcast
     return myAddress;
   }
 

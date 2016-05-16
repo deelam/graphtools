@@ -1,5 +1,9 @@
 package net.deelam.vertx;
 
+import static org.junit.Assert.assertEquals;
+
+import java.util.HashSet;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -20,9 +24,9 @@ public class VerticleDiscoveryTest {
 
   private Vertx vertx;
 
-  static final String jcPrefix = "net.deelam.jm-";
+  static HashSet<String> clients=new HashSet<>();
 
-  static class Server extends AbstractVerticle {
+  public static class Server extends AbstractVerticle {
     @Override
     public void start() throws Exception {
       String serverEventBusAddr = deploymentID() + ".addr";
@@ -30,11 +34,12 @@ public class VerticleDiscoveryTest {
       VerticleUtils.announceServiceType(vertx, "typeA", serviceContactInfo);
       vertx.eventBus().consumer(serverEventBusAddr, msg -> {
         log.info("Discovered client: " + msg.body());
+        clients.add((String) msg.body());
       });
     }
   }
 
-  static class Client extends AbstractVerticle {
+  public static class Client extends AbstractVerticle {
     @Override
     public void start() throws Exception {
       VerticleUtils.announceClientType(vertx, "typeA", msg->{
@@ -52,14 +57,12 @@ public class VerticleDiscoveryTest {
 
     Handler<AsyncResult<String>> deployHandler = res -> {
       async.countDown();
-      log.info("deploy " + async.count());
+      log.info("deploy " + async.count()+": "+res.result()+" "+res.cause());
     };
 
-    vertx.deployVerticle(new Server(), deployHandler);
-    vertx.deployVerticle(new Client(), deployHandler);
-    vertx.deployVerticle(new Client(), deployHandler);
-//    vertx.deployVerticle(Server.class.getName(), deployHandler);
-//    vertx.deployVerticle(Client.class.getName(), deployHandler);
+    clients.clear();
+    vertx.deployVerticle(Server.class.getName(), deployHandler);
+    vertx.deployVerticle(Client.class.getName(), deployHandler);
 
 //    DeploymentOptions consumerOpts = new DeploymentOptions().setWorker(true);
 //    vertx.deployVerticle(Client.class.getName(), consumerOpts, deployHandler);
@@ -74,13 +77,25 @@ public class VerticleDiscoveryTest {
   }
 
   @Test
-  public void test(TestContext context) {
+  public void test1Client(TestContext context) {
+      try {
+        Thread.sleep(3000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+  }
+  @Test
+  public void test3Clients(TestContext context) {
     try {
-      Thread.sleep(10000);
+      Thread.sleep(1000);
+      assertEquals(1, clients.size());
+      vertx.deployVerticle(Client.class.getName());
+      vertx.deployVerticle(Client.class.getName());
+      Thread.sleep(3000);
     } catch (InterruptedException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
     }
+    assertEquals(3, clients.size());
   }
 
 }

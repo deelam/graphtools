@@ -90,12 +90,12 @@ public final class VerticleUtils {
   /**
    * Verticles can be deployed in any order and find each other.
    * Given a client and server verticles,
-   * - client deploys first and publishes "I'm here as client"; server deploys and publishes "I'm here as server and my address is ..."; client uses broadcasted address   
-   * - client deploys second and publishes "I'm here as client with address"; server sends "My address is ..." to client; client uses response to register/use/etc
+   * - If client deploys first and publishes "I'm here as client"; server deploys and publishes "I'm here as server and my address is ..."; client uses broadcasted address   
+   * - If client deploys second and publishes "I'm here as client with address"; server sends "My address is ..." to client; client uses response to register/use/etc
    * 
-   * Client needs address handler.
-   * Server needs address publisher and responder.
-   * Both need I'm-here registration publisher.
+   * Client needs serviceContactInfo handler for both server's broadcast and reply.
+   * Server needs client responder.
+   * Both need announcement publisher.
    */
 
   private static final String YP_ADDRESS_PREFIX = "net.deelam.vertx.";

@@ -1,5 +1,7 @@
 package net.deelam.vertx.jobmarket;
 
+import java.util.function.Function;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,28 +42,29 @@ public class JobMarketTest {
 
     JobMarket jm = new JobMarket(svcType);
     prod = new JobProducer(svcType);
-    cons = new JobWorker(svcType){
+    cons = new JobWorker(svcType, new Function<JsonObject, Boolean>() {
       int count=0;
-      public boolean doWork(JsonObject job) {
+      @Override
+      public Boolean apply(JsonObject job) {
         boolean success=true; //++count % 2 == 0;
         try {
           job.put("progress", "10%");
-          sendJobProgress();
+          cons.sendJobProgress();
           Thread.sleep(2000);
           job.put("progress2", "50%");
-          sendJobProgress();
+          cons.sendJobProgress();
           prod.getProgress("id-A", reply -> log.info("Progress="+(reply.result()==null ? reply.succeeded() : reply.result().body())));
           if(success){
             Thread.sleep(2000);
             job.put("progress", "100%");
-            sendJobProgress();
+            cons.sendJobProgress();
           }
         } catch (InterruptedException e) {
           e.printStackTrace();
         }
         return success;
       }
-    };
+    });
 
     vertx.deployVerticle(jm, deployHandler);
     vertx.deployVerticle(prod, deployHandler);

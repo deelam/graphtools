@@ -116,7 +116,7 @@ public class JsonPropertyMerger implements PropertyMerger {
     }
 
     if (validPropertyClasses.contains(leafValue.getClass())) {
-      elem.setProperty(key, value);
+      elem.setProperty(key, value); // TODO: 6: not sure if this works for Titan if value is an array
     } else { // save as Json
       elem.setProperty(key, mapper.toJson(value));
       setPropertyValueClass(elem, key, value);

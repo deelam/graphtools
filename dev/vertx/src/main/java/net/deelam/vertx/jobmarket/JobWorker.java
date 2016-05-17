@@ -3,6 +3,8 @@ package net.deelam.vertx.jobmarket;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import java.util.function.Function;
+
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -23,7 +25,7 @@ import net.deelam.vertx.jobmarket.JobMarket.BUS_ADDR;
 @Slf4j
 @RequiredArgsConstructor
 @ToString
-public abstract class JobWorker extends AbstractVerticle {
+public class JobWorker extends AbstractVerticle {
   private final String serviceType;
   private DeliveryOptions deliveryOptions;
 
@@ -68,6 +70,20 @@ public abstract class JobWorker extends AbstractVerticle {
     vertx.eventBus().send(jmPrefix + BUS_ADDR.FAIL, prevJob, deliveryOptions);
   }
 
+  public JobWorker(String svcType, Function<JsonObject, Boolean> worker) {
+    this(svcType);
+    setWorker(worker);
+  }
+
+  @Setter
+  private Function<JsonObject,Boolean> worker=new Function<JsonObject, Boolean>() {
+    @Override
+    public Boolean apply(JsonObject job) {
+      log.info("TODO: Do work on: {}", job);
+      return true;
+    }
+  };
+  
   @Setter
   private Handler<Message<JsonArray>> jobListHandler = msg -> {
     JsonArray jobs = msg.body();
@@ -78,7 +94,7 @@ public abstract class JobWorker extends AbstractVerticle {
     msg.reply(pickedJob, deliveryOptions);  // must reply even if picked==null
 
     if (pickedJob != null) {
-      if (doWork(pickedJob))
+      if (worker.apply(pickedJob))
         jobDone(); // creates new conversation
       else
         jobFailed(); // creates new conversation
@@ -96,7 +112,5 @@ public abstract class JobWorker extends AbstractVerticle {
     log.info("pickedJob={} from jobs={}", picked, jobsSb);
     return picked;
   }
-
-  public abstract boolean doWork(JsonObject job);
 
 }

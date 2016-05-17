@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import org.junit.After;
 import org.junit.Before;
@@ -38,13 +39,10 @@ public class DependentJobManagerTest {
   JobProducer prod;
   List<JobWorker> cons=new ArrayList<>();
 
-  static class MyWorker extends JobWorker{
+  static class MyWorker implements Function<JsonObject,Boolean>{
     static int counter=0;
     final int name=++counter;
-    public MyWorker() {
-      super(svcType);
-    }
-      public boolean doWork(JsonObject job) {
+      public Boolean apply(JsonObject job) {
         for (int i = 0; i < 5; ++i) {
           try {
             log.info(name + " Running: " + job + " {}", i);
@@ -61,8 +59,9 @@ public class DependentJobManagerTest {
     vertx = Vertx.vertx();
     JobMarket jm = new JobMarket(svcType);
     prod = new JobProducer(svcType);
-    cons.add(new MyWorker());
-    cons.add(new MyWorker());
+    for(int i=0; i<2; ++i){
+      cons.add(new JobWorker(svcType, new MyWorker()));
+    }
 
     AtomicInteger async = new AtomicInteger(2+cons.size()); //needed for multi-verticle deployments; use context.asyncAsserSuccess() for 1 verticle 
 

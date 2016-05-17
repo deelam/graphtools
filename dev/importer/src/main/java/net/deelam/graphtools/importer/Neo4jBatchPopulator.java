@@ -139,14 +139,6 @@ public class Neo4jBatchPopulator implements Populator {
     return inserter;
   }
 
-  static Map<String, String> config = new HashMap<>();
-  static {
-    config.put("node_keys_indexable", IdGraph.ID);
-    config.put("node_auto_indexing", "true");
-    config.put("relationship_keys_indexable", IdGraph.ID);
-    config.put("relationship_auto_indexing", "true");
-  }
-
   private GraphUri graphUri;
   private long createdNodes = 0, createdEdges = 0;
 
@@ -166,7 +158,7 @@ public class Neo4jBatchPopulator implements Populator {
   }
 
   public void shutdown() {
-    String storeDir = inserter.getStoreDir();
+    //String storeDir = inserter.getStoreDir();
     if (inserter != null) {
       log.info("Shutting down BatchInserter={}", inserter);
       if (indexProvider != null) {
@@ -185,7 +177,7 @@ public class Neo4jBatchPopulator implements Populator {
     }
 
     try{
-      GraphUri tmpGraphUri = new GraphUri(graphUri.asString(), IdGraphFactoryNeo4j.OPEN_AFTER_BATCH_INSERT_CONFIG);
+      GraphUri tmpGraphUri = new GraphUri(graphUri.asString());
       IdGraph<?> idGraph = tmpGraphUri.openExistingIdGraph();
       Vertex neo4jRootNode = idGraph.getBaseGraph().getVertex(0l);
       if(neo4jRootNode==null)
@@ -205,6 +197,16 @@ public class Neo4jBatchPopulator implements Populator {
     }
 
 
+/*
+  static Map<String, String> config = new HashMap<>();
+  static {
+    config.put("node_keys_indexable", IdGraph.ID);
+    config.put("node_auto_indexing", "true");
+    config.put("relationship_keys_indexable", IdGraph.ID);
+    config.put("relationship_auto_indexing", "true");
+  }
+
+
     if (!true) {
       Neo4jGraph baseGraph = new Neo4jGraph(storeDir, config);
       log.error("indices: " + baseGraph.getIndices());
@@ -217,7 +219,7 @@ public class Neo4jBatchPopulator implements Populator {
       baseGraph.shutdown();
     }
     if (!true) {
-      Neo4jGraph baseGraph = new Neo4jGraph(storeDir/*, config*/);
+      Neo4jGraph baseGraph = new Neo4jGraph(storeDir, config);
       log.error("indices: " + baseGraph.getIndices());
       log.error("1 node indexedKeys=" + baseGraph.getIndexedKeys(Vertex.class));
       log.error("1 edge indexedKeys=" + baseGraph.getIndexedKeys(Edge.class));
@@ -236,7 +238,7 @@ public class Neo4jBatchPopulator implements Populator {
       log.warn("3: " + idGraph.getEdge("phone:512-351-5576.9>phone:512-291-3791.10@@6.11.2015Z09:10:00Z"));
       log.warn("A: " + idGraph.getVertex("email:dnlam@arl.utexas"));
       idGraph.shutdown();
-    }
+    }*/
   }
 
   private void importEdges(BatchInserter graph, Direction direction, long newVLongId, GraphRecord gr) {

@@ -40,7 +40,7 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
   // Ideally, this should be persisted with the graphstore but don't know how. 
   // http://stackoverflow.com/questions/21368277/neo4j-automatic-indexing-on-batch-execution
   // http://blog.armbruster-it.de/2013/12/indexing-in-neo4j-an-overview/
-  public static Configuration OPEN_AFTER_BATCH_INSERT_CONFIG=new BaseConfiguration();
+  private static Configuration OPEN_AFTER_BATCH_INSERT_CONFIG=new BaseConfiguration();
   static {
     OPEN_AFTER_BATCH_INSERT_CONFIG.setProperty("node_keys_indexable", IdGraph.ID );
     OPEN_AFTER_BATCH_INSERT_CONFIG.setProperty("node_auto_indexing", "true" );
@@ -79,19 +79,25 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
     // Set other settings using prefix "blueprints.neo4j.conf"
     conf.setProperty("blueprints.neo4j.directory", path);
     
-    conf.setProperty("blueprints.neo4j.conf."+OnlineBackupSettings.online_backup_enabled.name(), "false");// if true, limits number of opened Neo4j graphs 
+    conf.setProperty(CONFIG_PREFIX+OnlineBackupSettings.online_backup_enabled.name(), "false");// if true, limits number of opened Neo4j graphs 
     
     //GraphUri.printConfig(conf);
     
+    long waitTime=0;
     while(true){
       try{
+        if(waitTime>0)
+          log.info("Trying to open Neo4j graph at path={}",  conf.getProperty("blueprints.neo4j.directory"));
         IdGraph<Neo4jGraph> graph = new IdGraph<>(new Neo4jGraph(conf));
+        if(waitTime>0)
+          log.info("Done waiting time={}; opened {}", waitTime, graph);
         return graph;
       }catch(RuntimeException re){
         if(re.getCause().getCause() instanceof org.neo4j.kernel.lifecycle.LifecycleException){
           log.warn("Graph already opened; waiting for it to close: {}", gUri);
           try {
-            Thread.sleep(5000);
+            Thread.sleep(5000); // TODO: 4: sleeping may be unfair if some other Thread opens it before this wakes up.  Queue would be fair but only works within a single JVM.  
+            waitTime+=5;
           } catch (InterruptedException e) {
             e.printStackTrace();
           }

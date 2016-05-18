@@ -101,7 +101,7 @@ public final class VerticleUtils {
   private static final String YP_ADDRESS_PREFIX = "net.deelam.";
 
   public static MessageConsumer<Object> announceServiceType(Vertx vertx, String type, String serviceContactInfo){
-    log.info("Announcing service type={}: {}", type, serviceContactInfo);
+    log.info("Announcing service type={}: {} on vertx={}", type, serviceContactInfo, vertx);
     // in response to client's broadcast, notify that particular client (Vertx does not allow msg.reply())
     MessageConsumer<Object> consumer = vertx.eventBus().consumer(YP_ADDRESS_PREFIX+"clients."+type, msg ->{
       String clientAddress=(String) msg.body();
@@ -123,7 +123,7 @@ public final class VerticleUtils {
    * @return client's inbox event bus address
    */
   public synchronized static String announceClientType(Vertx vertx, String serviceType, Handler<Message<String>> serverRespHandler){
-    log.info("Announcing client of serviceType={}", serviceType);
+    log.info("Announcing client of serviceType={} on vertx={}", serviceType, vertx);
     
     vertx.eventBus().consumer(YP_ADDRESS_PREFIX+"servers."+serviceType, (Message<String> msg) ->{
       log.debug("Got server broadcast: {}", msg.body());

@@ -273,6 +273,13 @@ public class JobMarket extends AbstractVerticle {
           if (selectedJobReply.result().body() == null) {
             if (jobList.size() > 0) {
               log.info("Worker did not choose a job: {}", jobList);
+              // move worker to end of queue
+              if (!idleWorkers.remove(workerAddr)){
+                log.error("Could not remove {} from idleWorkers={}", workerAddr, idleWorkers);
+              }else{
+                if (!idleWorkers.add(workerAddr))
+                  log.error("Could not add {} to idleWorkers={}", workerAddr, idleWorkers);
+              }
             }
 
             /*          // jobItems may have changed by the time this reply is received

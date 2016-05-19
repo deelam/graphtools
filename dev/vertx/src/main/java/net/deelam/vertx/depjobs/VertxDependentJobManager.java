@@ -309,7 +309,7 @@ public class VertxDependentJobManager<T> {
       graph.commit();
     }
     waitingJobs.put(jobV.getNodeId(), job);
-    log.info("Waiting jobs: {}", waitingJobs.keySet());
+    log.info("{} Waiting jobs: {}", waitingJobs.size(), waitingJobs.keySet());
   }
   
   private boolean isJobReady(DependentJobFrame jobV) {

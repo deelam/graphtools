@@ -295,7 +295,7 @@ public class JobMarket extends AbstractVerticle {
       } else if (selectedJobReply.succeeded()) {
         if (selectedJobReply.result().body() == null) {
           /*if (jobList.size() > 0) */ {
-            log.info("Worker {} did not choose a job: {}", workerAddr, toString(jobList));
+            log.debug("Worker {} did not choose a job: {}", workerAddr, toString(jobList));
 
             // jobItems may have changed by the time this reply is received
             if (jobAdded) {

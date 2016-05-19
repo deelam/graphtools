@@ -259,24 +259,26 @@ public class JobMarket extends AbstractVerticle {
   private boolean isNegotiating=false; 
   private void asyncNegotiateJobWithNextIdleWorker() {
     if(!isNegotiating){
-      isNegotiating=true; // make sure all code paths reset this to false
+      final JsonArray jobList = getAvailableJobs();
+      if(jobList.size()==0){  // no jobs available
+        return;
+      }
+      
       String idleWorker = Iterables.getFirst(idleWorkers, null);
+      if (idleWorker == null){ // no workers available
+        return;
+      }
+      
       log.info("Negotiating jobs with {}, idleWorkers={}", idleWorker, idleWorkers);
-      if (idleWorker == null) // no workers available
-        isNegotiating=false;
-      else
-        asyncSendJobsTo(idleWorker);
+      isNegotiating=true; // make sure all code paths reset this to false
+      asyncSendJobsTo(idleWorker, jobList);
     }
   }
 
   private boolean jobAdded=false; 
-  private void asyncSendJobsTo(final String workerAddr) {
-    final JsonArray jobList = getAvailableJobs();
+  private void asyncSendJobsTo(final String workerAddr, final JsonArray jobList) {
     jobAdded=false;
     log.debug("Sending to {} available jobs={}", workerAddr, jobList);
-    if(jobList.size()==0){  // no jobs available
-      isNegotiating=false;
-    } else {
       vertx.eventBus().send(workerAddr, jobList, (AsyncResult<Message<JsonObject>> selectedJobReply) -> {
         //log.debug("reply from worker={}", selectedJobReply.result().headers().get(WORKER_ADDRESS));
         boolean negotiateWithNextIdle=true;
@@ -294,7 +296,7 @@ public class JobMarket extends AbstractVerticle {
               // jobItems may have changed by the time this reply is received
               if (jobAdded) {
                 log.info("jobList has since changed; sending updated jobList to {}", workerAddr);
-                asyncSendJobsTo(workerAddr);
+                asyncSendJobsTo(workerAddr, getAvailableJobs());
                 negotiateWithNextIdle=false; // still negotiating with current idleWorker
               } else {
                 log.info("Moving idleWorker to pickyWorkers queue: {}", workerAddr);
@@ -312,11 +314,10 @@ public class JobMarket extends AbstractVerticle {
         }
         
         if(negotiateWithNextIdle){
-          isNegotiating=false;
+          isNegotiating=false; // close current negotiation
           asyncNegotiateJobWithNextIdleWorker();
         }
       });
-    }
   }
 
   private String toString(JsonArray jobList) {

@@ -24,7 +24,7 @@ public class ConfidenceGraphTest {
   GraphUri guri;
   @Before
   public void setUp() throws Exception {
-    guri=new GraphUri("tinker:");
+    guri=new GraphUri("tinker:/");
   }
 
   @After

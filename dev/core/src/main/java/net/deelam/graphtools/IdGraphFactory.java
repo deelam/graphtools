@@ -36,13 +36,7 @@ public interface IdGraphFactory {
    * @throws IOException 
    */
   public void backup(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException;
-  
-  // used by PondVerticle
-  
-  default public BiConsumer<URI, File> getSerializer(){return null;}
-
-  default public BiConsumer<Path, File> getDeserializer(){return null;}
-  
+    
   /**
    * 
    * @param gUri

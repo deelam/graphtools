@@ -1,16 +1,9 @@
 package net.deelam.vertx.pool;
 
-import java.io.*;
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.function.BiConsumer;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
@@ -45,6 +38,8 @@ public class PondVerticleNeo4jGraphTest {
     
     final String svcType;
     String pondAddr;
+    
+    String resourceUri;
     @Override
     public void start() throws Exception {
       VerticleUtils.announceClientType(vertx, svcType, msg->{
@@ -53,20 +48,29 @@ public class PondVerticleNeo4jGraphTest {
       });
       
       vertx.eventBus().consumer(deploymentID(), msg->{
-        log.info(svcType+": Got it! {}", msg.body());
+        resourceUri = (String) msg.body();
+        log.info(svcType+": Got it! {}", resourceUri);
       });
     }
 
-    public void add(){
-      vertx.eventBus().send(pondAddr+ADDR.ADD, RESOURCE_URI);
+    public void add(String resourceUri){
+      vertx.eventBus().send(pondAddr+ADDR.ADD, resourceUri);
     }
 
-    public void checkout(){
+    public void checkout(String resourceUri){
       JsonObject requestMsg = new JsonObject()
-          .put("appAddr", deploymentID())
-          .put("resourceUri", RESOURCE_URI);
+          .put(PondVerticle.CLIENT_ADDR, deploymentID())
+          .put(PondVerticle.RESOURCE_URI, resourceUri);
 
       vertx.eventBus().send(pondAddr+ADDR.CHECKOUT, requestMsg);
+    }
+    
+    public void checkin(String resourceUri){
+      JsonObject requestMsg = new JsonObject()
+          .put(PondVerticle.CLIENT_ADDR, deploymentID())
+          .put(PondVerticle.RESOURCE_URI, resourceUri);
+
+      vertx.eventBus().send(pondAddr+ADDR.CHECKIN, requestMsg);
     }
   }
 
@@ -86,8 +90,8 @@ public class PondVerticleNeo4jGraphTest {
     pond2 = new PondVerticle(svcType2, 8002);
     vertx.deployVerticle(pond2, deployHandler);
     
-    BiConsumer<URI, File> serializer=new IdGraphFactoryNeo4j().getSerializer();
-    BiConsumer<Path, File> deserializer=new IdGraphFactoryNeo4j().getDeserializer();
+    PondVerticle.Serializer serializer = SerDeserUtils.createGraphUriSerializer();
+    PondVerticle.Deserializer deserializer=SerDeserUtils.createGraphUriDeserializer();
     pond1.register("neo4j", serializer, deserializer);
     pond2.register("neo4j", serializer, deserializer);
     
@@ -113,13 +117,19 @@ public class PondVerticleNeo4jGraphTest {
     guri.openIdGraph();
     guri.shutdown();
     
-    client1.add();
+    client1.add(RESOURCE_URI);
     
-    client1.checkout();
+    client1.checkout(RESOURCE_URI);
     
-    client2.checkout();
     
-    Thread.sleep(5000);
+    client2.checkout(RESOURCE_URI);
+
+    Thread.sleep(2000);
+
+    client1.checkin(client1.resourceUri);
+    client2.checkin(client2.resourceUri);
+
+    Thread.sleep(3000);
   }
 
 }

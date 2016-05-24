@@ -34,23 +34,28 @@ public class PondVerticleTest {
   PondVerticle pond1, pond2;
   Client client1, client2;
 
-  private BiConsumer<URI, File> serializer=(URI uri, File serFile)->{
+
+  private PondVerticle.Serializer serializer=(URI origUri, String localPondDir)->{
+    File serFile=new File(localPondDir, origUri.getPath());
     try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(serFile))) {
       oos.writeObject("Hey there");
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+    return serFile.toPath();
   };
 
-  private BiConsumer<Path, File> deserializer=(Path serFile, File outFile)->{
-    try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(serFile.toFile()))) {
+  private PondVerticle.Deserializer deserializer=(URI origUri, Path localSerializedFile, String localPondDir)->{
+    File serFile = new File(localPondDir, origUri.getPath());
+    try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(localSerializedFile.toFile()))) {
       Object obj=ois.readObject();
-      try (FileWriter w = new FileWriter(outFile)) {
+      try (FileWriter w = new FileWriter(serFile)) {
         w.append(obj.toString());
       }
     } catch (IOException | ClassNotFoundException e) {
       throw new RuntimeException(e);
     }
+    return serFile.toURI();
   };
 
   @RequiredArgsConstructor

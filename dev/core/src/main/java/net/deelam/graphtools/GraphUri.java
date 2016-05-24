@@ -266,14 +266,6 @@ public class GraphUri {
   public PropertyMerger createPropertyMerger() {
     return factory.createPropertyMerger();
   }
-  
-  public BiConsumer<URI, File> getSerializer(){
-    return factory.getSerializer();
-  }
-
-  public BiConsumer<Path, File> getDeserializer(){
-    return factory.getDeserializer();
-  }
 
 // use GraphUtils.addMetaData() instead
 //  public String[] getVertexTypes() {

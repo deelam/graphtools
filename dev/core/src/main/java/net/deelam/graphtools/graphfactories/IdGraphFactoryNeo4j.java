@@ -3,11 +3,9 @@
  */
 package net.deelam.graphtools.graphfactories;
 
-import java.io.*;
-import java.net.URI;
-import java.nio.file.Path;
+import java.io.File;
+import java.io.IOException;
 import java.util.Iterator;
-import java.util.function.BiConsumer;
 
 import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.commons.configuration.Configuration;
@@ -24,7 +22,6 @@ import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.IdGraphFactory;
 import net.deelam.graphtools.JsonPropertyMerger;
 import net.deelam.graphtools.PropertyMerger;
-import net.deelam.graphtools.utils.TarGzipUtils;
 
 /**
  * @author deelam
@@ -33,10 +30,13 @@ import net.deelam.graphtools.utils.TarGzipUtils;
 @Slf4j
 public class IdGraphFactoryNeo4j implements IdGraphFactory {
 
+  @Getter
+  private static final String scheme = "neo4j";
+  
   private static final String CONFIG_PREFIX = "blueprints.neo4j.conf.";
 
   public static void register() {
-    GraphUri.register("neo4j", new IdGraphFactoryNeo4j());
+    GraphUri.register(scheme, new IdGraphFactoryNeo4j());
   }
   
   // Pass this to GraphUri on graphs that were built using BatchInserter.  
@@ -185,23 +185,4 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
     return new JsonPropertyMerger();
   }
   
-  /// 
-  
-  @Getter
-  private BiConsumer<URI, File> serializer=(URI uri, File serFile)->{
-    try{
-      TarGzipUtils.compressDirectory(new GraphUri(uri.toString()).getUriPath(), serFile.getAbsolutePath());
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  };
-
-  @Getter
-  private BiConsumer<Path, File> deserializer=(Path serFile, File outFile)->{
-    try{
-      TarGzipUtils.uncompressDirectory(serFile.toAbsolutePath().toString(), outFile.getAbsolutePath(), false);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  };
 }

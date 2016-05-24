@@ -45,8 +45,10 @@ public final class SerDeserUtils {
     String path=gUri.getUriPath();
     if(path.startsWith("./"))
       path=path.substring(2);
-    return resourceId.getScheme() + "-" + path.replace('/', '_')
-        + "-" + System.currentTimeMillis();
+    Integer version = PondVerticle.getVersion(resourceId);
+    return resourceId.getScheme() + "-" + path.replace('/', '_').replace('?', '_')
+        + ((version==null)?"-":"-" + version + "-")
+        + System.currentTimeMillis();
   }
 
 }

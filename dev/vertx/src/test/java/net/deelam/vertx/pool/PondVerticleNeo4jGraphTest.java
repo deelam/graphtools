@@ -66,11 +66,14 @@ public class PondVerticleNeo4jGraphTest {
     }
     
     public void checkin(String resourceUri){
+      if(resourceUri==null)
+        log.error("Didn't get resource yet!");
       JsonObject requestMsg = new JsonObject()
           .put(PondVerticle.CLIENT_ADDR, deploymentID())
           .put(PondVerticle.RESOURCE_URI, resourceUri);
 
       vertx.eventBus().send(pondAddr+ADDR.CHECKIN, requestMsg);
+      resourceUri=null;
     }
   }
 
@@ -85,9 +88,9 @@ public class PondVerticleNeo4jGraphTest {
       log.info("Async.complete " + async.count());
     };
 
-    pond1 = new PondVerticle(svcType1, 8001);
+    pond1 = new PondVerticle(svcType1);
     vertx.deployVerticle(pond1, deployHandler);
-    pond2 = new PondVerticle(svcType2, 8002);
+    pond2 = new PondVerticle(svcType2);
     vertx.deployVerticle(pond2, deployHandler);
     
     PondVerticle.Serializer serializer = SerDeserUtils.createGraphUriSerializer();
@@ -111,15 +114,24 @@ public class PondVerticleNeo4jGraphTest {
   }
 
   @Test
-  public void test() throws InterruptedException {
+  public void testVersions() throws InterruptedException {
     IdGraphFactoryNeo4j.register();
     GraphUri guri=new GraphUri(RESOURCE_URI);
     guri.openIdGraph();
     guri.shutdown();
     
+    String RESOURCE_URI2=RESOURCE_URI+"?"+PondVerticle.VERSION_PARAM+"=2";
+    GraphUri guri2=new GraphUri(RESOURCE_URI2);
+    guri2.openIdGraph();
+    guri2.shutdown();
+    //Thread.sleep(2000);
+    
     client1.add(RESOURCE_URI);
     
     client1.checkout(RESOURCE_URI);
+
+    client1.add(RESOURCE_URI2);
+    client2.checkout(RESOURCE_URI2);
     
     
     client2.checkout(RESOURCE_URI);
@@ -128,8 +140,25 @@ public class PondVerticleNeo4jGraphTest {
 
     client1.checkin(client1.resourceUri);
     client2.checkin(client2.resourceUri);
-
-    Thread.sleep(3000);
   }
 
+  @Test
+  public void testVersionOverride() throws InterruptedException {
+    IdGraphFactoryNeo4j.register();
+    GraphUri guri=new GraphUri(RESOURCE_URI);
+    guri.openIdGraph();
+    guri.shutdown();
+    
+    client1.add(RESOURCE_URI);
+    client1.checkout(RESOURCE_URI);
+    client2.checkout(RESOURCE_URI);
+    Thread.sleep(1000);
+    //client1.checkin(client1.resourceUri);
+
+    client1.add(RESOURCE_URI);
+    client1.checkout(RESOURCE_URI);
+    Thread.sleep(1000);
+    client1.checkin(client1.resourceUri);
+    
+  }
 }

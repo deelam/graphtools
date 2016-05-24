@@ -31,7 +31,7 @@ public class PondVerticleNeo4jGraphTest {
   PondVerticle pond1, pond2;
   Client client1, client2;
 
-  private static final String RESOURCE_URI = "neo4j:///./hiThere";
+  private static final String RESOURCE_URI = "neo4j:///./target/hiThere";
   
   @RequiredArgsConstructor
   public static class Client extends AbstractVerticle {

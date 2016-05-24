@@ -42,7 +42,10 @@ public final class SerDeserUtils {
   
   private static String getSerializedFilename(URI resourceId) {
     GraphUri gUri=new GraphUri(resourceId.toString());
-    return resourceId.getScheme() + "_" + gUri.getUriPath().replace('/', '-')
+    String path=gUri.getUriPath();
+    if(path.startsWith("./"))
+      path=path.substring(2);
+    return resourceId.getScheme() + "-" + path.replace('/', '_')
         + "-" + System.currentTimeMillis();
   }
 

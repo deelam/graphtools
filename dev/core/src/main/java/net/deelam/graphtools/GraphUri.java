@@ -3,13 +3,16 @@
  */
 package net.deelam.graphtools;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 import lombok.Getter;
 import lombok.ToString;
@@ -63,6 +66,7 @@ public class GraphUri {
   }
 
   public GraphUri(String uri, Configuration config) {
+    URI.create(uri);
     Preconditions.checkNotNull(uri, "uri parameter cannot be null");
     origUri=uri;
     int colonIndx = uri.indexOf(':');
@@ -261,6 +265,14 @@ public class GraphUri {
 
   public PropertyMerger createPropertyMerger() {
     return factory.createPropertyMerger();
+  }
+  
+  public BiConsumer<URI, File> getSerializer(){
+    return factory.getSerializer();
+  }
+
+  public BiConsumer<Path, File> getDeserializer(){
+    return factory.getDeserializer();
   }
 
 // use GraphUtils.addMetaData() instead

@@ -29,7 +29,7 @@ public class GraphUriTest {
 
   @Test
   public void testInMemGraph() throws IOException {
-    GraphUri gUri = new GraphUri("tinker:");
+    GraphUri gUri = new GraphUri("tinker:///");
     IdGraph<TinkerGraph> graph = gUri.createNewIdGraph(true);
     graph.shutdown();
   }

@@ -3,7 +3,11 @@
  */
 package net.deelam.graphtools;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Path;
+import java.util.function.BiConsumer;
 
 import com.tinkerpop.blueprints.KeyIndexableGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
@@ -32,6 +36,12 @@ public interface IdGraphFactory {
    * @throws IOException 
    */
   public void backup(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException;
+  
+  // used by PondVerticle
+  
+  default public BiConsumer<URI, File> getSerializer(){return null;}
+
+  default public BiConsumer<Path, File> getDeserializer(){return null;}
   
   /**
    * 

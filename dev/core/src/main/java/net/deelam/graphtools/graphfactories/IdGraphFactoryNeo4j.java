@@ -3,18 +3,13 @@
  */
 package net.deelam.graphtools.graphfactories;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.net.URI;
+import java.nio.file.Path;
 import java.util.Iterator;
-
-import lombok.extern.slf4j.Slf4j;
-import net.deelam.graphtools.GraphUri;
-import net.deelam.graphtools.IdGraphFactory;
-import net.deelam.graphtools.JsonPropertyMerger;
-import net.deelam.graphtools.PropertyMerger;
+import java.util.function.BiConsumer;
 
 import org.apache.commons.configuration.BaseConfiguration;
-import org.apache.commons.configuration.CompositeConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.io.FileUtils;
 import org.neo4j.backup.OnlineBackupSettings;
@@ -22,6 +17,14 @@ import org.neo4j.backup.OnlineBackupSettings;
 import com.google.common.collect.Iterators;
 import com.tinkerpop.blueprints.impls.neo4j.Neo4jGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
+
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import net.deelam.graphtools.GraphUri;
+import net.deelam.graphtools.IdGraphFactory;
+import net.deelam.graphtools.JsonPropertyMerger;
+import net.deelam.graphtools.PropertyMerger;
+import net.deelam.graphtools.utils.TarGzipUtils;
 
 /**
  * @author deelam
@@ -109,7 +112,7 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
     }
   }
   
-  public static void main(String[] args) throws InterruptedException {
+  public static void main1(String[] args) throws InterruptedException {
     IdGraphFactoryNeo4j.register();
     
     new Thread(new Runnable(){
@@ -181,4 +184,24 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
   public PropertyMerger createPropertyMerger() {
     return new JsonPropertyMerger();
   }
+  
+  /// 
+  
+  @Getter
+  private BiConsumer<URI, File> serializer=(URI uri, File serFile)->{
+    try{
+      TarGzipUtils.compressDirectory(new GraphUri(uri.toString()).getUriPath(), serFile.getAbsolutePath());
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  };
+
+  @Getter
+  private BiConsumer<Path, File> deserializer=(Path serFile, File outFile)->{
+    try{
+      TarGzipUtils.uncompressDirectory(serFile.toAbsolutePath().toString(), outFile.getAbsolutePath(), false);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  };
 }

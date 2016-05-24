@@ -1,5 +1,7 @@
 package net.deelam.vertx;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -140,5 +142,22 @@ public final class VerticleUtils {
     return myAddress;
   }
 
+  ////
+  
+  public static String getConfig(AbstractVerticle v, String currVal, String configKey, String defaultVal) {
+    final String configVal = v.config().getString(configKey);
+    if (currVal == null) {
+      currVal = configVal;
+      if (currVal == null) {
+        currVal = defaultVal;
+        log.info("Using defaultValue={} for config={}", defaultVal, configKey);
+      }
+    } else if (configVal != null) {
+      log.warn("Ignoring {} configuration since already set: {}", configKey, currVal);
+    }
+
+    checkNotNull(currVal, "Must set '" + configKey + "' config since not provided in constructor!");
+    return currVal;
+  }
 }
 

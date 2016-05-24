@@ -9,6 +9,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -33,47 +34,21 @@ public class PondVerticleNeo4jGraphTest {
 
   private static final String RESOURCE_URI = "neo4j:///./target/hiThere";
   
-  @RequiredArgsConstructor
-  public static class Client extends AbstractVerticle {
-    
-    final String svcType;
-    String pondAddr;
-    
+  public static class Client extends ResourcePoolClient {
     String resourceUri;
-    @Override
-    public void start() throws Exception {
-      VerticleUtils.announceClientType(vertx, svcType, msg->{
-        pondAddr=msg.body();
-        log.info(svcType+": found pond={}", pondAddr);
+    
+    public Client(String pondId) {
+      super(pondId);
+      setResourceConsumer(uri->{
+        resourceUri = uri;
       });
-      
-      vertx.eventBus().consumer(deploymentID(), msg->{
-        resourceUri = (String) msg.body();
-        log.info(svcType+": Got it! {}", resourceUri);
-      });
-    }
-
-    public void add(String resourceUri){
-      vertx.eventBus().send(pondAddr+ADDR.ADD, resourceUri);
-    }
-
-    public void checkout(String resourceUri){
-      JsonObject requestMsg = new JsonObject()
-          .put(PondVerticle.CLIENT_ADDR, deploymentID())
-          .put(PondVerticle.RESOURCE_URI, resourceUri);
-
-      vertx.eventBus().send(pondAddr+ADDR.CHECKOUT, requestMsg);
     }
     
     public void checkin(String resourceUri){
-      if(resourceUri==null)
+      if(this.resourceUri==null)
         log.error("Didn't get resource yet!");
-      JsonObject requestMsg = new JsonObject()
-          .put(PondVerticle.CLIENT_ADDR, deploymentID())
-          .put(PondVerticle.RESOURCE_URI, resourceUri);
-
-      vertx.eventBus().send(pondAddr+ADDR.CHECKIN, requestMsg);
-      resourceUri=null;
+      super.checkin(resourceUri);
+      this.resourceUri=null;
     }
   }
 
@@ -114,7 +89,7 @@ public class PondVerticleNeo4jGraphTest {
   }
 
   @Test
-  public void testVersions() throws InterruptedException {
+  public void testVersions(TestContext context) throws InterruptedException {
     IdGraphFactoryNeo4j.register();
     GraphUri guri=new GraphUri(RESOURCE_URI);
     guri.openIdGraph();
@@ -143,7 +118,7 @@ public class PondVerticleNeo4jGraphTest {
   }
 
   @Test
-  public void testVersionOverride() throws InterruptedException {
+  public void testVersionOverride(TestContext context) throws InterruptedException {
     IdGraphFactoryNeo4j.register();
     GraphUri guri=new GraphUri(RESOURCE_URI);
     guri.openIdGraph();
@@ -159,6 +134,5 @@ public class PondVerticleNeo4jGraphTest {
     client1.checkout(RESOURCE_URI);
     Thread.sleep(1000);
     client1.checkin(client1.resourceUri);
-    
   }
 }

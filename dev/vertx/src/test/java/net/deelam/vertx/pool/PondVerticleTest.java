@@ -3,25 +3,19 @@ package net.deelam.vertx.pool;
 import java.io.*;
 import java.net.URI;
 import java.nio.file.Path;
-import java.util.function.BiConsumer;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.deelam.vertx.VerticleUtils;
-import net.deelam.vertx.pool.PondVerticle.ADDR;
 
 @RunWith(VertxUnitRunner.class)
 @Slf4j
@@ -32,7 +26,7 @@ public class PondVerticleTest {
   static final String svcType2 = "dnlam-pcB.pool";
 
   PondVerticle pond1, pond2;
-  Client client1, client2;
+  ResourcePoolClient client1, client2;
 
 
   private PondVerticle.Serializer serializer=(URI origUri, String localPondDir)->{
@@ -58,35 +52,6 @@ public class PondVerticleTest {
     return serFile.toURI();
   };
 
-  @RequiredArgsConstructor
-  public static class Client extends AbstractVerticle {
-    final String svcType;
-    String pondAddr;
-    @Override
-    public void start() throws Exception {
-      VerticleUtils.announceClientType(vertx, svcType, msg->{
-        pondAddr=msg.body();
-        log.info(svcType+": found pond={}", pondAddr);
-      });
-      
-      vertx.eventBus().consumer(deploymentID(), msg->{
-        log.info(svcType+": Got it! {}", msg.body());
-      });
-    }
-
-    public void add(){
-      vertx.eventBus().send(pondAddr+ADDR.ADD, "string:///hiThere");
-    }
-
-    public void checkout(){
-      JsonObject requestMsg = new JsonObject()
-          .put("appAddr", deploymentID())
-          .put("resourceUri", "string:///hiThere");
-
-      vertx.eventBus().send(pondAddr+ADDR.CHECKOUT, requestMsg);
-    }
-  }
-
   @Before
   public void before(final TestContext context) {
     vertx = Vertx.vertx();
@@ -106,10 +71,12 @@ public class PondVerticleTest {
     pond1.register("string", serializer, deserializer);
     pond2.register("string", serializer, deserializer);
     
-    client1=new Client(svcType1);
+    client1=new ResourcePoolClient(svcType1);
+    client1.setResourceConsumer(msg -> {});
     vertx.deployVerticle(client1, deployHandler);
 
-    client2=new Client(svcType2);
+    client2=new ResourcePoolClient(svcType2);
+    client1.setResourceConsumer(msg -> {});
     vertx.deployVerticle(client2, deployHandler);
 
     async.await(30000); // fails when timeout occurs
@@ -123,13 +90,13 @@ public class PondVerticleTest {
 
   @Test
   public void test() throws InterruptedException {
-    client1.add();
+    client1.add("string:///hiThere");
     
-    client1.checkout();
+    client1.checkout("string:///hiThere");
     
-    client2.checkout();
+    client2.checkout("string:///hiThere");
     
-    Thread.sleep(5000);
+    //Thread.sleep(1000);
   }
 
 }

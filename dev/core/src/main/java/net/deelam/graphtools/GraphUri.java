@@ -259,7 +259,7 @@ public class GraphUri {
 
   public static void register(String scheme, IdGraphFactory factory) {
     if(graphFtry.containsKey(scheme))
-      log.info("Replacing existing IdGraphFactory for {} with {}", scheme, factory);
+      log.warn("Replacing existing IdGraphFactory for {} with {}", scheme, factory);
     graphFtry.put(scheme, factory);
     log.info("Registering {} with {}", scheme, factory);
   }

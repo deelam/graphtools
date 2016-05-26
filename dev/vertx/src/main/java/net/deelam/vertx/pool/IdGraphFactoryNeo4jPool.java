@@ -5,8 +5,6 @@ package net.deelam.vertx.pool;
 
 import java.io.IOException;
 
-import com.google.inject.Inject;
-import com.google.inject.Injector;
 import com.tinkerpop.blueprints.impls.neo4j.Neo4jGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
@@ -24,11 +22,6 @@ import net.deelam.graphtools.graphfactories.IdGraphFactoryNeo4j;
 public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
 
   private final ResourcePoolClient poolClient;
-  
-  @Deprecated
-  public static void register() {
-    throw new UnsupportedOperationException("Use register(Injector injector) instead!"); 
-  }
   
   private boolean isReadOnly(GraphUri gUri) {
     return gUri.getConfig().getBoolean(IdGraphFactory.READONLY, false);
@@ -65,11 +58,15 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
     }
   }
   
-  public static void register(Injector injector) {
-    GraphUri.register(injector.getInstance(IdGraphFactoryNeo4jPool.class));
+  @Deprecated
+  public static void register() {
+    throw new UnsupportedOperationException("Use register(ResourcePoolClient client) instead!"); 
+  }
+  
+  public static void register(ResourcePoolClient client) {
+    GraphUri.register(new IdGraphFactoryNeo4jPool(client));
   }
 
-  @Inject
   public IdGraphFactoryNeo4jPool(ResourcePoolClient client) {
     super();
     poolClient=client;

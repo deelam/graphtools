@@ -66,7 +66,8 @@ public class ResourcePoolClient extends AbstractVerticle {
     vertx.eventBus().send(pondAddr+ADDR.ADD, resourceUri);
   }
 
-  public void checkout(String resourceUri){
+  // use synchronized version instead, otherwise this will result in ERROR log "Cannot find {origUri} in {waitingObjs}"
+  protected void checkout(String resourceUri){
     JsonObject requestMsg = new JsonObject()
         .put(PondVerticle.CLIENT_ADDR, deploymentID())
         .put(PondVerticle.RESOURCE_URI, resourceUri);
@@ -95,7 +96,7 @@ public class ResourcePoolClient extends AbstractVerticle {
     synchronized(syncToken){
       checkout(resourceUri); // async; can finish at any time
       try {
-        log.info("Waiting for resource pool to get graph: "+resourceUri);
+        log.info("Waiting for pool to get resource="+resourceUri);
         syncToken.wait(); // wait for response
       } catch (InterruptedException e) {
         e.printStackTrace();

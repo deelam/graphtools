@@ -138,13 +138,13 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
   @Override
   protected IdGraph<?> openNeo4jGraph(GraphUri gUri) {
     if(isReadOnly(gUri)){
-      poolClient.checkout(gUri.asString());
       gUri.getConfig().clearProperty(BLUEPRINTS_NEO4J_DIRECTORY); // to ensure we don't open original graph
       synchronized(waitingGraphUris){
-        log.info("Putting {} into waitingGraphUris=", gUri, waitingGraphUris.baseMap());
+        log.info("Putting {} into waitingGraphUris={}", gUri.asString(), waitingGraphUris.baseMap());
         waitingGraphUris.put(gUri.asString(), gUri);
       }
       synchronized(gUri){
+        poolClient.checkout(gUri.asString()); // async; can finish at any time
         try {
           log.info("Waiting for resource pool to get graph: "+gUri);
           gUri.wait(); // wait for response

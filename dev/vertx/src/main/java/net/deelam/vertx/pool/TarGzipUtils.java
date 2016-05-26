@@ -16,32 +16,52 @@ import lombok.extern.slf4j.Slf4j;
 public class TarGzipUtils {
   
   public static void compressDirectory(String dirPath, String tarGzPath) throws IOException {
+    compressDirectory(dirPath, tarGzPath, null);
+  }
+  public static void compressDirectory(String dirPath, String tarGzPath, String relativeDir) throws IOException {
     File file = new File(tarGzPath);
     if(file.exists())
       throw new IllegalArgumentException("File already exists: "+file.getAbsolutePath());
     log.info("compressDirectory {} {}", dirPath, tarGzPath);
     try (TarArchiveOutputStream tOut = new TarArchiveOutputStream(
         new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(file))))) {
-      addFileToTarGz(tOut, new File(dirPath), "");
+      addFileToTarGz(tOut, new File(dirPath), "", relativeDir);
       tOut.finish();
     }
   }
 
-  private static void addFileToTarGz(TarArchiveOutputStream tOut, File f, String base)
+  private static void addFileToTarGz(TarArchiveOutputStream tOut, File f, String entryNameBaseDir, String relativeDir)
       throws IOException {
-    String entryName = base + f.getName();
-    TarArchiveEntry tarEntry = new TarArchiveEntry(f, entryName);
-    tOut.putArchiveEntry(tarEntry);
+    String actualEntryName = entryNameBaseDir + f.getName();
+    String entryName = actualEntryName;
+    if(relativeDir!=null){
+      if(entryName.startsWith(relativeDir))
+        entryName=entryName.substring(relativeDir.length());
+      else if(relativeDir.startsWith(entryName))
+        entryName="";
+      else {
+        log.warn("Excluding file {} because it is not in relativeDir={}",actualEntryName,relativeDir);
+        entryName="";
+      }
+    }
+    
+    if(entryName.length()>0){
+      TarArchiveEntry tarEntry = new TarArchiveEntry(f, entryName);
+      tOut.putArchiveEntry(tarEntry);
+    }
 
     if (f.isFile()) {
-      IOUtils.copy(new FileInputStream(f), tOut);
-      tOut.closeArchiveEntry();
+      if(entryName.length()>0){
+        IOUtils.copy(new FileInputStream(f), tOut);
+        tOut.closeArchiveEntry();
+      }
     } else {
-      tOut.closeArchiveEntry();
+      if(entryName.length()>0)
+        tOut.closeArchiveEntry();
       File[] children = f.listFiles();
       if (children != null) {
         for (File child : children) {
-          addFileToTarGz(tOut, child.getAbsoluteFile(), entryName + "/");
+          addFileToTarGz(tOut, child.getAbsoluteFile(), actualEntryName + "/", relativeDir);
         }
       }
     }
@@ -75,8 +95,11 @@ public class TarGzipUtils {
   
 
   public static void main(String[] args) throws IOException {
-    compressDirectory("target/classes", "classes.tgz");
-    uncompressDirectory("classes.tgz", ".", false);
+    //compressDirectory("target/classes/net", "classes1.tgz");
+    String path="target/classes";
+    compressDirectory(path, "classes.tgz", new File(path).getName());
+    //compressDirectory(path, "classes.tgz", new File(path).getName()+"/net");
+    //uncompressDirectory("classes.tgz", "classes", false);
   }
 }
 

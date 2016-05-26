@@ -52,7 +52,7 @@ public class GraphCopier implements AutoCloseable {
       final String sourceGraphUri = getSourceGraphUri();
       if(sourceGraphUri==null)
         throw new IllegalStateException(SRC_GRAPHURI+" property value of MetaData node is null!");
-      srcGraphUri=new GraphUri(sourceGraphUri);
+      srcGraphUri=new GraphUri(sourceGraphUri).readOnly();
     } 
     
     if (srcGraphUri.isOpen()) {

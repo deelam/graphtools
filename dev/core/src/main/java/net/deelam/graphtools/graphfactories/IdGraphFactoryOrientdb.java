@@ -31,7 +31,12 @@ public class IdGraphFactoryOrientdb implements IdGraphFactory {
   private static final String CONFIG_PREFIX = "blueprints.orientdb.";
 
   public static void register() {
-    GraphUri.register("orientdb", new IdGraphFactoryOrientdb());
+    GraphUri.register(new IdGraphFactoryOrientdb());
+  }
+  
+  @Override
+  public String getScheme() {
+    return "orientdb";
   }
 
   @SuppressWarnings("unchecked")
@@ -39,7 +44,7 @@ public class IdGraphFactoryOrientdb implements IdGraphFactory {
   public IdGraph<OrientGraph> open(GraphUri gUri) {
     Configuration conf=gUri.getConfig();
     /// copy properties to new keys that OrientGraph looks for
-    String[] keys = Iterators.toArray(conf.getKeys(), String.class);
+    String[] keys = (String[]) Iterators.toArray(conf.getKeys(), String.class);
     for (String key : keys) {
       if (key.startsWith(CONFIG_PREFIX))
         continue;

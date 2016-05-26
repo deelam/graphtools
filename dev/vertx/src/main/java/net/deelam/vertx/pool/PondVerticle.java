@@ -20,6 +20,7 @@ import org.apache.commons.io.FileUtils;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpClient;
@@ -134,16 +135,17 @@ public class PondVerticle extends AbstractVerticle {
 
   public PondVerticle(String serviceType, int restPort) {
     this.serviceType = serviceType;
-    pondDir = "pond-" + serviceType;
+    pondDir = "target/pond-" + serviceType;
     File pondDirFile = new File(pondDir);
     if (pondDirFile.exists()) {
       try {
+        log.info("Deleting directory: {}", pondDirFile);
         FileUtils.deleteDirectory(pondDirFile.getAbsoluteFile());
       } catch (IOException e) {
         log.warn("Could not delete directory: " + pondDirFile, e);
       }
     }
-    if (!pondDirFile.mkdir())
+    if (!pondDirFile.mkdirs())
       log.error("Could not create directory: {}", pondDir);
     pondDirFile.deleteOnExit(); // only deletes dir if empty
 
@@ -182,7 +184,13 @@ public class PondVerticle extends AbstractVerticle {
       if (rsrcLoc != null) {
         log.info("Overwriting existing entry: {}", rsrcLoc);
         notifyOtherPonds = true;
-        rsrcLoc.localSerializedPath.toFile().renameTo(new File(rsrcLoc.localSerializedPath + ".old"));
+        if(rsrcLoc.localSerializedPath!=null){
+          File existingFile = rsrcLoc.localSerializedPath.toFile();
+          if(existingFile.exists()){
+            log.info("Moving {} to .old", rsrcLoc.localSerializedPath);
+            existingFile.renameTo(new File(rsrcLoc.localSerializedPath + ".old"));
+          }
+        }
       }
 
       rsrcLoc = new ResourceLocation(origResourceURI, resourceId, host, host);
@@ -209,7 +217,10 @@ public class PondVerticle extends AbstractVerticle {
         ResourceLocation.Resource rsrc = getAvailableResource(rsrcLoc);
         if (rsrc == null) {
           log.info("No available resource, replicating: {}", rsrcLoc);
-          new Thread(() -> replicateResourceAndNotify(rsrcLoc, clientAddr)).start();
+          if(false)
+            replicateResourceAndNotify(rsrcLoc, clientAddr); // potentially takes too long and Vertx complains
+          else
+            new Thread(() -> replicateResourceAndNotify(rsrcLoc, clientAddr)).start(); // multiple of these threads may clash; added synchronized block in deserialize()
         } else {
           log.info("Found available resource: {}", rsrc);
           asyncSendResourceReady(clientAddr, rsrc, rsrcLoc);
@@ -328,8 +339,6 @@ public class PondVerticle extends AbstractVerticle {
       new Thread(() -> {
         try {
           serializeIfNeeded(rsrcLoc);
-          rsrcLoc.serializedMasterLocationREST =
-              URI.create("http://" + host + ":" + port + "/" + rsrcLoc.localSerializedPath);
 
           asyncRegisterWithOtherPond(rsrcLoc, requesterAddr, clientAddr);
         } catch (IOException e) {
@@ -426,21 +435,26 @@ public class PondVerticle extends AbstractVerticle {
         Serializer ser = serializers.get(rsrcLoc.resourceId.scheme);
         checkNotNull(ser, "Serializer for " + rsrcLoc.resourceId.scheme + " not registered");
         rsrcLoc.localSerializedPath = ser.apply(rsrcLoc.originalUri, pondDir);
-        log.info("Serialized uri={} to path={}", rsrcLoc.originalUri, rsrcLoc.localSerializedPath);
+        rsrcLoc.serializedMasterLocationREST =
+            URI.create("http://" + host + ":" + port + "/" + rsrcLoc.localSerializedPath);
+        
+        log.info("Serialized uri={} to path={} and url={}", rsrcLoc.originalUri, rsrcLoc.localSerializedPath, rsrcLoc.serializedMasterLocationREST);
       }
     }
   }
 
   private ResourceLocation.Resource deserialize(ResourceLocation rsrcLoc) {
-    log.info("Deserialize from file={}", rsrcLoc.localSerializedPath);
-    //File newFile = new File("resourceCopy" + (++resourceCounter)+"-"+System.currentTimeMillis());
-    // rsrcLoc.localSerializedLocation -> newURI
-    Deserializer deser = deserializers.get(rsrcLoc.resourceId.scheme);
-    checkNotNull(deser, "Deserializer for " + rsrcLoc.resourceId.scheme + " not registered");
-    URI newUri = deser.apply(rsrcLoc.originalUri, rsrcLoc.localSerializedPath, pondDir);
-    log.info("Deserialized path={} to uri={}", rsrcLoc.localSerializedPath, newUri);
-    ResourceLocation.Resource rsrc = new ResourceLocation.Resource(newUri);
-    return rsrc;
+    synchronized(rsrcLoc){ // in case multiple copies are created of the same resource, take turns
+      log.info("Deserializing from file={}", rsrcLoc.localSerializedPath);
+      //File newFile = new File("resourceCopy" + (++resourceCounter)+"-"+System.currentTimeMillis());
+      // rsrcLoc.localSerializedLocation -> newURI
+      Deserializer deser = deserializers.get(rsrcLoc.resourceId.scheme);
+      checkNotNull(deser, "Deserializer for " + rsrcLoc.resourceId.scheme + " not registered");
+      URI newUri = deser.apply(rsrcLoc.originalUri, rsrcLoc.localSerializedPath, pondDir);
+      log.info("Deserialized path={} to uri={}", rsrcLoc.localSerializedPath, newUri);
+      ResourceLocation.Resource rsrc = new ResourceLocation.Resource(newUri);
+      return rsrc;
+    }
   }
 
   private void asyncSendResourceReady(String clientAddr, ResourceLocation.Resource rsrc, ResourceLocation rLoc) {
@@ -448,7 +462,8 @@ public class PondVerticle extends AbstractVerticle {
     String uriStr = rsrc.uri.toString();
     rsrc.checkout(clientAddr);
     checkouts.put(uriStr, rLoc);
-    vertx.eventBus().send(clientAddr, uriStr);
+    DeliveryOptions delivOps=new DeliveryOptions().addHeader(ORIGINAL_URI, rLoc.originalUri.toString());
+    vertx.eventBus().send(clientAddr, uriStr, delivOps);
   }
 
   private Map<String, ResourceLocation> checkouts = new HashMap<>();

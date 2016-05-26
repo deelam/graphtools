@@ -256,12 +256,15 @@ public final class GraphUtils {
   public static void addMetaDataNode(GraphUri gUri, IdGraph<?> graph) {
     Vertex mdV = getMetaDataNode(graph);
     if (mdV == null) {
+      //log.info("Adding METADATA_VERTEX with id={} {}", METADATA_VERTEXID, toString(graph));
       mdV = graph.addVertex(METADATA_VERTEXID);
       mdV.setProperty(GRAPH_METADATA_PROP, true);
       mdV.setProperty(TIMESTAMP_PROP, new Date().toString());
       mdV.setProperty(GRAPHURI_PROP, gUri.asString());
       //      mdV.setProperty(VERTEXTYPES_PROP, gUri.getVertexTypes());
       //      mdV.setProperty(EDGELABELS_PROP, gUri.getEdgeLabels());
+      graph.commit();
+      //log.info("Added METADATA_VERTEX to {}", toString(graph));
     }
   }
 

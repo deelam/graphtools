@@ -20,18 +20,18 @@ public class ResourcePoolClient extends AbstractVerticle {
   String pondAddr;
   
   @Setter
-  Consumer<String> resourceConsumer;
+  Consumer<Message<String>> resourceConsumer;
   
   @Override
   public void start() throws Exception {
-    VerticleUtils.announceClientType(vertx, pondId, msg->{
+    VerticleUtils.announceClientType(vertx, pondId, msg ->{
       pondAddr=msg.body();
       log.info(pondId+": found pond={}", pondAddr);
     });
     
     vertx.eventBus().consumer(deploymentID(), (Message<String> msg)->{
       log.info(pondId+": Got it! {}", msg.body());
-      resourceConsumer.accept(msg.body());
+      resourceConsumer.accept(msg);
     });
   }
 

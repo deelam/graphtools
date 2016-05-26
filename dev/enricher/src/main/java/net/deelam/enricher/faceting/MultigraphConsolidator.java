@@ -243,7 +243,7 @@ public class MultigraphConsolidator implements AutoCloseable {
       graph = srcGraphs.getIfPresent(shortGraphId);
       if (graph == null) {
         try {
-          GraphUri graphUri = new GraphUri(graphId);
+          GraphUri graphUri = new GraphUri(graphId).readOnly();
           graph = graphUri.openExistingIdGraph();
           srcGraphUrisToShutdown.put(shortGraphId, graphUri); //so that graph can be closed
           addSrcGraph(graphUri, graphId, shortGraphId, graph);

@@ -35,7 +35,7 @@ public class JobWorker extends AbstractVerticle {
   @Override
   public void start() throws Exception {
     String myAddr = deploymentID();
-    log.info("JobWorker ready: myAddr={}: {}",  myAddr, this);
+    log.info("JobWorker ready: myAddr={}: {}",  myAddr, this.getClass());
     deliveryOptions = JobMarket.createWorkerHeader(myAddr);
 
     vertx.eventBus().consumer(myAddr, jobListHandler);

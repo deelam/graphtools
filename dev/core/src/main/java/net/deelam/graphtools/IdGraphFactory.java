@@ -3,11 +3,7 @@
  */
 package net.deelam.graphtools;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.function.BiConsumer;
 
 import com.tinkerpop.blueprints.KeyIndexableGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
@@ -17,6 +13,10 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
  *
  */
 public interface IdGraphFactory {
+  String READONLY = "openReadOnly";
+
+  public String getScheme();
+
   /**
    * Open existing or create a new graph
    * @param gUri

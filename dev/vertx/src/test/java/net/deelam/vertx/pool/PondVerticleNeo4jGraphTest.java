@@ -39,8 +39,12 @@ public class PondVerticleNeo4jGraphTest {
     
     public Client(String pondId) {
       super(pondId);
-      setResourceConsumer(uri->{
+      setResourceConsumer(msg->{
+        String uri=msg.body();
         resourceUri = uri;
+        GraphUri guri = new GraphUri(uri);
+        guri.openIdGraph();
+        guri.shutdown();
       });
     }
     

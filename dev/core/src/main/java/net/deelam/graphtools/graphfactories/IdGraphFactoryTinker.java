@@ -22,7 +22,12 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 public class IdGraphFactoryTinker implements IdGraphFactory {
 
   public static void register() {
-    GraphUri.register("tinker", new IdGraphFactoryTinker());
+    GraphUri.register(new IdGraphFactoryTinker());
+  }
+  
+  @Override
+  public String getScheme() {
+    return "tinker";
   }
 
   @SuppressWarnings("unchecked")

@@ -54,7 +54,12 @@ public class GraphUri {
   @Getter
   private final String scheme;
   private final URI baseUri;
-  private IdGraphFactory factory;
+  
+  public IdGraphFactory getFactory() {
+    IdGraphFactory factory = graphFtry.get(scheme);
+    Preconditions.checkNotNull(factory, "Unknown schema: " + scheme);
+    return factory;
+  }
 
   public GraphUri(String uri) {
     this(uri, new BaseConfiguration());
@@ -64,6 +69,18 @@ public class GraphUri {
   public String asString() {
     return origUri;
   }
+  
+  @Override
+  public boolean equals(Object arg) {
+    if (arg instanceof GraphUri)
+      return origUri.equals(((GraphUri) arg).origUri);
+    return false;
+  }
+  
+  @Override
+  public int hashCode() {
+    return origUri.hashCode();
+  }
 
   public GraphUri(String uri, Configuration config) {
     URI.create(uri);
@@ -72,16 +89,13 @@ public class GraphUri {
     int colonIndx = uri.indexOf(':');
     Preconditions.checkState(colonIndx>0, "Expecting something like 'tinker:' but got "+uri);
     scheme=uri.substring(0,colonIndx);
-    factory = graphFtry.get(scheme);
-    Preconditions.checkNotNull(factory, "Unknown schema: " + scheme);
-    
     baseUri=URI.create(uri.substring(colonIndx+1));
     this.config = config;
     parseUriPath(baseUri);
   }
 
   @Getter
-  private Configuration config;
+  private final Configuration config;
 
   /**
    * Open existing or create a new graph
@@ -93,7 +107,7 @@ public class GraphUri {
   }
   
   public boolean exists(){
-    return factory.exists(this);
+    return getFactory().exists(this);
   }
   
   public boolean isOpen(){
@@ -104,7 +118,7 @@ public class GraphUri {
   public IdGraph openExistingIdGraph() throws FileNotFoundException {
     checkNotOpen();
 
-    if(factory.exists(this)){
+    if(getFactory().exists(this)){
       return openIdGraph(KeyIndexableGraph.class);
     } else {
       throw new FileNotFoundException("Graph not found at "+getUriPath());
@@ -124,9 +138,9 @@ public class GraphUri {
   @SuppressWarnings("rawtypes")
   public IdGraph createNewIdGraph(boolean deleteExisting) throws IOException {
     checkNotOpen();
-    if(factory.exists(this)){
+    if(getFactory().exists(this)){
       if(deleteExisting)
-        factory.delete(this);
+        getFactory().delete(this);
       else
         throw new FileAlreadyExistsException("Graph exists at: "+getUriPath());
     }
@@ -136,8 +150,8 @@ public class GraphUri {
   
   public boolean delete() throws IOException{
     checkNotOpen();
-    if(factory.exists(this)){
-      factory.delete(this);
+    if(getFactory().exists(this)){
+      getFactory().delete(this);
       return true;
     } else {
       return false;
@@ -167,7 +181,7 @@ public class GraphUri {
   private void shutdown(IdGraph<?> graph){
     log.info("Shutting down graph={}",graph);
     try {
-      factory.shutdown(this, graph);
+      getFactory().shutdown(this, graph);
     } catch (Exception e) {
       throw new RuntimeException(e);
     } finally {
@@ -184,13 +198,12 @@ public class GraphUri {
   @SuppressWarnings("unchecked")
   public <T extends KeyIndexableGraph> IdGraph<T> openIdGraph(Class<T> baseGraphClass) {
     checkNotOpen();
-    if (config == null)
-      config = new BaseConfiguration();
     config.setProperty(URI_SCHEMA_PART, baseUri.getSchemeSpecificPart());
     parseQuery(baseUri.toString());
-    log.info("Opening graphUri={}", this);
+    log.info("Opening graphUri={} using {}", this, getFactory());
+    //printConfig(config);
     try{
-      graph = factory.open(this);
+      graph = getFactory().open(this);
       log.debug("  Opened graph={}", graph);
       GraphUtils.addMetaDataNode(this, graph);
     }catch(RuntimeException re){
@@ -200,12 +213,14 @@ public class GraphUri {
     return graph;
   }
 
-  public static void printConfig(Configuration conf) {
-    for (@SuppressWarnings("unchecked")
-    Iterator<String> itr = conf.getKeys(); itr.hasNext();) {
+  @SuppressWarnings("unchecked")
+  public static void printConfig(Configuration config) {
+    StringBuilder sb=new StringBuilder();
+    for (Iterator<String> itr = config.getKeys(); itr.hasNext();) {
       String key = itr.next();
-      System.out.println(key + "=" + conf.getString(key));
+      sb.append("\n").append(key).append("=").append(config.getString(key));
     }
+    log.info("config=", sb);
   }
 
   private void parseUriPath(URI uri) {
@@ -243,14 +258,21 @@ public class GraphUri {
   private static Map<String, IdGraphFactory> graphFtry = new HashMap<>(5);
 
   public static void register(String scheme, IdGraphFactory factory) {
+    if(graphFtry.containsKey(scheme))
+      log.info("Replacing existing IdGraphFactory for {} with {}", scheme, factory);
     graphFtry.put(scheme, factory);
+    log.info("Registering {} with {}", scheme, factory);
+  }
+
+  public static void register(IdGraphFactory factory) {
+    register(factory.getScheme(), factory);
   }
 
   public URI getUri() {
     return baseUri;
   }
   public String getUriPath() {
-    return getConfig().getString(URI_PATH);
+    return config.getString(URI_PATH);
   }
 
   public void backupTo(GraphUri dstGraphUri) throws IOException {
@@ -260,11 +282,20 @@ public class GraphUri {
       throw new IllegalStateException("Destination graph must not be open so underlying files can be copied.");
     if(dstGraphUri.exists())
       throw new IllegalStateException("Destination graph must not already exist so underlying files can be copied.");
-    factory.backup(this, dstGraphUri);
+    getFactory().backup(this, dstGraphUri);
   }
 
   public PropertyMerger createPropertyMerger() {
-    return factory.createPropertyMerger();
+    return getFactory().createPropertyMerger();
+  }
+
+  public GraphUri setConfig(String key, Object value) {
+    config.setProperty(key, value);
+    return this;
+  }
+
+  public GraphUri readOnly() {
+    return setConfig(IdGraphFactory.READONLY, "true");
   }
 
 // use GraphUtils.addMetaData() instead

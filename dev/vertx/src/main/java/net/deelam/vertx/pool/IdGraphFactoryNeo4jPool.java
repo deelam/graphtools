@@ -85,9 +85,12 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
         if(gUri==null){
           log.error("Cannot find {} in {}", origUri, waitingGraphUris.baseMap());
         }else{
-          waitingGraphUris.removeValueFrom(origUri, gUri);
-          if(waitingGraphUris.getFirst(origUri)==null)
+          if(!waitingGraphUris.removeValueFrom(origUri, gUri))
+            log.warn("Could not remove {} from {}", gUri, waitingGraphUris.baseMap());
+          if(waitingGraphUris.getFirst(origUri)==null){
+            log.info("Removing empty key={} from {}", origUri, waitingGraphUris.baseMap());
             waitingGraphUris.remove(origUri);
+          }
         }
       }
       if(gUri!=null) synchronized(gUri){
@@ -136,12 +139,13 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
   protected IdGraph<?> openNeo4jGraph(GraphUri gUri) {
     if(isReadOnly(gUri)){
       poolClient.checkout(gUri.asString());
+      gUri.getConfig().clearProperty(BLUEPRINTS_NEO4J_DIRECTORY); // to ensure we don't open original graph
+      synchronized(waitingGraphUris){
+        log.info("Putting {} into waitingGraphUris=", gUri, waitingGraphUris.baseMap());
+        waitingGraphUris.put(gUri.asString(), gUri);
+      }
       synchronized(gUri){
         try {
-          gUri.getConfig().clearProperty(BLUEPRINTS_NEO4J_DIRECTORY); // to ensure we don't open original graph
-          synchronized(waitingGraphUris){
-            waitingGraphUris.put(gUri.asString(), gUri);
-          }
           log.info("Waiting for resource pool to get graph: "+gUri);
           gUri.wait(); // wait for response
         } catch (InterruptedException e) {

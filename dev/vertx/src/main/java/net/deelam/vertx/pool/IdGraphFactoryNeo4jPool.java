@@ -79,14 +79,18 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
     poolClient=client;
     poolClient.setResourceConsumer(msg->{
       String origUri=msg.headers().get(PondVerticle.ORIGINAL_URI);
-      GraphUri gUri = waitingGraphUris.getFirst(origUri);
-      if(gUri==null){
-        log.error("Cannot find {} in {}", origUri, waitingGraphUris.baseMap());
-      }else{
-        waitingGraphUris.removeValueFrom(origUri, gUri);
-        if(waitingGraphUris.getFirst(origUri)==null)
-          waitingGraphUris.remove(origUri);
-        synchronized(gUri){
+      GraphUri gUri = null;
+      synchronized(waitingGraphUris){
+        gUri = waitingGraphUris.getFirst(origUri);
+        if(gUri==null){
+          log.error("Cannot find {} in {}", origUri, waitingGraphUris.baseMap());
+        }else{
+          waitingGraphUris.removeValueFrom(origUri, gUri);
+          if(waitingGraphUris.getFirst(origUri)==null)
+            waitingGraphUris.remove(origUri);
+        }
+      }
+      if(gUri!=null) synchronized(gUri){
           String uri = msg.body();
           String path=new GraphUri(uri).getUriPath();
           checkPath(path);
@@ -96,7 +100,6 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
           gUri.getConfig().setProperty(BLUEPRINTS_NEO4J_DIRECTORY, path);
           gUri.getConfig().setProperty(POOL_RESOURCE_URI, uri);
           gUri.notify();
-        }
       }
     });
   }
@@ -136,7 +139,9 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
       synchronized(gUri){
         try {
           gUri.getConfig().clearProperty(BLUEPRINTS_NEO4J_DIRECTORY); // to ensure we don't open original graph
-          waitingGraphUris.put(gUri.asString(), gUri);
+          synchronized(waitingGraphUris){
+            waitingGraphUris.put(gUri.asString(), gUri);
+          }
           log.info("Waiting for resource pool to get graph: "+gUri);
           gUri.wait(); // wait for response
         } catch (InterruptedException e) {

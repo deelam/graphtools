@@ -5,9 +5,6 @@ package net.deelam.vertx.pool;
 
 import java.io.IOException;
 
-import org.boon.collections.MultiMap;
-import org.boon.collections.MultiMapImpl;
-
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.tinkerpop.blueprints.impls.neo4j.Neo4jGraph;
@@ -18,7 +15,6 @@ import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.IdGraphFactory;
 import net.deelam.graphtools.ReadOnlyIdGraph;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryNeo4j;
-import net.deelam.graphtools.graphfactories.IdGraphFactoryTinker;
 
 /**
  * @author deelam
@@ -77,81 +73,22 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
   public IdGraphFactoryNeo4jPool(ResourcePoolClient client) {
     super();
     poolClient=client;
-    poolClient.setResourceConsumer(msg->{
-      String origUri=msg.headers().get(PondVerticle.ORIGINAL_URI);
-      GraphUri gUri = null;
-      synchronized(waitingGraphUris){
-        gUri = waitingGraphUris.getFirst(origUri);
-        if(gUri==null){
-          log.error("Cannot find {} in {}", origUri, waitingGraphUris.baseMap());
-        }else{
-          if(!waitingGraphUris.removeValueFrom(origUri, gUri))
-            log.warn("Could not remove {} from {}", gUri, waitingGraphUris.baseMap());
-          if(waitingGraphUris.getFirst(origUri)==null){
-            log.info("Removing empty key={} from {}", origUri, waitingGraphUris.baseMap());
-            waitingGraphUris.remove(origUri);
-          }
-        }
-      }
-      if(gUri!=null) synchronized(gUri){
-          String uri = msg.body();
-          String path=new GraphUri(uri).getUriPath();
-          checkPath(path);
-
-          log.info("Got copy of Neo4j graph at path={}", path);
-          // Set other settings using prefix "blueprints.neo4j.conf"
-          gUri.getConfig().setProperty(BLUEPRINTS_NEO4J_DIRECTORY, path);
-          gUri.getConfig().setProperty(POOL_RESOURCE_URI, uri);
-          gUri.notify();
-      }
-    });
-  }
-  
-  private MultiMap<String,GraphUri> waitingGraphUris=new MultiMapImpl<>();
-  
-  public static void main(String[] args) {
-    IdGraphFactoryTinker.register();
-    MultiMap<String,GraphUri> mm=new MultiMapImpl<>();
-    mm.put("a", new GraphUri("tinker:/"));
-    mm.put("a", new GraphUri("tinker:///"));
-    System.out.println(mm.baseMap());
-    GraphUri first = mm.getFirst("a");
-    System.out.println(new GraphUri("tinker:/").equals(first)+" "+first);
-    mm.removeValueFrom("a", first);
-    System.out.println(mm.baseMap());
-    
-    mm.put("a", new GraphUri("tinker:///asdf"));
-    GraphUri next = mm.getFirst("a");
-    System.out.println((new GraphUri("tinker:///").equals(next))+" "+next);
-    mm.removeValueFrom("a", next);
-    System.out.println(mm.baseMap());
-    
-    GraphUri last = mm.getFirst("a");
-    mm.removeValueFrom("a", last);
-    System.out.println(mm.baseMap());
-    System.out.println(mm.getFirst("a")==null);
-    if(mm.getFirst("a")==null)
-      mm.remove("a");
-    System.out.println(mm.baseMap().size()==0);
   }
   
   @Override
   protected IdGraph<?> openNeo4jGraph(GraphUri gUri) {
     if(isReadOnly(gUri)){
       gUri.getConfig().clearProperty(BLUEPRINTS_NEO4J_DIRECTORY); // to ensure we don't open original graph
-      synchronized(waitingGraphUris){
-        log.info("Putting {} into waitingGraphUris={}", gUri.asString(), waitingGraphUris.baseMap());
-        waitingGraphUris.put(gUri.asString(), gUri);
-      }
-      synchronized(gUri){
-        poolClient.checkout(gUri.asString()); // async; can finish at any time
-        try {
-          log.info("Waiting for resource pool to get graph: "+gUri);
-          gUri.wait(); // wait for response
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-      }
+      poolClient.checkoutSynchronized(gUri.asString(), msg -> { // update the path to newUri of copied resource
+        String uri = msg.body();
+        String path = new GraphUri(uri).getUriPath();
+        checkPath(path);
+
+        log.info("Got copy of Neo4j graph at path={}", path);
+        // Set other settings using prefix "blueprints.neo4j.conf"
+        gUri.getConfig().setProperty(BLUEPRINTS_NEO4J_DIRECTORY, path);
+        gUri.getConfig().setProperty(POOL_RESOURCE_URI, uri);
+      });
       log.debug("Opening read-only copy of Neo4j graph at new path={}", gUri);
       ReadOnlyIdGraph graph = new ReadOnlyIdGraph(new Neo4jGraph(gUri.getConfig()));
 //      IdGraph<?> graph = new IdGraph<>(new MyReadOnlyKeyIndexableGraph<>(new IdGraph<>((new Neo4jGraph(gUri.getConfig())))));

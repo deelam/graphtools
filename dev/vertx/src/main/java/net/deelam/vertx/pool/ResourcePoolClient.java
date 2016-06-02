@@ -1,5 +1,6 @@
 package net.deelam.vertx.pool;
 
+import java.net.URI;
 import java.util.function.Consumer;
 
 import org.boon.collections.MultiMap;
@@ -62,6 +63,9 @@ public class ResourcePoolClient extends AbstractVerticle {
     });
   }
 
+  public void add(URI resourceUri){
+    add(resourceUri.toString());
+  }
   public void add(String resourceUri){
     vertx.eventBus().send(pondAddr+ADDR.ADD, resourceUri);
   }
@@ -83,6 +87,10 @@ public class ResourcePoolClient extends AbstractVerticle {
     vertx.eventBus().send(pondAddr+ADDR.CHECKIN, requestMsg);
   }
 
+  public void checkin(URI resourceUri){
+    checkin(resourceUri.toString());
+  }
+  
   //
   
   private MultiMap<String,Consumer<Message<String>>> waitingObjs=new MultiMapImpl<>();

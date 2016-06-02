@@ -230,6 +230,11 @@ public class PondVerticle extends AbstractVerticle {
     eb.consumer(addressBase + ADDR.CHECKIN, (Message<JsonObject> msg) -> {
       String rsrcUriStr = msg.body().getString(RESOURCE_URI);
       ResourceLocation rLoc = checkouts.get(rsrcUriStr);
+      if(rLoc==null && rsrcUriStr.endsWith("/")){// try removing '/'
+        rsrcUriStr=rsrcUriStr.substring(0, rsrcUriStr.length()-1);
+        log.warn("Stripping final '/' to get resourceUri={}", rsrcUriStr);
+        rLoc = checkouts.get(rsrcUriStr);
+      }
       checkNotNull(rLoc, "Could not find resource=" + rsrcUriStr + " in checkouts=" + checkouts);
       URI rsrcUri = URI.create(rsrcUriStr);
       ResourceLocation.Resource rsrc = rLoc.resources.get(rsrcUri);

@@ -217,8 +217,10 @@ public class GraphTransaction {
     if (rollbackCalled.get().get()) {
       rollbackCalled.remove();
       log.warn("Rolling back outer-most transaction on graph: {}", graphHolder.get());
-      graphHolder.get().rollback();
-      graphHolder.remove();
+      if(graphHolder.get()!=null){
+        graphHolder.get().rollback();
+        graphHolder.remove();
+      }
       return false;
     } else {
       rollbackCalled.remove();

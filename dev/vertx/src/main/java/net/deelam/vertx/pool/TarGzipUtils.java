@@ -22,7 +22,7 @@ public class TarGzipUtils {
     File file = new File(tarGzPath);
     if(file.exists())
       throw new IllegalArgumentException("File already exists: "+file.getAbsolutePath());
-    log.info("compressDirectory {} {}", dirPath, tarGzPath);
+    log.info("compressDirectory {} {} relativeDir={}", dirPath, tarGzPath, relativeDir);
     try (TarArchiveOutputStream tOut = new TarArchiveOutputStream(
         new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(file))))) {
       addFileToTarGz(tOut, new File(dirPath), "", relativeDir);

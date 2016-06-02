@@ -42,6 +42,7 @@ public class JobWorker extends AbstractVerticle {
     
     VerticleUtils.announceClientType(vertx, serviceType, msg->{
       jmPrefix=msg.body();
+      log.debug("Sending client registration to {} from {}", jmPrefix, myAddr);
       vertx.eventBus().send(jmPrefix, null, deliveryOptions);
     });
   }

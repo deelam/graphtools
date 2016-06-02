@@ -108,8 +108,6 @@ public class JobMarket extends AbstractVerticle {
 
     EventBus eb = vertx.eventBus();
 
-    VerticleUtils.announceServiceType(vertx, serviceType, addressBase);
-
     eb.consumer(addressBase/* + BUS_ADDR.REGISTER*/, message -> {
       String workerAddr = getWorkerAddress(message);
       log.debug("Received initial message from {}", workerAddr);
@@ -121,6 +119,7 @@ public class JobMarket extends AbstractVerticle {
 
       asyncNegotiateJobWithNextIdleWorker();
     });
+    
     eb.consumer(addressBase + BUS_ADDR.UNREGISTER, message -> {
       String workerAddr = getWorkerAddress(message);
       log.debug("Received UNREGISTER message from {}", workerAddr);
@@ -236,6 +235,9 @@ public class JobMarket extends AbstractVerticle {
         vertx.eventBus().send(ji.failureAddr, ji.jobJO.copy());
       }
     });
+
+    // announce after setting eb.consumer
+    VerticleUtils.announceServiceType(vertx, serviceType, addressBase);
 
     log.info("Ready: " + this + " addressPrefix=" + addressBase);
   }

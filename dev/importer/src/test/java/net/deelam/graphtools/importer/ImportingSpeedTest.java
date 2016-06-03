@@ -46,7 +46,7 @@ public class ImportingSpeedTest {
     IdGraphFactoryOrientdb.register();
 
     mgr.register("companyContactsCsv",
-        new CsvBeanSourceDataFactory<CompanyContactBean>(new CompanyContactsCsvParser()),
+        new CsvBeanSourceDataFactory<CompanyContactBean>(()->new CompanyContactsCsvParser()),
         new ImporterFactory() {
           @Override
           public Importer<CompanyContactBean> create() {
@@ -60,7 +60,7 @@ public class ImportingSpeedTest {
         });
 
     mgr.register("companyContactsCsvBuffered",
-        new CsvBeanSourceDataFactory<CompanyContactBean>(new CompanyContactsCsvParser()),
+        new CsvBeanSourceDataFactory<CompanyContactBean>(()->new CompanyContactsCsvParser()),
         new ImporterFactory() {
           @Override
           public Importer<CompanyContactBean> create() {
@@ -74,7 +74,7 @@ public class ImportingSpeedTest {
         });
 
     mgr.register("companyContactsCsvConsolidating",
-        new CsvBeanSourceDataFactory<CompanyContactBean>(new CompanyContactsCsvParser()),
+        new CsvBeanSourceDataFactory<CompanyContactBean>(()->new CompanyContactsCsvParser()),
         new ImporterFactory() {
           @Override
           public Importer<CompanyContactBean> create() {

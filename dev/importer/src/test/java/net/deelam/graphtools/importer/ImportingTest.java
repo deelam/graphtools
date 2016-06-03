@@ -33,7 +33,7 @@ public class ImportingTest {
     IdGraphFactoryTinker.register();
     IdGraphFactoryOrientdb.register();
     mgr.register("companyContactsCsv",
-        new CsvBeanSourceDataFactory<CompanyContactBean>(new CompanyContactsCsvParser()),
+        new CsvBeanSourceDataFactory<CompanyContactBean>(()->new CompanyContactsCsvParser()),
         new ImporterFactory() {
           @Override
           public Importer<CompanyContactBean> create() {
@@ -46,7 +46,7 @@ public class ImportingTest {
         });
 
 
-    mgr.register("companyContactsCsvConsolidating", new CsvBeanSourceDataFactory<CompanyContactBean>(new CompanyContactsCsvParser()), 
+    mgr.register("companyContactsCsvConsolidating", new CsvBeanSourceDataFactory<CompanyContactBean>(()->new CompanyContactsCsvParser()), 
         new ImporterFactory() {
           @Override
           public Importer<CompanyContactBean> create() {

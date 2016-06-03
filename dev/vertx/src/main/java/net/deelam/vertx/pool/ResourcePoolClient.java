@@ -36,7 +36,7 @@ public class ResourcePoolClient extends AbstractVerticle {
     });
     
     vertx.eventBus().consumer(deploymentID(), (Message<String> msg)->{
-      log.info(pondId+": Got it! {}", msg.body());
+      log.debug(pondId+": Got it! {}", msg.body());
       String origUri=msg.headers().get(PondVerticle.ORIGINAL_URI);
       Consumer<Message<String>> syncToken = null;
       synchronized(waitingObjs){
@@ -47,7 +47,7 @@ public class ResourcePoolClient extends AbstractVerticle {
           if(!waitingObjs.removeValueFrom(origUri, syncToken))
             log.warn("Could not remove {} from {}", syncToken, waitingObjs.baseMap());
           if(waitingObjs.getFirst(origUri)==null){
-            log.info("Removing empty key={} from {}", origUri, waitingObjs.baseMap());
+            log.debug("Removing key={} with no values from {}", origUri, waitingObjs.baseMap());
             waitingObjs.remove(origUri);
           }
         }
@@ -97,7 +97,7 @@ public class ResourcePoolClient extends AbstractVerticle {
   
   public Consumer<Message<String>> checkoutSynchronized(String resourceUri, Consumer<Message<String>> syncToken){
     synchronized(waitingObjs){
-      log.info("Putting {} into waitingGraphUris={}", resourceUri, waitingObjs.baseMap());
+      log.debug("Putting {} into waitingGraphUris={}", resourceUri, waitingObjs.baseMap());
       waitingObjs.put(resourceUri, syncToken);
     }
 

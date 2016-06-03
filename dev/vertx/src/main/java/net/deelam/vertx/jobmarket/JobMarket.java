@@ -305,7 +305,7 @@ public class JobMarket extends AbstractVerticle {
               asyncSendJobsTo(workerAddr, getAvailableJobs());
               negotiateWithNextIdle = false; // still negotiating with current idleWorker
             } else {
-              log.info("Moving idleWorker to pickyWorkers queue: {}", workerAddr);
+              log.debug("Moving idleWorker to pickyWorkers queue: {}", workerAddr);
               if (!idleWorkers.remove(workerAddr)) {
                 log.error("Could not remove {} from idleWorkers={}", workerAddr, idleWorkers);
               } else {

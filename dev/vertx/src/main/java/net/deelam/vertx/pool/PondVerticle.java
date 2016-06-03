@@ -211,18 +211,18 @@ public class PondVerticle extends AbstractVerticle {
             .put(CLIENT_ADDR, clientAddr)
             .put(RESOURCE_URI, msg.body().getString(RESOURCE_URI))
             .put(REQUESTER_ADDR, addressBase + ADDR.REGISTER);
-        log.info("Broadcast a find for: {}", uriWithAppsRequestMsg);
+        log.debug("Broadcast a find for: {}", uriWithAppsRequestMsg);
         eb.publish(EVENTBUS_PREFIX + ADDR.FIND, uriWithAppsRequestMsg);
       } else {
         ResourceLocation.Resource rsrc = getAvailableResource(rsrcLoc);
         if (rsrc == null) {
-          log.info("No available resource, replicating: {}", rsrcLoc);
+          log.debug("No available resource, replicating: {}", rsrcLoc);
           if(false)
             replicateResourceAndNotify(rsrcLoc, clientAddr); // potentially takes too long and Vertx complains
           else
             new Thread(() -> replicateResourceAndNotify(rsrcLoc, clientAddr)).start(); // multiple of these threads may clash; added synchronized block in deserialize()
         } else {
-          log.info("Found available resource: {}", rsrc);
+          log.debug("Found available resource: {}", rsrc);
           asyncSendResourceReady(clientAddr, rsrc, rsrcLoc);
         }
       }
@@ -257,10 +257,10 @@ public class PondVerticle extends AbstractVerticle {
     eb.consumer(addressBase + ADDR.REGISTER, (Message<JsonObject> msg) -> {
       URI rsrcUri = URI.create(msg.body().getString(ORIGINAL_URI));
       ResourceId resourceId = new ResourceId(rsrcUri);
-      log.info("Registering {}: {}", resourceId, msg.body());
+      log.debug("Registering {}: {}", resourceId, msg.body());
       if (regisTable.containsKey(resourceId)) {
         if(msg.body().getBoolean(INVALIDATE_RESOURCE, false)){
-          log.info(serviceType + ": Invalidating resource: {}", msg.body());
+          log.info(serviceType + ": Invalidating old resource: {}", msg.body());
           regisTable.remove(resourceId);
         }else{
           log.warn(serviceType + ": ResourceId already registered; ignoring msg: {}", msg.body());
@@ -282,7 +282,7 @@ public class PondVerticle extends AbstractVerticle {
     vertx.createHttpServer().requestHandler((HttpServerRequest req) -> {
       String webroot = "./";
       if (new File(webroot + req.path()).exists()) {
-        log.info("Sending response, file={}", Paths.get(webroot, req.path()).normalize().toAbsolutePath());
+        log.debug("Sending response, file={}", Paths.get(webroot, req.path()).normalize().toAbsolutePath());
         req.response().sendFile(webroot + req.path());
       } else {
         log.warn("File doesn't exist: {}", webroot + req.path());
@@ -301,9 +301,9 @@ public class PondVerticle extends AbstractVerticle {
         rsrcLoc.serializedMasterLocationREST.getHost(),
         rsrcLoc.serializedMasterLocationREST.getPath(), (HttpClientResponse response) -> {
 
-      StringBuilder sb = new StringBuilder();
+/*      StringBuilder sb = new StringBuilder();
       response.headers().forEach(e -> sb.append("|").append(e.getKey()).append("=").append(e.getValue()));
-      log.info("Response received: headers={}", sb);
+      log.debug("Response received: headers={}", sb);*/
 
       if (rsrcLoc.localSerializedPath == null)
         rsrcLoc.localSerializedPath = Paths.get(pondDir,
@@ -329,7 +329,7 @@ public class PondVerticle extends AbstractVerticle {
       });
       response.endHandler((Void v) -> {
         if (serFile.exists()) {
-          log.info("File ready: {}", serFile.getAbsolutePath());
+          log.debug("File ready: {}", serFile.getAbsolutePath());
           // create a deserialized copy and return the resourceUri.
           replicateResourceAndNotify(rsrcLoc, clientAddr);
         } else {
@@ -394,7 +394,7 @@ public class PondVerticle extends AbstractVerticle {
   }
 
   private void replicateResourceAndNotify(ResourceLocation rsrcLoc, String clientAddr) {
-    log.info("replicateResourceAndNotify: {}", rsrcLoc);
+    log.debug("replicateResourceAndNotify: {}", rsrcLoc);
     try {
       serializeIfNeeded(rsrcLoc);
       ResourceLocation.Resource rsrc = deserialize(rsrcLoc);
@@ -443,27 +443,27 @@ public class PondVerticle extends AbstractVerticle {
         rsrcLoc.serializedMasterLocationREST =
             URI.create("http://" + host + ":" + port + "/" + rsrcLoc.localSerializedPath);
         
-        log.info("Serialized uri={} to path={} and url={}", rsrcLoc.originalUri, rsrcLoc.localSerializedPath, rsrcLoc.serializedMasterLocationREST);
+        log.debug("Serialized uri={} to path={} and url={}", rsrcLoc.originalUri, rsrcLoc.localSerializedPath, rsrcLoc.serializedMasterLocationREST);
       }
     }
   }
 
   private ResourceLocation.Resource deserialize(ResourceLocation rsrcLoc) {
     synchronized(rsrcLoc){ // in case multiple copies are created of the same resource, take turns
-      log.info("Deserializing from file={}", rsrcLoc.localSerializedPath);
+      log.debug("Deserializing from file={}", rsrcLoc.localSerializedPath);
       //File newFile = new File("resourceCopy" + (++resourceCounter)+"-"+System.currentTimeMillis());
       // rsrcLoc.localSerializedLocation -> newURI
       Deserializer deser = deserializers.get(rsrcLoc.resourceId.scheme);
       checkNotNull(deser, "Deserializer for " + rsrcLoc.resourceId.scheme + " not registered");
       URI newUri = deser.apply(rsrcLoc.originalUri, rsrcLoc.localSerializedPath, pondDir);
-      log.info("Deserialized path={} to uri={}", rsrcLoc.localSerializedPath, newUri);
+      log.debug("Deserialized path={} to uri={}", rsrcLoc.localSerializedPath, newUri);
       ResourceLocation.Resource rsrc = new ResourceLocation.Resource(newUri);
       return rsrc;
     }
   }
 
   private void asyncSendResourceReady(String clientAddr, ResourceLocation.Resource rsrc, ResourceLocation rLoc) {
-    log.info("Sending resource to {}: {}", clientAddr, rsrc);
+    log.debug("Sending resource to {}: {}", clientAddr, rsrc);
     String uriStr = rsrc.uri.toString();
     rsrc.checkout(clientAddr);
     checkouts.put(uriStr, rLoc);
@@ -537,7 +537,7 @@ public class PondVerticle extends AbstractVerticle {
       boolean isBeingUsed = false;
 
       public void checkout(String clientAddr) {
-        log.info("Checking out: {}", this);
+        log.debug("Checking out: {}", this);
         isBeingUsed = true;
         usedBy = clientAddr;
         ++usedCount;
@@ -545,7 +545,7 @@ public class PondVerticle extends AbstractVerticle {
       }
 
       public void checkin() {
-        log.info("Checking in: {}", this);
+        log.debug("Checking in: {}", this);
         isBeingUsed = false;
         checkoutTime = null;
       }

@@ -9,13 +9,14 @@ import net.deelam.graphtools.GraphRecordImpl;
 @RequiredArgsConstructor
 @Slf4j
 public class Neo4jBatchImporterFactory<B> implements ImporterFactory{
-  final Supplier<Encoder<B>> encoder;
+  final Supplier<Encoder<B>> encoderFactory;
   final String importerPropertyVal;
   
   @Override
   public Importer<B> create() {
-    log.info("Creating Neo4jBatchImporter");
-    return new Neo4jBatchImporter<B>(encoder.get(), 
+    Encoder<B> encoder = encoderFactory.get();
+    log.info("Creating Neo4jBatchImporter: "+encoder);
+    return new Neo4jBatchImporter<B>(encoder, 
         new Neo4jBatchPopulator(importerPropertyVal),
         new GraphRecordImpl.Factory()
     );

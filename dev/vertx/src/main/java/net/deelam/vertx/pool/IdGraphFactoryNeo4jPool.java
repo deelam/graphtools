@@ -81,7 +81,7 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
         String path = new GraphUri(uri).getUriPath();
         checkPath(path);
 
-        log.info("Got copy of Neo4j graph at path={}", path);
+        log.debug("Got copy of Neo4j graph at path={}", path);
         // Set other settings using prefix "blueprints.neo4j.conf"
         gUri.getConfig().setProperty(BLUEPRINTS_NEO4J_DIRECTORY, path);
         gUri.getConfig().setProperty(POOL_RESOURCE_URI, uri);
@@ -89,7 +89,7 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
       log.debug("Opening read-only copy of Neo4j graph at new path={}", gUri);
       ReadOnlyIdGraph graph = new ReadOnlyIdGraph(new Neo4jGraph(gUri.getConfig()));
 //      IdGraph<?> graph = new IdGraph<>(new MyReadOnlyKeyIndexableGraph<>(new IdGraph<>((new Neo4jGraph(gUri.getConfig())))));
-      log.info("  Opened read-only graph={}", graph); 
+      log.debug("  Opened read-only graph={}", graph); 
       return graph;
     } else {
       return super.openNeo4jGraph(gUri);
@@ -104,7 +104,7 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
     
     if(isReadOnly(gUri)){
       String copiedRsrcUri = gUri.getConfig().getString(POOL_RESOURCE_URI);
-      log.info("Returning pool resource: {}", copiedRsrcUri);
+      log.debug("Returning pool resource: {}", copiedRsrcUri);
       poolClient.checkin(copiedRsrcUri);
     } else {
       log.info("Adding pool resource: {}", gUri.asString());

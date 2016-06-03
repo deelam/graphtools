@@ -147,13 +147,13 @@ public class PondVerticle extends AbstractVerticle {
     }
     if (!pondDirFile.mkdirs())
       log.error("Could not create directory: {}", pondDir);
-    pondDirFile.deleteOnExit(); // only deletes dir if empty
+    //pondDirFile.deleteOnExit(); // only deletes dir if empty
 
     this.port = restPort;
     try {
       host = InetAddress.getLocalHost().getHostName();
       addressBase = host + "." + restPort;
-      log.info(this + " is providing serialized resource files at {}:{} ", host, restPort);
+      log.info(this + " is providing serialized resource files {} at {}:{} ", pondDirFile.getAbsolutePath(), host, restPort);
     } catch (UnknownHostException e) {
       e.printStackTrace();
     }

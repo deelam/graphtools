@@ -102,9 +102,9 @@ public class ResourcePoolClient extends AbstractVerticle {
     }
 
     synchronized(syncToken){
-      checkout(resourceUri); // async; can finish at any time
+      new Thread(()->checkout(resourceUri)).start(); // async; can finish at any time
       try {
-        log.info("Waiting for pool to get resource="+resourceUri);
+        log.info("Waiting for pool to get resource={}", resourceUri);
         syncToken.wait(); // wait for response
       } catch (InterruptedException e) {
         e.printStackTrace();

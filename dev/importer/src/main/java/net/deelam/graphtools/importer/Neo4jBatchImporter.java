@@ -38,6 +38,11 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
     this.populator = populator;
     grBuilder=new GraphRecordBuilder<>(encoder, grFactory);
   }
+  
+  @Override
+  public String toString() {
+    return "importer's encoder="+encoder.getClass().getSimpleName();
+  }
 
   @Override
   public void importFile(SourceData<B> sourceData, GraphUri graphUri) throws IOException {
@@ -49,6 +54,7 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
       B inRecord;
       long recordNum=0;
       while ((inRecord = sourceData.getNextRecord()) != null) {
+        //log.info("{} {}", inRecord.getClass(), ((net.deelam.graphtools.importer.csv.CsvFileToBeanSourceData) sourceData).getParser().getBeanClass().getSimpleName());
         ++recordNum;
         log.debug("{}: record={}", recordNum, inRecord);
         try{

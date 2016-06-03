@@ -5,6 +5,7 @@ package net.deelam.graphtools.importer.csv;
 
 import java.io.*;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.importer.SourceData;
 
@@ -20,6 +21,7 @@ import org.supercsv.io.ICsvBeanReader;
 public class CsvFileToBeanSourceData<B> implements SourceData<B> {
 
   protected final ICsvBeanReader beanReader;
+  @Getter
   protected final CsvParser<B> parser;
 
   private int totalLines;
@@ -46,27 +48,36 @@ public class CsvFileToBeanSourceData<B> implements SourceData<B> {
   }
 
   @Override
+  public String toString() {
+    return "parser's beanClass="+parser.getBeanClass().getSimpleName();
+  }
+  static Object staticToken=new StringBuilder("CsvBeanReader is not thread safe");
+  
+  @Override
   public B getNextRecord() throws IOException {
-    while (true) { // keep reading next row until valid bean or EOF
-      try {
-        B bean =
-            beanReader.read(parser.getBeanClass(), parser.getCsvFields(),
-                parser.getCellProcessors());
-        if(bean==null) // bean=null if EOF
-          return null;
-        
-        // bean may have been successfully created for a row that should be ignored
-        String rowStr = beanReader.getUntokenizedRow();
-        if(CsvUtils.shouldIgnore(rowStr, beanReader.getLineNumber(), parser)) {
-          continue;
-        }else{
-          return bean;
+    synchronized(staticToken){
+      while (true) { // keep reading next row until valid bean or EOF
+        try {
+          log.info(" "+parser.getCsvFields().length+"=?"+parser.getCellProcessors().length+"");
+          B bean =
+              beanReader.read(parser.getBeanClass(), parser.getCsvFields(),
+                  parser.getCellProcessors());
+          if(bean==null) // bean=null if EOF
+            return null;
+          
+          // bean may have been successfully created for a row that should be ignored
+          String rowStr = beanReader.getUntokenizedRow();
+          if(CsvUtils.shouldIgnore(rowStr, beanReader.getLineNumber(), parser)) {
+            continue;
+          }else{
+            return bean;
+          }
+        } catch (SuperCsvException e) {
+          String rowStr = beanReader.getUntokenizedRow();
+          if (!CsvUtils.shouldIgnore(rowStr, beanReader.getLineNumber(), parser))
+            throw e;
+          //else try reading next line
         }
-      } catch (SuperCsvException e) {
-        String rowStr = beanReader.getUntokenizedRow();
-        if (!CsvUtils.shouldIgnore(rowStr, beanReader.getLineNumber(), parser))
-          throw e;
-        //else try reading next line
       }
     }
   }

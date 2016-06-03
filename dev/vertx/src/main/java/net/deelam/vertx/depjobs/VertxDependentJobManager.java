@@ -278,14 +278,16 @@ public class VertxDependentJobManager<T> {
     
     Map<String,Object> map=new HashMap<>();
     if(jobV.getState() == STATE.PROCESSING){
-      jobProd.getProgress(jobId, reply -> {
-        synchronized (map) {
-          JsonObject bodyJO=(JsonObject) reply.result().body();
-          //job = Json.decodeValue(bodyJO.toString(), DependentJob.class);
-          map.putAll(bodyJO.getMap());
-          map.notify();
-        }
-      });
+      new Thread(()->{
+        jobProd.getProgress(jobId, reply -> {
+          synchronized (map) {
+            JsonObject bodyJO=(JsonObject) reply.result().body();
+            //job = Json.decodeValue(bodyJO.toString(), DependentJob.class);
+            map.putAll(bodyJO.getMap());
+            map.notify();
+          }
+        });
+      }).start();
       // wait for reply
       synchronized (map) {
         while(map.size()==0) 

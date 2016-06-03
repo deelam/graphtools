@@ -58,7 +58,7 @@ public class CsvFileToBeanSourceData<B> implements SourceData<B> {
     synchronized(staticToken){
       while (true) { // keep reading next row until valid bean or EOF
         try {
-          log.info(" "+parser.getCsvFields().length+"=?"+parser.getCellProcessors().length+"");
+          //log.info(" "+parser.getCsvFields().length+"=?"+parser.getCellProcessors().length+"");
           B bean =
               beanReader.read(parser.getBeanClass(), parser.getCsvFields(),
                   parser.getCellProcessors());

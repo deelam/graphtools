@@ -75,6 +75,7 @@ public class Neo4jBatchPopulator implements Populator {
     Map<String, Long> mapDb;
     try {
       File mapFile = File.createTempFile("batchImporter-", ".map");
+      mapFile.deleteOnExit();
       log.info("Creating temp file: " + mapFile.getAbsolutePath());
       mapDb = ChronicleMapBuilder.of(String.class, Long.class)
           .entries(maxNumNodes).createPersistedTo(mapFile);

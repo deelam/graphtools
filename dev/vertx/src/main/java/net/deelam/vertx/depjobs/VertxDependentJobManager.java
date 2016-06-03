@@ -141,7 +141,7 @@ public class VertxDependentJobManager<T> {
 
     synchronized (graph) {
       if (isJobReady(jobV)) {
-        log.info("Submitting jobId={}", jobV.getNodeId());
+        log.debug("Submitting jobId={}", jobV.getNodeId());
         submitJob(jobV, job);
       } else {
         log.info("Input to job={} is not ready; setting state=WAITING.  {}", job);
@@ -183,7 +183,7 @@ public class VertxDependentJobManager<T> {
     
     synchronized (graph) {
       if (isJobReady(jobV)) {
-        log.info("Submitting jobId={}", jobV.getNodeId());
+        log.debug("Submitting jobId={}", jobV.getNodeId());
         submitJob(jobV, job);
       } else {
         log.info("Input to job={} is not ready; setting state=WAITING.  {}", job);
@@ -381,7 +381,7 @@ public class VertxDependentJobManager<T> {
           T job = waitingJobs.remove(readyV.getNodeId());
           submitJob(readyV, job);
         }
-        log.info("Waiting jobs: {}", waitingJobs.keySet());
+        log.debug("Waiting jobs: {}", waitingJobs.keySet());
       }
     }
   }

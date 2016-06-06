@@ -23,6 +23,10 @@ public class Runner {
   private static final String CORE_EXAMPLES_GROOVY_DIR = CORE_EXAMPLES_DIR + "/src/main/groovy/";
   private static final String CORE_EXAMPLES_RUBY_DIR = CORE_EXAMPLES_DIR + "/src/main/rb/";
 
+  public static void runClusteredExample(Class clazz, String clusterHost) {
+    runExample(CORE_EXAMPLES_JAVA_DIR, clazz, new VertxOptions().setClustered(true).setClusterHost(clusterHost), null);
+  }
+  
   public static void runClusteredExample(Class clazz) {
     runExample(CORE_EXAMPLES_JAVA_DIR, clazz, new VertxOptions().setClustered(true), null);
   }

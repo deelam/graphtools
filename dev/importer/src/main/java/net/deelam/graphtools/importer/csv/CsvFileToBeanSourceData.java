@@ -28,6 +28,7 @@ public class CsvFileToBeanSourceData<B> implements SourceData<B> {
   public CsvFileToBeanSourceData(File file, CsvParser<B> parser) throws FileNotFoundException {
     try{
       totalLines=countLines(file);
+      log.info("{} has {} totalLines", file, totalLines);
     }catch(IOException e){
       e.printStackTrace();
     }
@@ -85,7 +86,7 @@ public class CsvFileToBeanSourceData<B> implements SourceData<B> {
   @Override
   public int getPercentProcessed() {
     int percent=0;
-    log.info("line={} total={}", beanReader.getLineNumber(), totalLines);
+    log.debug("line={} total={}", beanReader.getLineNumber(), totalLines);
     if(beanReader.getLineNumber()>0 && totalLines>0)
       percent=beanReader.getLineNumber()*100/totalLines;
     return percent;

@@ -36,9 +36,15 @@ public class ImporterManager {
     return registry.keySet();
   }
 
-  public int getPercentProcessed(){//FIXME: getPercentProcessed()
-      return 10;
-    //return sData.getPercentProcessed();
+  private Map<File,SourceData> openSourceDatas=new HashMap<>();
+  
+  public int getPercentProcessed(File currFile){
+    SourceData sData = openSourceDatas.get(currFile);
+    if(sData==null){
+      log.warn("No SourceData found for file={}", currFile);
+      return -1;
+    }
+    return sData.getPercentProcessed();
   }
   
   @SuppressWarnings({"unchecked"})
@@ -48,12 +54,15 @@ public class ImporterManager {
     Preconditions.checkNotNull(factories, "importerFactory not registered: " + ingesterId);
     
     SourceData sData = factories.sourceDataFactory.createFrom(file);
+    if(openSourceDatas.put(file, sData)!=null)
+      log.warn("Overrode sourceData for file={}", file);
     final ImporterFactory importerF = factories.importerFactory;
     Importer importer=importerF.create();
     
 //    log.info("{}  {}", sData.toString(), importer);
     importData(sData, importer, graphUri);
     sData=null;
+    openSourceDatas.remove(file);
   }
 
   @SuppressWarnings({"unchecked"})

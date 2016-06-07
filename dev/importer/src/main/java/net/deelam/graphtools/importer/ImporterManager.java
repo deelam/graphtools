@@ -13,7 +13,7 @@ import net.deelam.graphtools.GraphUri;
 import com.google.common.base.Preconditions;
 
 /**
- * 
+ * Thread-safe
  * @author deelam
  */
 @Slf4j
@@ -41,7 +41,7 @@ public class ImporterManager {
   public int getPercentProcessed(File currFile){
     SourceData sData = openSourceDatas.get(currFile);
     if(sData==null){
-      log.warn("No SourceData found for file={}", currFile);
+      //log.warn("No SourceData found for file={}", currFile);
       return -1;
     }
     return sData.getPercentProcessed();

@@ -2,10 +2,7 @@ package net.deelam.vertx.pool;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.URI;
@@ -109,8 +106,6 @@ public class PondVerticle extends AbstractVerticle {
     return uri.getScheme() + "://" + uri.getPath() + "?" + uri.getQuery();
   }
 
-  Map<ResourceId, ResourceLocation> regisTable = new Hashtable<>();
-
   private final String serviceType;
   private final String pondDir;
 
@@ -138,16 +133,21 @@ public class PondVerticle extends AbstractVerticle {
     pondDir = "target/pond-" + serviceType;
     File pondDirFile = new File(pondDir);
     if (pondDirFile.exists()) {
-      try {
+      boolean loadPrev=true;
+      if(loadPrev){
+        loadState();
+      }else try {
         log.info("Deleting directory: {}", pondDirFile);
         FileUtils.deleteDirectory(pondDirFile.getAbsoluteFile());
       } catch (IOException e) {
         log.warn("Could not delete directory: " + pondDirFile, e);
       }
     }
-    if (!pondDirFile.mkdirs())
+    
+    if (!pondDirFile.exists() && !pondDirFile.mkdirs())
       log.error("Could not create directory: {}", pondDir);
     //pondDirFile.deleteOnExit(); // only deletes dir if empty
+    
 
     this.port = restPort;
     try {
@@ -164,6 +164,35 @@ public class PondVerticle extends AbstractVerticle {
     FIND, REGISTER, // among ponds
     RESOURCE_READY // to app
   };
+
+  private Map<ResourceId, ResourceLocation> regisTable = new Hashtable<>();
+
+  private void saveState() {
+    log.debug("Saving pond state to {}", pondDir);
+    File pondDirFile = new File(pondDir, "pondState.ser");
+    try(ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(pondDirFile))){
+      oos.writeObject(regisTable);
+    } catch (IOException e) {
+      log.error("", e);
+    }
+  }
+
+  private void loadState() {
+    log.info("Loading pond state from {}", pondDir);
+    File pondDirFile = new File(pondDir, "pondState.ser");
+    try(ObjectInputStream objectinputstream = new ObjectInputStream(new FileInputStream(pondDirFile))){
+      regisTable = (Hashtable) objectinputstream.readObject();
+      log.info("{}", regisTable);
+    } catch (IOException | ClassNotFoundException e) {
+      log.error("", e);
+    }
+  }
+  
+  @Override
+  public void stop() throws Exception {
+    super.stop();
+    saveState();
+  }
 
   @Override
   public void start() throws Exception {
@@ -185,7 +214,7 @@ public class PondVerticle extends AbstractVerticle {
         log.info("Overwriting existing entry: {}", rsrcLoc);
         notifyOtherPonds = true;
         if(rsrcLoc.localSerializedPath!=null){
-          File existingFile = rsrcLoc.localSerializedPath.toFile();
+          File existingFile = new File(rsrcLoc.localSerializedPath);
           if(existingFile.exists()){
             log.info("Moving {} to .old", rsrcLoc.localSerializedPath);
             existingFile.renameTo(new File(rsrcLoc.localSerializedPath + ".old"));
@@ -305,12 +334,14 @@ public class PondVerticle extends AbstractVerticle {
       response.headers().forEach(e -> sb.append("|").append(e.getKey()).append("=").append(e.getValue()));
       log.debug("Response received: headers={}", sb);*/
 
-      if (rsrcLoc.localSerializedPath == null)
-        rsrcLoc.localSerializedPath = Paths.get(pondDir,
+      if (rsrcLoc.localSerializedPath == null){
+        Path localSerializedPath = Paths.get(pondDir,
             rsrcLoc.serializedMasterLocationREST.getHost() + "_" +
                 rsrcLoc.serializedMasterLocationREST.getPath().replace('/', '_') +
                 "-" + System.currentTimeMillis());
-      File serFile = rsrcLoc.localSerializedPath.toFile();
+        rsrcLoc.localSerializedPath=localSerializedPath.toString();
+      }
+      File serFile = new File(rsrcLoc.localSerializedPath);
       if (serFile.exists()) {
         log.warn("Overwriting existing file: {}", serFile);
         if (!serFile.delete())
@@ -439,7 +470,7 @@ public class PondVerticle extends AbstractVerticle {
 
         Serializer ser = serializers.get(rsrcLoc.resourceId.scheme);
         checkNotNull(ser, "Serializer for " + rsrcLoc.resourceId.scheme + " not registered");
-        rsrcLoc.localSerializedPath = ser.apply(rsrcLoc.originalUri, pondDir);
+        rsrcLoc.localSerializedPath = ser.apply(rsrcLoc.originalUri, pondDir).toString();
         rsrcLoc.serializedMasterLocationREST =
             URI.create("http://" + host + ":" + port + "/" + rsrcLoc.localSerializedPath);
         
@@ -455,7 +486,7 @@ public class PondVerticle extends AbstractVerticle {
       // rsrcLoc.localSerializedLocation -> newURI
       Deserializer deser = deserializers.get(rsrcLoc.resourceId.scheme);
       checkNotNull(deser, "Deserializer for " + rsrcLoc.resourceId.scheme + " not registered");
-      URI newUri = deser.apply(rsrcLoc.originalUri, rsrcLoc.localSerializedPath, pondDir);
+      URI newUri = deser.apply(rsrcLoc.originalUri, Paths.get(rsrcLoc.localSerializedPath), pondDir);
       log.debug("Deserialized path={} to uri={}", rsrcLoc.localSerializedPath, newUri);
       ResourceLocation.Resource rsrc = new ResourceLocation.Resource(newUri);
       return rsrc;
@@ -475,7 +506,9 @@ public class PondVerticle extends AbstractVerticle {
 
   @EqualsAndHashCode(/*exclude = {"uri"}*/)
   @ToString
-  private static class ResourceId {
+  private static class ResourceId implements Serializable {
+    private static final long serialVersionUID = 201606080845L;
+    
     String scheme, path;
     Integer version;
 
@@ -514,20 +547,24 @@ public class PondVerticle extends AbstractVerticle {
 
   @RequiredArgsConstructor
   @ToString
-  private static class ResourceLocation {
+  private static class ResourceLocation implements Serializable {
+    private static final long serialVersionUID = 201606080846L;
+    
     final URI originalUri;
     final ResourceId resourceId;
     final String sourceHost;
     final String originalHost; //(may be same as sourceHost)
 
     URI serializedMasterLocationREST;
-    Path localSerializedPath;
+    String localSerializedPath;
 
     Map<URI, Resource> resources = new Hashtable<>();
 
     @RequiredArgsConstructor
     @ToString
-    static class Resource {
+    static class Resource implements Serializable {
+      private static final long serialVersionUID = 201606080847L;
+      
       //String fromSerializedMasterLocation;
       final URI uri;
       Date checkoutTime;

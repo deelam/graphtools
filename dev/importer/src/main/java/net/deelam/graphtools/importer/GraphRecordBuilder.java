@@ -117,7 +117,7 @@ public class GraphRecordBuilder<B> {
 
   @Getter
   private final static Set<Class<?>> validPropertyClasses = new HashSet<>();
-  {
+  static {
     validPropertyClasses.add(String.class);
     validPropertyClasses.add(Integer.class);
     validPropertyClasses.add(Boolean.class);
@@ -150,7 +150,7 @@ public class GraphRecordBuilder<B> {
         if(val instanceof Date){
           keys.add(key);
         } else {
-          log.warn("Unhandled property value of class="+val.getClass()+" "+val);
+          log.warn("Unhandled property value of class={} val={}", val.getClass(), val);
         }
       }
     }

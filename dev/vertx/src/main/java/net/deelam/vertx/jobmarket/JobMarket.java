@@ -289,7 +289,7 @@ public class JobMarket extends AbstractVerticle {
       boolean negotiateWithNextIdle = true;
 
       if (selectedJobReply.failed()) {
-        log.error(
+        log.warn(
             "selectedJobReply failed: {}.  Removing worker={} permanently -- have worker register again if appropriate",
             workerAddr, selectedJobReply.cause());
         if (!idleWorkers.remove(workerAddr))

@@ -2,6 +2,7 @@ package net.deelam.enricher.faceting;
 
 import static com.google.common.base.Preconditions.*;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import lombok.Getter;
@@ -26,8 +27,26 @@ public class GraphCopier implements AutoCloseable {
   private IdGraph<?> graph;
   private final GraphUri dstGraphUri;
 
-  private final IdGraph<?> srcGraph;
+  private IdGraph<?> srcGraph=null;
+  private final GraphUri srcGraphUri;
   private GraphUri srcGraphUriToShutdown = null;
+  
+  private IdGraph<?> getSrcGraph(){
+    if(srcGraph==null){
+      if (srcGraphUri.isOpen()) {
+        srcGraph = srcGraphUri.getGraph();
+        // do not close graph since I didn't open it
+      } else {
+        try {
+          srcGraph = srcGraphUri.openExistingIdGraph();
+        } catch (FileNotFoundException e) {
+          log.error("Cannot find source graph: "+srcGraphUri, e);
+        }
+        srcGraphUriToShutdown = srcGraphUri;//so that graph can be closed
+      }
+    }
+    return srcGraph;
+  }
 
   @Override
   public void close() throws IOException {
@@ -41,35 +60,28 @@ public class GraphCopier implements AutoCloseable {
     this(null, dstGraphUri);
   }
   
-  public GraphCopier(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException {
+  public GraphCopier(GraphUri sourceGraphUri, GraphUri dstGraphUri) throws IOException {
     this.dstGraphUri = dstGraphUri;
-    if(dstGraphUri.exists())
+    if(dstGraphUri.exists()){
       graph = dstGraphUri.getOrOpenGraph(); //openExistingIdGraph(); // graph will be open here so that close() can call shutdown()
-    else
-      graph=dstGraphUri.createNewIdGraph(false);
-
-    if(srcGraphUri==null){
-      final String sourceGraphUri = getSourceGraphUri();
-      if(sourceGraphUri==null)
-        throw new IllegalStateException(SRC_GRAPHURI+" property value of MetaData node is null!");
-      srcGraphUri=new GraphUri(sourceGraphUri).readOnly();
-    } 
-    
-    if (srcGraphUri.isOpen()) {
-      srcGraph = srcGraphUri.getGraph();
-      // do not close graph since I didn't open it
     } else {
-      srcGraph = srcGraphUri.openExistingIdGraph();
-      srcGraphUriToShutdown = srcGraphUri;//so that graph can be closed
+      graph=dstGraphUri.createNewIdGraph(false);
+      GraphUtils.setMetaData(graph, GraphUtils.GRAPHBUILDER_PROPKEY, this.getClass().getSimpleName());
+      GraphUtils.setMetaData(graph, SRC_GRAPHURI, sourceGraphUri.asString());
+      addEdgeFromSrcMetaDataNode(getSrcGraph());
+      importMetadataSubgraph();
     }
-    GraphUtils.setMetaData(graph, SRC_GRAPHURI, srcGraphUri.asString());
+
+    if(sourceGraphUri==null){
+      final String sourceGraphUriStr = getSourceGraphUri();
+      if(sourceGraphUriStr==null)
+        throw new IllegalStateException(SRC_GRAPHURI+" property value of MetaData node is null!");
+      srcGraphUri=new GraphUri(sourceGraphUriStr).readOnly();
+    } else {
+      srcGraphUri=sourceGraphUri;
+    }
     
     merger = dstGraphUri.createPropertyMerger();
-    
-    GraphUtils.setMetaData(graph, GraphUtils.GRAPHBUILDER_PROPKEY, this.getClass().getSimpleName());
-    
-    addEdgeFromSrcMetaDataNode(srcGraph);
-    importMetadataSubgraph();
   }
   
   private static final String SRC_GRAPHURI = "_SRC_GRAPHURI_";
@@ -92,7 +104,7 @@ public class GraphCopier implements AutoCloseable {
   }
   
   private void importMetadataSubgraph() {
-    Vertex srcGraphMdV = GraphUtils.getMetaDataNode(srcGraph);
+    Vertex srcGraphMdV = GraphUtils.getMetaDataNode(getSrcGraph());
 
     int tx = GraphTransaction.begin(graph);
     try {
@@ -108,7 +120,7 @@ public class GraphCopier implements AutoCloseable {
   }
   
   public Vertex importVertex(String nodeId) {
-    Vertex v = srcGraph.getVertex(nodeId);
+    Vertex v = getSrcGraph().getVertex(nodeId);
     checkNotNull(v, "Cannot find nodeId=" + nodeId + " in srcGraph");
     return importVertex(v);
   }
@@ -118,7 +130,7 @@ public class GraphCopier implements AutoCloseable {
   }
 
   public Edge importEdge(String edgeId) {
-    Edge e = srcGraph.getEdge(edgeId);
+    Edge e = getSrcGraph().getEdge(edgeId);
     checkNotNull(e, "Cannot find edgeId=" + edgeId + " in srcGraph");
     return importEdge(e, null, null);
   }
@@ -132,7 +144,7 @@ public class GraphCopier implements AutoCloseable {
    * @return
    */
   public Edge importEdgeWithDifferentVertices(String edgeId, Vertex importedOutV, Vertex importedInV) {
-    Edge e = srcGraph.getEdge(edgeId);
+    Edge e = getSrcGraph().getEdge(edgeId);
     checkNotNull(e, "Cannot find edgeId=" + edgeId + " in srcGraph");
     return importEdge(e, importedOutV, importedInV);
   }
@@ -150,7 +162,11 @@ public class GraphCopier implements AutoCloseable {
   
   private static final String ORIGID_PROPKEY="__origId";
   public String getOrigId(Vertex v){
-    return v.getProperty(ORIGID_PROPKEY);
+    String origId = v.getProperty(ORIGID_PROPKEY);
+    // may be null if id wasn't changed (i.e., importVertexWithDifferentId() wasn't called)
+    if(origId==null)
+      return (String) v.getId();
+    return origId;
   }
   
   private Vertex importVertexWithId(Vertex v, Object nodeId, boolean storeOrigNodeId) {
@@ -186,7 +202,7 @@ public class GraphCopier implements AutoCloseable {
   ///
 
   public void addNeighborsOf(String nodeStringId, String graphId, int hops) {
-    Vertex v = srcGraph.getVertex(nodeStringId);
+    Vertex v = getSrcGraph().getVertex(nodeStringId);
     Vertex newV = importVertex(nodeStringId);
     addNeighborsOf(v, newV, hops);
   }
@@ -218,7 +234,7 @@ public class GraphCopier implements AutoCloseable {
   ///
 
   public void importGraph(int commitFreq) {
-    IdGraph<?> from = srcGraph;
+    IdGraph<?> from = getSrcGraph();
 
     int tx = GraphTransaction.begin(graph, commitFreq);
     try {

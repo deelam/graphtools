@@ -10,8 +10,11 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 import com.tinkerpop.blueprints.util.wrappers.readonly.ReadOnlyTokens;
 
 /**
+ * First-line of protection.
+ * 
+ * TODO: Does not prevent element properties from being modified! 
+ * 
  * @author dd
- *
  */
 public class ReadOnlyIdGraph extends IdGraph<KeyIndexableGraph> {
 

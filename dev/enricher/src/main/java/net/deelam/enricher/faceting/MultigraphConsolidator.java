@@ -113,14 +113,14 @@ public class MultigraphConsolidator implements AutoCloseable {
             });
     
     dstGraphUri=graphUri;
-    if(shouldAlreadyExist || dstGraphUri.exists())
+    if(shouldAlreadyExist || dstGraphUri.exists()){
       graph = dstGraphUri.getOrOpenGraph(); //openExistingIdGraph(); // graph will be open here so that close() can call shutdown()
-    else
+    } else {
       graph=dstGraphUri.createNewIdGraph(false);
+      GraphUtils.setMetaData(graph, GraphUtils.GRAPHBUILDER_PROPKEY, this.getClass().getSimpleName());
+    }
 
     merger = dstGraphUri.createPropertyMerger();
-
-    GraphUtils.setMetaData(graph, GraphUtils.GRAPHBUILDER_PROPKEY, this.getClass().getSimpleName());
     
     srcGraphIdPropKey = GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
     origIdPropKey = GraphUtils.getMetaData(graph, ORIGID_PROPKEY);

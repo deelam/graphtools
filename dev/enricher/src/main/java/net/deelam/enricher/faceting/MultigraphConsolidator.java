@@ -28,6 +28,7 @@ import net.deelam.enricher.indexing.IdMapper;
 import net.deelam.graphtools.GraphTransaction;
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.GraphUtils;
+import net.deelam.graphtools.JavaSetPropertyMerger;
 import net.deelam.graphtools.PropertyMerger;
 
 /**
@@ -115,44 +116,88 @@ public class MultigraphConsolidator implements AutoCloseable {
     dstGraphUri=graphUri;
     if(shouldAlreadyExist || dstGraphUri.exists()){
       graph = dstGraphUri.getOrOpenGraph(); //openExistingIdGraph(); // graph will be open here so that close() can call shutdown()
+      origIdPropKey = GraphUtils.getMetaData(graph, ORIGID_PROPKEY);
+      checkNotNull(origIdPropKey);
+      origIdPropKeyPrefix=origIdPropKey+"_";
     } else {
       graph=dstGraphUri.createNewIdGraph(false);
       GraphUtils.setMetaData(graph, GraphUtils.GRAPHBUILDER_PROPKEY, this.getClass().getSimpleName());
+      setOrigIdPropKey("_origId"); //default value
     }
 
     merger = dstGraphUri.createPropertyMerger();
     
-    srcGraphIdPropKey = GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
-    origIdPropKey = GraphUtils.getMetaData(graph, ORIGID_PROPKEY);
+//    srcGraphIdPropKey = GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
 
     loadIdMapperFromGraphMetaData();
   }
-  private static final String SRCGRAPHID_PROPKEY = "_SRCGRAPHID_PROPKEY_";
-  @Getter
-  private String srcGraphIdPropKey;
-
+  
+//  @Deprecated
+//  private static final String SRCGRAPHID_PROPKEY = "_SRCGRAPHID_PROPKEY_";
+//  @Deprecated
+//  @Getter
+//  private String srcGraphIdPropKey;
+//
+  @Deprecated
   public void setSrcGraphIdPropKey(String srcGraphIdPropKey) {
-    this.srcGraphIdPropKey = srcGraphIdPropKey;
-    GraphUtils.setMetaData(graph, SRCGRAPHID_PROPKEY, srcGraphIdPropKey);
-  }
-
-  public String getSrcGraphId(Vertex v) {
-    String shortGraphId = v.getProperty(srcGraphIdPropKey);
-    return graphIdMapper.longId(shortGraphId);
+//    this.srcGraphIdPropKey = srcGraphIdPropKey;
+//    GraphUtils.setMetaData(graph, SRCGRAPHID_PROPKEY, srcGraphIdPropKey);
   }
 
   private static final String ORIGID_PROPKEY = "_ORIGID_PROPKEY_";
   @Getter
   private String origIdPropKey;
+  private String origIdPropKeyPrefix;
 
   public void setOrigIdPropKey(String origIdPropKey) {
     this.origIdPropKey = origIdPropKey;
+    origIdPropKeyPrefix=origIdPropKey+"_";
     GraphUtils.setMetaData(graph, ORIGID_PROPKEY, origIdPropKey);
   }
+  
+  //
 
   public String getOrigId(Vertex v) {
-    return v.getProperty(origIdPropKey);
+    checkNotNull(origIdPropKey);
+    checkNotNull(origIdPropKeyPrefix);
+    Object origId = v.getProperty(origIdPropKey);
+    if(origId==null){
+      log.warn("origId=null for v={}",v);
+      return null;
+    }
+    if(origId instanceof Long){
+      int nInt=NodeIdEncodeUtils.getFirstInt(((Long) origId).longValue());
+      //log.warn((origIdPropKeyPrefix+nInt)+" = "+v.getProperty(origIdPropKeyPrefix+nInt));
+      return v.getProperty(origIdPropKeyPrefix+nInt);
+    }else if(JavaSetPropertyMerger.SET_VALUE.equals(origId)){
+      return (String) origId; // TODO: handle "[multivalued]"
+    }else{
+      log.error("What should I return for origId="+origId+" class="+origId.getClass(), new UnsupportedOperationException());
+      return null;
+    }
   }
+  
+  public String getSrcGraphId(Vertex v) {
+    Object origId = v.getProperty(origIdPropKey);
+    if(origId==null){
+      log.warn("origId=null for v={}",v);
+      return null;
+    }
+    if(origId instanceof Long){
+      int gInt=NodeIdEncodeUtils.getSecondInt(((Long) origId).longValue());
+      String shortGraphId = v.getProperty(origIdPropKeyPrefix+gInt);
+//      log.warn((origIdPropKeyPrefix+gInt)+" = "+shortGraphId);
+//    String shortGraphId = v.getProperty(srcGraphIdPropKey);
+      return graphIdMapper.longId(shortGraphId);
+    }else if(JavaSetPropertyMerger.SET_VALUE.equals(origId)){
+      return (String) origId; // TODO: handle "[multivalued]"
+    }else{
+      log.error("What should I return for "+origIdPropKey+"="+origId+" class="+origId.getClass(), new UnsupportedOperationException());
+      return null;
+    }
+  }
+
+  ///
 
   @Getter
   private IdMapper graphIdMapper = null;
@@ -412,6 +457,7 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
 
   public Vertex getVertex(String nodeId, String graphId) {
+    checkNotNull(graphId, nodeId);
     String localId = genNewId(getShortGraphId(graphId), nodeId);
     Vertex existingV = graph.getVertex(localId);
     return existingV;
@@ -442,9 +488,10 @@ public class MultigraphConsolidator implements AutoCloseable {
     return newE;
   }
 
+  static int COUNTER=0; //FIXME: replace with valueSet.size()+1
   private void setNewProperties(Element v, String shortGraphId, Element newV) {
     if (origIdPropKey != null) {
-      String origId = v.getProperty(origIdPropKey); // use original id if possible
+      String origId = null; //v.getProperty(origIdPropKey); // use original id if possible
       if (origId == null)
         origId = v.getProperty(IdGraph.ID); // If v instanceof IdElement, getProperty(IdGraph.ID) returns null
       if (origId == null)
@@ -455,11 +502,15 @@ public class MultigraphConsolidator implements AutoCloseable {
           origId = v.getId().toString();
         }
 
-      newV.setProperty(origIdPropKey, origId);
+      int vInt=++COUNTER, gInt=++COUNTER;
+      newV.setProperty(origIdPropKeyPrefix+vInt, origId);
+      newV.setProperty(origIdPropKeyPrefix+gInt, shortGraphId);
+      long encodedNodeId=NodeIdEncodeUtils.concat(vInt, gInt);
+      newV.setProperty(origIdPropKey, encodedNodeId);
     }
 
-    if (srcGraphIdPropKey != null)
-      newV.setProperty(srcGraphIdPropKey, shortGraphId);
+//    if (srcGraphIdPropKey != null)
+//      newV.setProperty(srcGraphIdPropKey, shortGraphId);
   }
 
   ///

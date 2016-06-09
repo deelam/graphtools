@@ -62,26 +62,28 @@ public class GraphCopier implements AutoCloseable {
   
   public GraphCopier(GraphUri sourceGraphUri, GraphUri dstGraphUri) throws IOException {
     this.dstGraphUri = dstGraphUri;
+    merger = dstGraphUri.createPropertyMerger();
+    
     if(dstGraphUri.exists()){
       graph = dstGraphUri.getOrOpenGraph(); //openExistingIdGraph(); // graph will be open here so that close() can call shutdown()
+      final String sourceGraphUriStr = getSourceGraphUri();
+      if(sourceGraphUri==null){
+        if(sourceGraphUriStr==null)
+          throw new IllegalStateException(SRC_GRAPHURI+" property value of MetaData node is null!");
+        srcGraphUri=new GraphUri(sourceGraphUriStr).readOnly();
+      } else {
+        if(!sourceGraphUri.asString().equals(sourceGraphUriStr))
+          log.warn("Stored srcGraphUri != given parameter: {} != {}", sourceGraphUriStr, sourceGraphUri);
+        srcGraphUri=sourceGraphUri;
+      }
     } else {
       graph=dstGraphUri.createNewIdGraph(false);
       GraphUtils.setMetaData(graph, GraphUtils.GRAPHBUILDER_PROPKEY, this.getClass().getSimpleName());
       GraphUtils.setMetaData(graph, SRC_GRAPHURI, sourceGraphUri.asString());
+      srcGraphUri=sourceGraphUri;
       addEdgeFromSrcMetaDataNode(getSrcGraph());
       importMetadataSubgraph();
     }
-
-    if(sourceGraphUri==null){
-      final String sourceGraphUriStr = getSourceGraphUri();
-      if(sourceGraphUriStr==null)
-        throw new IllegalStateException(SRC_GRAPHURI+" property value of MetaData node is null!");
-      srcGraphUri=new GraphUri(sourceGraphUriStr).readOnly();
-    } else {
-      srcGraphUri=sourceGraphUri;
-    }
-    
-    merger = dstGraphUri.createPropertyMerger();
   }
   
   private static final String SRC_GRAPHURI = "_SRC_GRAPHURI_";

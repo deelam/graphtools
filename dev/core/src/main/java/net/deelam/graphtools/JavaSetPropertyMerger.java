@@ -19,7 +19,7 @@ import lombok.RequiredArgsConstructor;
 public class JavaSetPropertyMerger implements PropertyMerger {
 
   static final String VALUE_CLASS_SUFFIX = "__jsonClass";
-  static final String SET_VALUE = "[multivalued]";
+  public static final String SET_VALUE = "[multivalued]";
   static final String SET_SUFFIX = "__jsonSET";
 
   @SuppressWarnings("unchecked")
@@ -90,6 +90,41 @@ public class JavaSetPropertyMerger implements PropertyMerger {
   private void setPropertyValueClass(Element elem, String key, Object value) {
     final String compClassPropKey = key + VALUE_CLASS_SUFFIX;
     elem.setProperty(compClassPropKey, value.getClass().getCanonicalName());
+  }
+
+
+  @Override
+  public Object[] getArrayProperty(Element elem, String key) {
+    String setPropertyKey = key + SET_SUFFIX;
+    Set<Object> valueSet = elem.getProperty(setPropertyKey);
+    if (valueSet == null) {
+      Object val = elem.getProperty(key);
+      if(val==null)
+        return null;
+      else {
+        Object[] arr = new Object[1];
+        arr[0]=val;
+        return arr;
+      }
+    }else{
+      return valueSet.toArray(new Object[valueSet.size()]);
+    }
+  }
+  
+  @Override
+  public int getArrayPropertySize(Element elem, String key){
+    String setPropertyKey = key + SET_SUFFIX;
+    Set<Object> valueSet = elem.getProperty(setPropertyKey);
+    if (valueSet == null) {
+      Object val = elem.getProperty(key);
+      if(val==null)
+        return 0;
+      else {
+        return 1;
+      }
+    }else{
+      return valueSet.size();
+    }
   }
 
 }

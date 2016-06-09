@@ -3,6 +3,8 @@ package net.deelam.graphtools;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 import net.deelam.graphtools.graphfactories.IdGraphFactoryTinker;
@@ -83,6 +85,8 @@ public class PropertyMergerTest {
     pm.mergeProperties(toE, toE2);
     assertEquals(2+extraProps, toE2.getPropertyKeys().size());
     assertEquals(SET_VALUE, toE2.getProperty("prop"));
+    assertEquals(2, pm.getArrayProperty(toE2,"prop").length);
+    assertEquals(2, pm.getArrayPropertySize(toE2,"prop"));
 
     // Set+val -> Set
     
@@ -95,7 +99,12 @@ public class PropertyMergerTest {
     pm.mergeProperties(toE2, toE);
     assertEquals(2+extraProps, toE.getPropertyKeys().size());
     assertEquals(SET_VALUE, toE.getProperty("prop"));
-    
+
+    // test duplicate value doesn't change valueset
+    toE2.setProperty("prop", "2");
+    assertEquals(2+extraProps, toE2.getPropertyKeys().size());
+    assertEquals(2, pm.getArrayProperty(toE2,"prop").length);
+    assertEquals(2, pm.getArrayPropertySize(toE2,"prop"));
   }
 
 }

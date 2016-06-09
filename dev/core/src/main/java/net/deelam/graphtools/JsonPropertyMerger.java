@@ -192,7 +192,7 @@ public class JsonPropertyMerger implements PropertyMerger {
       try{
         valueList = (List) mapper.parser().parseList(compClass, valueSetStr);
       }catch(Exception e){
-        log.error("key="+key+" for node="+toE.getId()+" compClass="+compClass+" valueSetStr="+valueSetStr);
+        log.error("key="+key+" for node="+toE.getId()+" compClass="+compClass+" valueSetStr="+valueSetStr, e);
         throw e;
       }
     }
@@ -203,7 +203,7 @@ public class JsonPropertyMerger implements PropertyMerger {
       String fromListStr = fromE.getProperty(valSetPropKey);
       List fromValueList = (List) mapper.parser().parseList(compClass, fromListStr);
       for (Object fVal : fromValueList) {
-        if (!valueList.contains(fVal)) {
+        if (!valueList.contains(fVal)) { // not efficient since searching in a list
           if (!compClass.equals(fVal.getClass()))
             log.warn("existingClass={} newValueClass={}", compClass, fVal.getClass());
           valueList.add(fVal); // hopefully, fromValue is the same type as other elements in the set
@@ -223,6 +223,57 @@ public class JsonPropertyMerger implements PropertyMerger {
       toE.setProperty(valSetPropKey, mapper.toJson(valueList));
   }
 
+  @Override
+  public Object[] getArrayProperty(Element elem, String key) {
+    final String valSetPropKey = key + SET_SUFFIX;
+    final Object valueSet = elem.getProperty(valSetPropKey);
+    if (valueSet == null) {
+      Object val = elem.getProperty(key);
+      if(val==null)
+        return null;
+      else {
+        Object[] arr = new Object[1];
+        arr[0]=val;
+        return arr;
+      }
+    }else{
+      String valueSetStr=(String) valueSet;
+      try{
+        Class<?> compClass = getPropertyValueClass(elem, key);
+        List valueList = (List) mapper.parser().parseList(compClass, valueSetStr);
+        return valueList.toArray(new Object[valueList.size()]);
+      }catch(Exception e){
+        log.error("key="+key+" for node="+elem.getId()+" compClass="+elem.getProperty(key + VALUE_CLASS_SUFFIX)
+          +" valueSetStr="+valueSetStr, e);
+        throw new RuntimeException(e);
+      }
+    }
+  }
+  
+  @Override
+  public int getArrayPropertySize(Element elem, String key){
+    final String valSetPropKey = key + SET_SUFFIX;
+    final Object valueSet = elem.getProperty(valSetPropKey);
+    if (valueSet == null) {
+      Object val = elem.getProperty(key);
+      if(val==null)
+        return 0;
+      else {
+        return 1;
+      }
+    }else{
+      String valueSetStr=(String) valueSet;
+      try{
+        Class<?> compClass = getPropertyValueClass(elem, key);
+        List valueList = (List) mapper.parser().parseList(compClass, valueSetStr);
+        return valueList.size();
+      }catch(Exception e){
+        log.error("key="+key+" for node="+elem.getId()+" compClass="+elem.getProperty(key + VALUE_CLASS_SUFFIX)
+          +" valueSetStr="+valueSetStr, e);
+        throw new RuntimeException(e);
+      }
+    }
+  }
   // TODO: 3: set limit on size of Set
   // TODO: 3: add supernode detection and warning
 

@@ -7,6 +7,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -174,6 +175,14 @@ public class MultigraphConsolidator implements AutoCloseable {
       return null;
     }
     return origNodeCodec.getSrcGraphId(v, graphIdMapper);
+  }
+  
+  public List<String> getOrigNodeIdList(Vertex v) {
+    return origNodeCodec.getOrigNodeIdList(v);
+  }
+
+  public List<String> getSrcGraphIdList(Vertex v) {
+    return origNodeCodec.getSrcGraphIdList(v, graphIdMapper);
   }
 
   private void setOrigNodeProperties(Element v, String shortGraphId, Element newV) {

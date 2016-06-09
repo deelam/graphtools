@@ -3,8 +3,10 @@
  */
 package net.deelam.graphtools;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.tinkerpop.blueprints.Element;
@@ -98,6 +100,8 @@ public class JavaSetPropertyMerger implements PropertyMerger {
 
   @Override
   public boolean isMultivalued(Object value) {
+    if(value==null)
+      return false;
     if(value instanceof Set)
       return true;
     return !isAllowedValue(value);
@@ -133,20 +137,20 @@ public class JavaSetPropertyMerger implements PropertyMerger {
 */
 
   @Override
-  public Object[] getArrayProperty(Element elem, String key) {
+  public <T> List<T> getArrayProperty(Element elem, String key) {
     Object value = elem.getProperty(key);
-    Set<Object> valueSet = (isMultivalued(value)) ? (Set<Object>) value : null;
+    Set<T> valueSet = (isMultivalued(value)) ? (Set<T>) value : null;
     if (valueSet == null) {
-      Object val = elem.getProperty(key);
+      T val = elem.getProperty(key);
       if(val==null)
         return null;
       else {
-        Object[] arr = new Object[1];
-        arr[0]=val;
+        List<T> arr = new ArrayList<>();
+        arr.add((T) val);
         return arr;
       }
     }else{
-      return valueSet.toArray(new Object[valueSet.size()]);
+      return new ArrayList<T>(valueSet);
     }
   }
   

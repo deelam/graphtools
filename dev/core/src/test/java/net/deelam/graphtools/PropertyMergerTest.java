@@ -93,9 +93,9 @@ public class PropertyMergerTest {
     //assertEquals(2+extraProps, toE2.getPropertyKeys().size());
     //assertEquals(SET_VALUE, toE.getProperty("prop"));
     System.out.println("1: "+toE2.getProperty("prop"));
-    assertEquals(2, pm.getArrayProperty(toE2,"prop").length);
-    assertEquals(String.class, pm.getArrayProperty(toE2,"prop")[0].getClass());
-    assertEquals("2", pm.getArrayProperty(toE2,"prop")[0]);
+    assertEquals(2, pm.getArrayProperty(toE2,"prop").size());
+    assertEquals(String.class, pm.getArrayProperty(toE2,"prop").get(0).getClass());
+    assertEquals("2", pm.getArrayProperty(toE2,"prop").get(0));
     assertEquals(2, pm.getArrayPropertySize(toE2,"prop"));
 
     // Set+val -> Set
@@ -115,7 +115,7 @@ public class PropertyMergerTest {
     // test duplicate value doesn't change valueset
     pm.addProperty(toE2, "prop", "2");
 //    assertEquals(2+extraProps, toE2.getPropertyKeys().size());
-    assertEquals(2, pm.getArrayProperty(toE2,"prop").length);
+    assertEquals(2, pm.getArrayProperty(toE2,"prop").size());
     assertEquals(2, pm.getArrayPropertySize(toE2,"prop"));
   }
 

@@ -130,7 +130,7 @@ public class PondVerticle extends AbstractVerticle {
 
   public PondVerticle(String serviceType, int restPort) {
     this.serviceType = serviceType;
-    pondDir = "target/pond-" + serviceType;
+    pondDir = "tmp/pond-" + serviceType;
     File pondDirFile = new File(pondDir);
     if (pondDirFile.exists()) {
       boolean loadPrev=true;

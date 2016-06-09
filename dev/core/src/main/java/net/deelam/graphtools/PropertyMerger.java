@@ -1,5 +1,7 @@
 package net.deelam.graphtools;
 
+import java.util.List;
+
 import com.tinkerpop.blueprints.Element;
 
 /**
@@ -11,7 +13,7 @@ public interface PropertyMerger {
   // TODO: add unit tests for different cases and different classes (eg., Date)
   void mergeProperties(Element fromE, Element toE);
   
-  Object[] getArrayProperty(Element elem, String key);
+  <T> List<T> getArrayProperty(Element elem, String key);
   
   int getArrayPropertySize(Element elem, String key);
 

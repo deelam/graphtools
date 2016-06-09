@@ -3,8 +3,6 @@
  */
 package net.deelam.graphtools;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import java.lang.reflect.Array;
 import java.util.*;
 import java.util.Map.Entry;
@@ -25,7 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * @author deelam
  */
-@SuppressWarnings({"rawtypes","unchecked"})
 @RequiredArgsConstructor
 @Slf4j
 public class JsonSetPropertyMerger implements PropertyMerger {
@@ -51,11 +48,10 @@ public class JsonSetPropertyMerger implements PropertyMerger {
           if(fromValueSet instanceof Set){ 
             toE.setProperty(key, mapper.toJson(fromValueSet));
 
-            Object firstVal = ((Set) fromValueSet).iterator().next();
+            Object firstVal = ((Set<?>) fromValueSet).iterator().next();
             if (firstVal == null) {
               log.error("Cannot determine class for this set: {}", fromValueSet);
             } else {
-              setPropertyValueClass(toE, key, firstVal);
             }
           } else {
             String fromValueSetStr = (String) fromValueSet;
@@ -113,16 +109,9 @@ public class JsonSetPropertyMerger implements PropertyMerger {
       elem.setProperty(key, value); // TODO: 6: not sure if this works for Titan if value is an array
     } else { // save as Json
       elem.setProperty(key, mapper.toJson(value));
-      setPropertyValueClass(elem, key, value);
     }
   }
 
-  @Deprecated
-  private void setPropertyValueClass(Element elem, String key, Object value) {
-//    final String compClassPropKey = key + VALUE_CLASS_SUFFIX;
-//    elem.setProperty(compClassPropKey, value.getClass().getCanonicalName());
-  }
-  
   boolean isAllowedValue(Object value){
     return (value.getClass().isPrimitive() || validPropertyClasses.contains(value.getClass()));
   }
@@ -140,7 +129,7 @@ public class JsonSetPropertyMerger implements PropertyMerger {
         else
           throw new IllegalStateException("Wasn't expecting parsedValue of class=" + num.toValue().getClass() + " num=" + num.toValue());
       }else if(parsedV instanceof List){
-        List list=(List) parsedV;
+        List<?> list=(List<?>) parsedV;
         return list.get(0).getClass();
       } else if (isAllowedValue(parsedV)){
         return parsedV.getClass();
@@ -196,18 +185,8 @@ public class JsonSetPropertyMerger implements PropertyMerger {
       }
 
       if (compClass == null) {
-        setPropertyValueClass(toE, key, existingVal);
         compClass = existingVal.getClass();
       }
-    } else {
-//      checkNotNull(compClass, "key="+key+" for node="+toE.getId()+" valueSet="+valueSet.getClass());
-//      String valueSetStr=(String) valueSet;
-//      try{
-//        valueList = (List) mapper.parser().parseList(compClass, valueSetStr);
-//      }catch(Exception e){
-//        log.error("key="+key+" for node="+toE.getId()+" compClass="+compClass+" valueSetStr="+valueSetStr, e);
-//        throw e;
-//      }
     }
 
     /// check if fromValue is already in toValueList
@@ -281,24 +260,25 @@ public class JsonSetPropertyMerger implements PropertyMerger {
     }
   }
   
+  @SuppressWarnings("unchecked")
   @Override
-  public Object[] getArrayProperty(Element elem, String key) {
+  public <T> List<T> getArrayProperty(Element elem, String key) {
     final Object valueSet = elem.getProperty(key);
     if (valueSet == null) {
       Object val = elem.getProperty(key);
       if(val==null)
         return null;
       else {
-        Object[] arr = new Object[1];
-        arr[0]=val;
+        List<T> arr = new ArrayList<>();
+        arr.add((T) val);
         return arr;
       }
     }else{
       String valueSetStr=(String) valueSet;
       try{
-        Class<?> compClass = getPropertyValueClass(elem, key);
-        List valueList = (List) mapper.parser().parseList(compClass, valueSetStr);
-        return valueList.toArray(new Object[valueList.size()]);
+        //Class<?> compClass = getPropertyValueClass(elem, key);
+        List<T> valueList = (List<T>) mapper.parser().parse(valueSetStr); //parseList(compClass, valueSetStr);
+        return valueList; //.toArray(new Object[valueList.size()]);
       }catch(Exception e){
         log.error("key="+key+" for node="+elem.getId() //+" compClass="+elem.getProperty(key + VALUE_CLASS_SUFFIX)
           +" valueSetStr="+valueSetStr, e);
@@ -320,8 +300,8 @@ public class JsonSetPropertyMerger implements PropertyMerger {
     }else{
       String valueSetStr=(String) valueSet;
       try{
-        Class<?> compClass = getPropertyValueClass(elem, key);
-        List valueList = (List) mapper.parser().parseList(compClass, valueSetStr);
+        //Class<?> compClass = getPropertyValueClass(elem, key);
+        List<?> valueList = (List<?>) mapper.parser().parse(valueSetStr); //parseList(compClass, valueSetStr);
         return valueList.size();
       }catch(Exception e){
         log.error("key="+key+" for node="+elem.getId() //+" compClass="+elem.getProperty(key + VALUE_CLASS_SUFFIX)
@@ -361,21 +341,6 @@ public class JsonSetPropertyMerger implements PropertyMerger {
     for(Entry<String, Object> entry:existingProps.entrySet()){
       Object value = entry.getValue();
       if(isMultivalued(value)){
-//        Class<?> compClass;
-//        {
-//          final String compClassPropKey = entry.getKey() + VALUE_CLASS_SUFFIX;
-//          String classStr = (String) existingProps.get(compClassPropKey);
-//          try {
-//            compClass=Class.forName(classStr);
-//          } catch (ClassNotFoundException e) {
-//            throw new RuntimeException(e);
-//          }
-//        }
-//        String valueSetStr;
-//        final String valSetPropKey = entry.getKey() + SET_SUFFIX;
-//        {
-//          valueSetStr = (String) existingProps.get(valSetPropKey);
-//        }
         try{
           //String valueStr = (String) existingProps.get(entry.getKey());
           if(value instanceof String)
@@ -393,6 +358,7 @@ public class JsonSetPropertyMerger implements PropertyMerger {
     }
   }
   
+  @SuppressWarnings({"rawtypes", "unchecked"})
   public static void main(String[] args) throws ClassNotFoundException {
     System.out.println(Integer.class.isPrimitive());
     System.out.println(int.class.isPrimitive());

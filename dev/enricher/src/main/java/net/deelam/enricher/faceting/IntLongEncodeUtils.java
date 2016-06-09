@@ -1,6 +1,6 @@
 package net.deelam.enricher.faceting;
 
-public class NodeIdEncodeUtils {
+public class IntLongEncodeUtils {
 
   static long concat(int a, int b) {
     return (long) a << 32 | b & 0xFFFFFFFFL;

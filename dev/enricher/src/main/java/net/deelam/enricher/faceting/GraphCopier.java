@@ -66,6 +66,7 @@ public class GraphCopier implements AutoCloseable {
     
     if(dstGraphUri.exists()){
       graph = dstGraphUri.getOrOpenGraph(); //openExistingIdGraph(); // graph will be open here so that close() can call shutdown()
+      origIdPropKey=GraphUtils.getMetaData(graph, METADATA_ORIGID_PROPKEY);
       final String sourceGraphUriStr = getSourceGraphUri();
       if(sourceGraphUri==null){
         if(sourceGraphUriStr==null)
@@ -162,9 +163,24 @@ public class GraphCopier implements AutoCloseable {
     return importVertexWithId(v, nodeId, true);
   }
   
-  private static final String ORIGID_PROPKEY="__origId";
+  private static final String METADATA_ORIGID_PROPKEY="__origId";
+  private String origIdPropKey=null;
+  
+  public void setOrigIdPropKey(String originalIdPropKeyPrefix) {
+    if(origIdPropKey!=null)
+      throw new IllegalStateException("OrigIdPropKey already set to "+origIdPropKey);
+    if(origIdPropKey==null){
+      origIdPropKey=null;
+    } else {
+      origIdPropKey=originalIdPropKeyPrefix+PropertyMerger.VALUELIST_SUFFIX;
+      GraphUtils.setMetaData(graph, METADATA_ORIGID_PROPKEY, origIdPropKey);
+    }
+  }
+  
   public String getOrigId(Vertex v){
-    String origId = v.getProperty(ORIGID_PROPKEY);
+    String origId=null;
+    if(origIdPropKey!=null)
+      origId = v.getProperty(origIdPropKey);
     // may be null if id wasn't changed (i.e., importVertexWithDifferentId() wasn't called)
     if(origId==null)
       return (String) v.getId();
@@ -177,7 +193,9 @@ public class GraphCopier implements AutoCloseable {
       newV = graph.addVertex(nodeId);
       merger.mergeProperties(v, newV);
       if(storeOrigNodeId){
-        newV.setProperty(ORIGID_PROPKEY, v.getId());
+        if(origIdPropKey==null)
+          throw new IllegalStateException("OrigIdPropKey not set; call setOrigIdPropKey() first");
+        newV.setProperty(origIdPropKey, v.getId());
       }
     }
     return newV;

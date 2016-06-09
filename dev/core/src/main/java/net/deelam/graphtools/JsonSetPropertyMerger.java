@@ -3,6 +3,8 @@
  */
 package net.deelam.graphtools;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.lang.reflect.Array;
 import java.util.*;
 import java.util.Map.Entry;
@@ -26,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 @SuppressWarnings({"rawtypes","unchecked"})
 @RequiredArgsConstructor
 @Slf4j
-public class JsonPropertyMerger implements PropertyMerger {
+public class JsonSetPropertyMerger implements PropertyMerger {
 
   @Override
   public void mergeProperties(Element fromE, Element toE) {
@@ -46,8 +48,15 @@ public class JsonPropertyMerger implements PropertyMerger {
         setElementProperty(toE, key, fromValue);
         if (isMultivalued(fromValue)) {
           Object fromValueSet = fromE.getProperty(key);
-          if(fromValueSet instanceof Set){ // created by JavaSetPropertyMerger
+          if(fromValueSet instanceof Set){ 
             toE.setProperty(key, mapper.toJson(fromValueSet));
+
+            Object firstVal = ((Set) fromValueSet).iterator().next();
+            if (firstVal == null) {
+              log.error("Cannot determine class for this set: {}", fromValueSet);
+            } else {
+              setPropertyValueClass(toE, key, firstVal);
+            }
           } else {
             String fromValueSetStr = (String) fromValueSet;
             toE.setProperty(key, fromValueSetStr);
@@ -207,29 +216,19 @@ public class JsonPropertyMerger implements PropertyMerger {
       String fromListStr = (String) fromValue; //fromE.getProperty(valSetPropKey);
       List fromValueList = (List) parseValue(fromListStr); //parseList(compClass, fromListStr);
       for (Object fVal : fromValueList) {
-        if(key.endsWith(VALUELIST_SUFFIX)){
+        if (!valueList.contains(fVal)) { // not efficient since searching in a list
+          if (!compClass.equals(fVal.getClass()))
+            log.warn("existingClass={} newValueClass={}", compClass, fVal.getClass());
           valueList.add(fVal); // hopefully, fromValue is the same type as other elements in the set
           toValueChanged = true;
-        } else { // treat as a Set 
-          if (!valueList.contains(fVal)) { // not efficient since searching in a list
-            if (!compClass.equals(fVal.getClass()))
-              log.warn("existingClass={} newValueClass={}", compClass, fVal.getClass());
-            valueList.add(fVal); // hopefully, fromValue is the same type as other elements in the set
-            toValueChanged = true;
-          }
         }
       }
     } else { // fromValue is a single value
-      if(key.endsWith(VALUELIST_SUFFIX)){
+      if (!valueList.contains(fromValue)) {
+        if (!compClass.equals(fromValue.getClass()))
+          log.warn("existingClass={} newValueClass={}", compClass, fromValue.getClass());
         valueList.add(fromValue); // hopefully, fromValue is the same type as other elements in the set
         toValueChanged = true;
-      } else { // treat as a Set 
-        if (!valueList.contains(fromValue)) {
-          if (!compClass.equals(fromValue.getClass()))
-            log.warn("existingClass={} newValueClass={}", compClass, fromValue.getClass());
-          valueList.add(fromValue); // hopefully, fromValue is the same type as other elements in the set
-          toValueChanged = true;
-        }
       }
     }
 
@@ -381,14 +380,9 @@ public class JsonPropertyMerger implements PropertyMerger {
           //String valueStr = (String) existingProps.get(entry.getKey());
           if(value instanceof String)
             value=parseValue((String) value);
-          Collection col;
-          if(entry.getKey().endsWith(VALUELIST_SUFFIX)){
-            col=(List) value;
-          }else{
-            col=new LinkedHashSet((List) value); //mapper.parser().parse(valueStr));
-          }
+          Set set=new LinkedHashSet((List) value); //mapper.parser().parse(valueStr));
           //tempGr.setProperty(entry.getKey(), entry.getValue());
-          tempGr.setProperty(entry.getKey(), col);
+          tempGr.setProperty(entry.getKey(), set);
         }catch(Exception e){
           log.error("{} {} {}", entry.getValue(), entry.getValue().getClass(), value);
           throw e;
@@ -464,7 +458,7 @@ public class JsonPropertyMerger implements PropertyMerger {
     }
     {
       LinkedHashSet<Object> valueSet = new LinkedHashSet<>();
-      valueSet.add(new JsonPropertyMerger());
+      valueSet.add(new JsonSetPropertyMerger());
       String inJson = mapper.toJson(valueSet);
       System.out.println(inJson);
       List list = (List) mapper.parser().parse(inJson);

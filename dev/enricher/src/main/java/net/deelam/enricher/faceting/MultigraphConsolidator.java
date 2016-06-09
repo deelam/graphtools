@@ -115,21 +115,20 @@ public class MultigraphConsolidator implements AutoCloseable {
             });
     
     dstGraphUri=graphUri;
+    merger = dstGraphUri.createPropertyMerger();
     if(shouldAlreadyExist || dstGraphUri.exists()){
       graph = dstGraphUri.getOrOpenGraph(); //openExistingIdGraph(); // graph will be open here so that close() can call shutdown()
       String origIdPropKey = GraphUtils.getMetaData(graph, ORIGID_PROPKEY);
       if(origIdPropKey!=null){
-        origNodeCodec=new OriginalNodeCodec(origIdPropKey, graph);
+        origNodeCodec=new OriginalNodeCodec(origIdPropKey, graph, merger);
       }
     } else {
       graph=dstGraphUri.createNewIdGraph(false);
       GraphUtils.setMetaData(graph, GraphUtils.GRAPHBUILDER_PROPKEY, this.getClass().getSimpleName());
-      setOrigIdPropKey("_origId"); //default value
+      //setOrigIdPropKey("_origId"); //default value
     }
 
-    merger = dstGraphUri.createPropertyMerger();
-    
-//    srcGraphIdPropKey = GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
+    //    srcGraphIdPropKey = GraphUtils.getMetaData(graph, SRCGRAPHID_PROPKEY);
 
     loadIdMapperFromGraphMetaData();
   }
@@ -148,10 +147,13 @@ public class MultigraphConsolidator implements AutoCloseable {
 
   private static final String ORIGID_PROPKEY = "_ORIGID_PROPKEY_";
   public void setOrigIdPropKey(String origIdPropKey) {
+    if(origNodeCodec!=null){
+      throw new IllegalStateException("OrigIdPropKey already set to "+origNodeCodec.getOrigIdPropKey());
+    }
     if(origIdPropKey==null){
       origNodeCodec=null;
     } else {
-      origNodeCodec=new OriginalNodeCodec(origIdPropKey, graph);
+      origNodeCodec=new OriginalNodeCodec(origIdPropKey, graph, merger);
       GraphUtils.setMetaData(graph, ORIGID_PROPKEY, origIdPropKey);
     }
   }
@@ -174,6 +176,22 @@ public class MultigraphConsolidator implements AutoCloseable {
     return origNodeCodec.getSrcGraphId(v, graphIdMapper);
   }
 
+  private void setOrigNodeProperties(Element v, String shortGraphId, Element newV) {
+    if (origNodeCodec != null) {
+      String origId = null; //v.getProperty(origIdPropKey); // use original id if possible
+      if (origId == null)
+        origId = v.getProperty(IdGraph.ID); // If v instanceof IdElement, getProperty(IdGraph.ID) returns null
+      if (origId == null)
+        if(v.getId() instanceof String)
+          origId = (String) v.getId();
+        else{
+          log.warn("Element id is not a String: {} is of class={}", v.getId(), v.getId().getClass());
+          origId = v.getId().toString();
+        }
+      origNodeCodec.setOrigId(newV, origId, shortGraphId);
+    }
+  }
+  
   ///
 
   @Getter
@@ -423,7 +441,7 @@ public class MultigraphConsolidator implements AutoCloseable {
       final MutableLong mutableLong = srcGraphNodeImportCount.get(shortGraphId);
       if(mutableLong!=null) mutableLong.increment();
       else log.error("{} not found in {}", shortGraphId, srcGraphNodeImportCount);
-      setNewProperties(v, shortGraphId, newV);
+      setOrigNodeProperties(v, shortGraphId, newV);
     }
     merger.mergeProperties(v, newV);
     return newV;
@@ -459,27 +477,10 @@ public class MultigraphConsolidator implements AutoCloseable {
         inV = importVertexUsingShortId(e.getVertex(Direction.IN), shortGraphId);
       newE = graph.addEdge(newId, outV, inV, e.getLabel());
       srcGraphEdgeImportCount.get(shortGraphId).increment();
-      setNewProperties(e, shortGraphId, newE);
+      setOrigNodeProperties(e, shortGraphId, newE);
     }
     merger.mergeProperties(e, newE);
     return newE;
-  }
-
-  private void setNewProperties(Element v, String shortGraphId, Element newV) {
-    if (origNodeCodec != null) {
-      String origId = null; //v.getProperty(origIdPropKey); // use original id if possible
-      if (origId == null)
-        origId = v.getProperty(IdGraph.ID); // If v instanceof IdElement, getProperty(IdGraph.ID) returns null
-      if (origId == null)
-        if(v.getId() instanceof String)
-          origId = (String) v.getId();
-        else{
-          log.warn("Element id is not a String: {} is of class={}", v.getId(), v.getId().getClass());
-          origId = v.getId().toString();
-        }
-
-      origNodeCodec.setOrigId(newV, origId, shortGraphId);
-    }
   }
 
   ///

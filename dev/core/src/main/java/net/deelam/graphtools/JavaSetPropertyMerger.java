@@ -3,12 +3,14 @@
  */
 package net.deelam.graphtools;
 
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
 import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -18,10 +20,6 @@ import lombok.RequiredArgsConstructor;
 //@Slf4j
 public class JavaSetPropertyMerger implements PropertyMerger {
 
-  static final String VALUE_CLASS_SUFFIX = "__jsonClass";
-  public static final String SET_VALUE = "[multivalued]";
-  static final String SET_SUFFIX = "__jsonSET";
-
   @SuppressWarnings("unchecked")
   public void mergeProperties(Element fromE, Element toE) {
     for (String key : fromE.getPropertyKeys()) {
@@ -30,10 +28,6 @@ public class JavaSetPropertyMerger implements PropertyMerger {
       
       if (key.equals(IdGraph.ID)) // needed, in case this method is called for GraphElements
         continue;
-
-      if (key.endsWith(SET_SUFFIX)) {
-        continue;
-      }
 
       Object fromValue = fromE.getProperty(key);
       if (fromValue == null) {
@@ -45,58 +39,103 @@ public class JavaSetPropertyMerger implements PropertyMerger {
       Object toValue = toE.getProperty(key);
       if (toValue == null) { // toNode does not have value
         toE.setProperty(key, fromValue);
-        if (fromValue.equals(SET_VALUE)) {
-          String setPropertyKey = key + SET_SUFFIX;
-          Set<Object> fromValueSet = (Set<Object>) fromE.getProperty(setPropertyKey);
-          toE.setProperty(setPropertyKey, new LinkedHashSet<>(fromValueSet));
+        if (isMultivalued(fromValue)) {
+          Set<Object> fromValueSet = (Set<Object>) fromE.getProperty(key);
+          toE.setProperty(key, new LinkedHashSet<>(fromValueSet)); // don't need to clone() since values are primitives
         }
         continue;
       }
 
-      if (!fromValue.equals(SET_VALUE) && toValue.equals(fromValue)) {
+      if (!isMultivalued(fromValue) && toValue.equals(fromValue)) {
         // nothing to do; values are the same
         continue;
       }
 
-      { // toValue and fromValue are not null and not equal
-        /* Possible cases:
-         * fromValue=val toValue=val     ==> toValue=SET_VALUE  toValue__SET=Set<?>
-         * fromValue=Set<?> toValue=val  ==> toValue=SET_VALUE  toValue__SET=Set<?>
-         * fromValue=val toValue=Set<?>  ==>                    toValue__SET=Set<?>
-         * fromValue=Set<?> toValue=Set<?>  ==>                 toValue__SET=Set<?>
-         */
-
-        // check special SET_SUFFIX property and create a Set if needed
-        String setPropertyKey = key + SET_SUFFIX;
-        Set<Object> valueSet = toE.getProperty(setPropertyKey);
-        if (valueSet == null) {
-          valueSet = new LinkedHashSet<>();
-          toE.setProperty(setPropertyKey, valueSet);
-          Object existingVal = toE.getProperty(key);
-          valueSet.add(existingVal);
-          toE.setProperty(key, SET_VALUE);
-          //setPropertyValueClass(toE, key, existingVal);
-        }
-        if (fromValue.equals(SET_VALUE)) { // then 
-          valueSet.addAll((Set<Object>) fromE.getProperty(setPropertyKey));
-        } else {
-          valueSet.add(fromValue); // hopefully, fromValue is the same type as other elements in the set
-        }
-      }
+      mergeValues(fromValue, toE, key);
     }
   }
+
+  private void mergeValues(Object fromValue, Element toE, String key) {
+    // toValue and fromValue are not null and not equal
+      /* Possible cases:
+       * fromValue=val toValue=val     ==> toValue=SET_VALUE  toValue__SET=Set<?>
+       * fromValue=Set<?> toValue=val  ==> toValue=SET_VALUE  toValue__SET=Set<?>
+       * fromValue=val toValue=Set<?>  ==>                    toValue__SET=Set<?>
+       * fromValue=Set<?> toValue=Set<?>  ==>                 toValue__SET=Set<?>
+       */
+
+      // check special SET_SUFFIX property and create a Set if needed
+      Object value = toE.getProperty(key);
+      Set<Object> valueSet = (isMultivalued(value)) ? (Set<Object>) value : null;
+      if (valueSet == null) {
+        Object existingVal = toE.getProperty(key);
+        valueSet = new LinkedHashSet<>();
+        toE.setProperty(key, valueSet);
+        valueSet.add(existingVal);
+        //toE.setProperty(key, SET_VALUE);
+        //setPropertyValueClass(toE, key, existingVal);
+      }
+      if (isMultivalued(fromValue)) { // then 
+        valueSet.addAll((Set<Object>) fromValue);
+      } else {
+        valueSet.add(fromValue); // hopefully, fromValue is the same type as other elements in the set
+      }
+  }
   
+  @Override
+  public boolean addProperty(Element elem, String key, Object value) {
+    if(isMultivalued(value))
+      throw new IllegalArgumentException("TODO: allow adding multivalued value?");
+    Object existingVal = elem.getProperty(key);
+    if(existingVal==null){
+      elem.setProperty(key, value);
+      return true;
+    }else{
+      mergeValues(existingVal, elem, key);
+      return false;
+    }
+  }
+
+  @Override
+  public boolean isMultivalued(Object value) {
+    if(value instanceof Set)
+      return true;
+    return !isAllowedValue(value);
+  }
   
+  boolean isAllowedValue(Object value){
+    return (value.getClass().isPrimitive() || validPropertyClasses.contains(value.getClass()));
+  }
+  
+  @Getter
+  private final Set<Class<?>> validPropertyClasses = new HashSet<>();
+  {
+    // this list is created from Neo4j's PropertyStore class
+    validPropertyClasses.add(String.class);
+    validPropertyClasses.add(Integer.class);
+    validPropertyClasses.add(Boolean.class);
+    validPropertyClasses.add(Float.class);
+    validPropertyClasses.add(Long.class);
+    validPropertyClasses.add(Double.class);
+    validPropertyClasses.add(Byte.class);
+    validPropertyClasses.add(Character.class);
+    validPropertyClasses.add(Short.class);
+    
+    //Titan supported property types: http://s3.thinkaurelius.com/docs/titan/0.5.0/schema.html#_defining_property_keys
+  }
+  
+/*  static final String VALUE_CLASS_SUFFIX = "__jsonClass";
+
   private void setPropertyValueClass(Element elem, String key, Object value) {
     final String compClassPropKey = key + VALUE_CLASS_SUFFIX;
     elem.setProperty(compClassPropKey, value.getClass().getCanonicalName());
   }
-
+*/
 
   @Override
   public Object[] getArrayProperty(Element elem, String key) {
-    String setPropertyKey = key + SET_SUFFIX;
-    Set<Object> valueSet = elem.getProperty(setPropertyKey);
+    Object value = elem.getProperty(key);
+    Set<Object> valueSet = (isMultivalued(value)) ? (Set<Object>) value : null;
     if (valueSet == null) {
       Object val = elem.getProperty(key);
       if(val==null)
@@ -113,8 +152,7 @@ public class JavaSetPropertyMerger implements PropertyMerger {
   
   @Override
   public int getArrayPropertySize(Element elem, String key){
-    String setPropertyKey = key + SET_SUFFIX;
-    Set<Object> valueSet = elem.getProperty(setPropertyKey);
+    Set<Object> valueSet = elem.getProperty(key);
     if (valueSet == null) {
       Object val = elem.getProperty(key);
       if(val==null)

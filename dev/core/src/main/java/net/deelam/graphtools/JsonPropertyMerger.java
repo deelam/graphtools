@@ -1,6 +1,3 @@
-/**
- * 
- */
 package net.deelam.graphtools;
 
 import java.lang.reflect.Array;
@@ -39,7 +36,6 @@ public class JsonPropertyMerger implements PropertyMerger {
       }
 
       // fromValue is not null at this point
-
       Object toValue = toE.getProperty(key);
       if (toValue == null) {
         setElementProperty(toE, key, fromValue);
@@ -53,19 +49,15 @@ public class JsonPropertyMerger implements PropertyMerger {
           }
         }
         continue;
-      }
-
-      if (!isMultivalued(fromValue) && toValue.equals(fromValue)) {
+      } else if (!key.endsWith(VALUELIST_SUFFIX) && toValue.equals(fromValue)) {
         // nothing to do; values are the same
         continue;
-      }
-
-      try {
+      } else try {
         mergeValues(fromValue, toE, key);
       } catch (Exception e) {
         log.warn("Could not merge property values for key=" + key, e);
       }
-    }
+    } // for loop
   }
 
   @Getter
@@ -83,6 +75,10 @@ public class JsonPropertyMerger implements PropertyMerger {
     validPropertyClasses.add(Short.class);
     
     //Titan supported property types: http://s3.thinkaurelius.com/docs/titan/0.5.0/schema.html#_defining_property_keys
+  }
+
+  boolean isAllowedValue(Object value){
+    return (value.getClass().isPrimitive() || validPropertyClasses.contains(value.getClass()));
   }
 
   // for Graphs (like Neo4j) that can only store primitives
@@ -106,10 +102,6 @@ public class JsonPropertyMerger implements PropertyMerger {
     }
   }
 
-  boolean isAllowedValue(Object value){
-    return (value.getClass().isPrimitive() || validPropertyClasses.contains(value.getClass()));
-  }
-
   private ObjectMapper mapper = JsonFactory.create();
   private static final Set<String> allowedMultivaluedProps=new LinkedHashSet<>();
   public static void allowMultivaluedProperty(String propName){
@@ -117,12 +109,12 @@ public class JsonPropertyMerger implements PropertyMerger {
   }
 
   public void mergeValues(Object fromValue, Element toE, String key) {
-    // toValue and fromValue are not null and not equal
+    // toValue and fromValue are not null and want to add fromValue to the list
     /* Possible cases:
-     * fromValue=val toValue=val     ==> toValue=SET_VALUE  toValue__SET=Set<?>
-     * fromValue=Set<?> toValue=val  ==> toValue=SET_VALUE  toValue__SET=Set<?>
-     * fromValue=val toValue=Set<?>  ==>                    toValue__SET=Set<?>
-     * fromValue=Set<?> toValue=Set<?>  ==>                 toValue__SET=Set<?>
+     * fromValue=val toValue=val     ==> toValue__SET=Set<?>
+     * fromValue=Set<?> toValue=val  ==> toValue__SET=Set<?>
+     * fromValue=val toValue=Set<?>  ==> toValue__SET=Set<?>
+     * fromValue=Set<?> toValue=Set<?>  ==> toValue__SET=Set<?>
      */
 
     // check special SET_SUFFIX property and create a Set if needed
@@ -139,7 +131,6 @@ public class JsonPropertyMerger implements PropertyMerger {
       valueList = new ValueList(false);
       Object existingVal = toE.getProperty(key);
       valueList.add(existingVal);
-      //toE.setProperty(key, SET_VALUE);
       if(!allowedMultivaluedProps.contains(key)){
         log.warn("Property has multiple values which is inefficient: key="+key+" for node="+toE.getId()
             + " existingVal="+existingVal+" newValue="+fromValue/*, new Throwable("Call stack")*/);
@@ -247,12 +238,10 @@ public class JsonPropertyMerger implements PropertyMerger {
     }else{
       String valueSetStr=(String) valueSet;
       try{
-        //Class<?> compClass = getPropertyValueClass(elem, key);
-        List<T> valueList = (List<T>) mapper.parser().parse(valueSetStr); //parseList(compClass, valueSetStr);
-        return valueList; //.toArray(new Object[valueList.size()]);
+        List<T> valueList = (List<T>) mapper.parser().parse(valueSetStr);
+        return valueList;
       }catch(Exception e){
-        log.error("key="+key+" for node="+elem.getId() //+" compClass="+elem.getProperty(key + VALUE_CLASS_SUFFIX)
-          +" valueSetStr="+valueSetStr, e);
+        log.error("key="+key+" for node="+elem.getId()+" valueSetStr="+valueSetStr, e);
         throw new RuntimeException(e);
       }
     }
@@ -271,12 +260,10 @@ public class JsonPropertyMerger implements PropertyMerger {
     }else{
       String valueSetStr=(String) valueSet;
       try{
-        //Class<?> compClass = getPropertyValueClass(elem, key);
-        List<?> valueList = (List<?>) mapper.parser().parse(valueSetStr); //parseList(compClass, valueSetStr);
+        List<?> valueList = (List<?>) mapper.parser().parse(valueSetStr);
         return valueList.size();
       }catch(Exception e){
-        log.error("key="+key+" for node="+elem.getId() //+" compClass="+elem.getProperty(key + VALUE_CLASS_SUFFIX)
-          +" valueSetStr="+valueSetStr, e);
+        log.error("key="+key+" for node="+elem.getId() +" valueSetStr="+valueSetStr, e);
         throw new RuntimeException(e);
       }
     }
@@ -288,17 +275,7 @@ public class JsonPropertyMerger implements PropertyMerger {
     Map<String, Object> newMap=new HashMap<>();
     for(Entry<String, Object> e:props.entrySet()){
       if (isMultivalued(e.getValue())) { 
-        final String key = e.getKey();
-//        Object firstVal=((Set) props.get(setKey)).iterator().next();
-//        if(firstVal==null){
-//          log.error("Cannot determine class for this set: {}", e.getValue());
-//        }else
-        {
-          //newMap.put(e.getKey(), SET_VALUE);
-          //mimics setPropertyValueClass(elem, e.getKey(), e.getValue());
-          //newMap.put(e.getKey() + VALUE_CLASS_SUFFIX, firstVal.getClass().getCanonicalName());
-          newMap.put(key, mapper.toJson(e.getValue()));
-        }
+        newMap.put(e.getKey(), mapper.toJson(e.getValue()));
       }else if (validPropertyClasses.contains(e.getValue().getClass())) {
         newMap.put(e.getKey(), e.getValue());
       } else {// save as Json
@@ -312,32 +289,15 @@ public class JsonPropertyMerger implements PropertyMerger {
     for(Entry<String, Object> entry:existingProps.entrySet()){
       Object value = entry.getValue();
       if(isMultivalued(value)){
-//        Class<?> compClass;
-//        {
-//          final String compClassPropKey = entry.getKey() + VALUE_CLASS_SUFFIX;
-//          String classStr = (String) existingProps.get(compClassPropKey);
-//          try {
-//            compClass=Class.forName(classStr);
-//          } catch (ClassNotFoundException e) {
-//            throw new RuntimeException(e);
-//          }
-//        }
-//        String valueSetStr;
-//        final String valSetPropKey = entry.getKey() + SET_SUFFIX;
-//        {
-//          valueSetStr = (String) existingProps.get(valSetPropKey);
-//        }
         try{
-          //String valueStr = (String) existingProps.get(entry.getKey());
           if(value instanceof String)
             value=parseValue((String) value);
-          Collection col;
+          Collection<?> col;
           if(entry.getKey().endsWith(VALUELIST_SUFFIX)){
-            col=(List) value;
+            col=(List<?>) value;
           }else{
-            col=new LinkedHashSet((List) value); //mapper.parser().parse(valueStr));
+            col=new LinkedHashSet<>((List<?>) value); //mapper.parser().parse(valueStr));
           }
-          //tempGr.setProperty(entry.getKey(), entry.getValue());
           tempGr.setProperty(entry.getKey(), col);
         }catch(Exception e){
           log.error("{} {} {}", entry.getValue(), entry.getValue().getClass(), value);
@@ -348,6 +308,9 @@ public class JsonPropertyMerger implements PropertyMerger {
       }
     }
   }
+  
+  
+  ///========================================
   
   @SuppressWarnings({"rawtypes","unchecked"})
   public static void main(String[] args) throws ClassNotFoundException {

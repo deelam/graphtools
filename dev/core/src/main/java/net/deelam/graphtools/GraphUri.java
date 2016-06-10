@@ -135,8 +135,7 @@ public class GraphUri {
    * @return
    * @throws IOException
    */
-  @SuppressWarnings("rawtypes")
-  public IdGraph createNewIdGraph(boolean deleteExisting) throws IOException {
+  public <T extends KeyIndexableGraph> IdGraph<T> createNewIdGraph(boolean deleteExisting) throws IOException {
     checkNotOpen();
     if(getFactory().exists(this)){
       if(deleteExisting)

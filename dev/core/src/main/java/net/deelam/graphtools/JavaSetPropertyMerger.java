@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
+ * store primitives and HashSet
  * @author deelam
  */
 @RequiredArgsConstructor
@@ -37,7 +38,6 @@ public class JavaSetPropertyMerger implements PropertyMerger {
       }
 
       // fromValue is not null at this point
-
       Object toValue = toE.getProperty(key);
       if (toValue == null) { // toNode does not have value
         toE.setProperty(key, fromValue);
@@ -46,17 +46,16 @@ public class JavaSetPropertyMerger implements PropertyMerger {
           toE.setProperty(key, new LinkedHashSet<>(fromValueSet)); // don't need to clone() since values are primitives
         }
         continue;
-      }
-
-      if (!isMultivalued(fromValue) && toValue.equals(fromValue)) {
+      } else if (!isMultivalued(fromValue) && toValue.equals(fromValue)) {
         // nothing to do; values are the same
         continue;
+      } else {
+        mergeValues(fromValue, toE, key);
       }
-
-      mergeValues(fromValue, toE, key);
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void mergeValues(Object fromValue, Element toE, String key) {
     // toValue and fromValue are not null and not equal
       /* Possible cases:
@@ -136,6 +135,7 @@ public class JavaSetPropertyMerger implements PropertyMerger {
   }
 */
 
+  @SuppressWarnings("unchecked")
   @Override
   public <T> List<T> getArrayProperty(Element elem, String key) {
     Object value = elem.getProperty(key);

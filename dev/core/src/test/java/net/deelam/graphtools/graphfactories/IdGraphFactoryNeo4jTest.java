@@ -3,6 +3,9 @@ package net.deelam.graphtools.graphfactories;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.List;
 
 import net.deelam.graphtools.GraphTransaction;
 import net.deelam.graphtools.GraphUri;
@@ -140,4 +143,76 @@ public class IdGraphFactoryNeo4jTest {
     graph.shutdown();
   }
 
+  
+  @Test
+  public void testNeo4jStorage() throws IOException {
+    GraphUri gUri = new GraphUri("neo4j:./target/myDb");
+    IdGraph<Neo4jGraph> graph = gUri.createNewIdGraph(true);
+    Vertex one = graph.addVertex("ONE");
+    
+    one.setProperty("int", 1);
+    assertEquals(Integer.class, one.getProperty("int").getClass());
+
+    short s=23333;
+    one.setProperty("short", s);
+    assertEquals(Short.class, one.getProperty("short").getClass());
+
+    one.setProperty("bool", true);
+    assertEquals(Boolean.class, one.getProperty("bool").getClass());
+
+    byte b=127;
+    one.setProperty("byte", b);
+    assertEquals(Byte.class, one.getProperty("byte").getClass());
+
+    byte[] ba={ 5 };
+    one.setProperty("byte[]", ba);
+    assertEquals(ArrayList.class, one.getProperty("byte[]").getClass());
+    assertEquals(1, ((List)one.getProperty("byte[]")).size());
+
+    String[] sa={ "asdf" };
+    System.out.println(sa);
+    one.setProperty("s[]", sa);
+    assertEquals(ArrayList.class, one.getProperty("s[]").getClass());
+    assertEquals(1, ((List)one.getProperty("s[]")).size());
+
+    char[] ca={ 'a' };
+    System.out.println(ca);
+    one.setProperty("c[]", ca);
+    assertEquals(ArrayList.class, one.getProperty("c[]").getClass());
+    assertEquals(1, ((List)one.getProperty("s[]")).size());
+
+    List<String> al=new ArrayList();
+    al.add("ok");
+    al.add("123");
+    assertFalse(al.getClass().isArray());
+    one.setProperty("al", al); // Blueprints' Neo4jElement.tryConvertCollectionToArray()
+    assertEquals(ArrayList.class, one.getProperty("al").getClass());
+    assertEquals(2, ((List)one.getProperty("al")).size());
+    assertEquals(String.class, ((List)one.getProperty("al")).get(0).getClass());
+
+    String[] arr = al.toArray(new String[al.size()]);
+    one.setProperty("arr", arr); // Blueprints' Neo4jElement.tryConvertCollectionToArray()
+    assertEquals(ArrayList.class, one.getProperty("arr").getClass());
+    assertEquals(2, ((List)one.getProperty("arr")).size());
+    assertEquals(String.class, ((List)one.getProperty("arr")).get(0).getClass());
+    
+    one.setProperty("emptyArr", new String[]{});
+    assertEquals(ArrayList.class, one.getProperty("emptyArr").getClass());
+    assertEquals(0, ((List)one.getProperty("emptyArr")).size());
+
+    try{
+	    List<String> emptyAl=new ArrayList();
+	    one.setProperty("emptyAl", emptyAl); // Blueprints' Neo4jElement.tryConvertCollectionToArray() returns null for empty arrays
+	    fail();
+    }catch(IllegalArgumentException e){    	
+    }
+
+    Object[] objArr=new Object[]{"asdf"};
+    assertEquals(Object.class, objArr.getClass().getComponentType());
+    
+    Object[] dynArr=(Object[]) Array.newInstance(String.class, 2);
+    assertEquals(String.class, objArr.getClass().getComponentType());
+    
+    graph.shutdown();
+  }
 }

@@ -18,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
+ * store primitives and JSON arrays
+ * 
  * @author deelam
  */
 @RequiredArgsConstructor
@@ -38,16 +40,14 @@ public class JsonPropertyMerger implements PropertyMerger {
       // fromValue is not null at this point
       Object toValue = toE.getProperty(key);
       if (toValue == null) {
-        setElementProperty(toE, key, fromValue);
         if (isMultivalued(fromValue)) {
-          Object fromValueSet = fromE.getProperty(key);
-          if(fromValueSet instanceof Set){ // created by JavaSetPropertyMerger
-            toE.setProperty(key, mapper.toJson(fromValueSet));
+          if(fromValue instanceof Collection){ // created by JavaSetPropertyMerger
+            toE.setProperty(key, mapper.toJson(fromValue));
           } else {
-            String fromValueSetStr = (String) fromValueSet;
-            toE.setProperty(key, fromValueSetStr);
+            toE.setProperty(key, fromValue);
           }
-        }
+        } else
+          setElementProperty(toE, key, fromValue);
         continue;
       } else if (!key.endsWith(VALUELIST_SUFFIX) && toValue.equals(fromValue)) {
         // nothing to do; values are the same
@@ -83,19 +83,16 @@ public class JsonPropertyMerger implements PropertyMerger {
 
   // for Graphs (like Neo4j) that can only store primitives
   private void setElementProperty(Element elem, String key, Object value) {
-    Object leafValue;
+    Class<?> valueClass=value.getClass();
     if (value.getClass().isArray()) {
+      valueClass=value.getClass().getComponentType();
       if (Array.getLength(value) == 0) {
-        elem.setProperty(key, value);
+//        elem.setProperty(key, value);
         return;
-      } else {
-        leafValue = Array.get(value, 0);
       }
-    } else {
-      leafValue = value;
     }
 
-    if (validPropertyClasses.contains(leafValue.getClass())) {
+    if (validPropertyClasses.contains(valueClass)) {
       elem.setProperty(key, value); // TODO: 6: for Titan, must use addProperty() to store as list or set if value is a Collection
     } else { // save as Json
       elem.setProperty(key, mapper.toJson(value));
@@ -108,6 +105,7 @@ public class JsonPropertyMerger implements PropertyMerger {
     allowedMultivaluedProps.add(propName);
   }
 
+  @SuppressWarnings("unchecked")
   public void mergeValues(Object fromValue, Element toE, String key) {
     // toValue and fromValue are not null and want to add fromValue to the list
     /* Possible cases:
@@ -122,18 +120,17 @@ public class JsonPropertyMerger implements PropertyMerger {
     Object parsedV =value;
     if(value instanceof String)
       parsedV = parseValue((String) value);
-    List valueList=null;
+    List<Object> valueList=null;
     if (!isAllowedValue(parsedV)) {
-      valueList = (List) parsedV;
+      valueList = (List<Object>) parsedV;
     }
 
     if (valueList == null) {
       valueList = new ValueList(false);
-      Object existingVal = toE.getProperty(key);
-      valueList.add(existingVal);
+      valueList.add(value);
       if(!allowedMultivaluedProps.contains(key)){
         log.warn("Property has multiple values which is inefficient: key="+key+" for node="+toE.getId()
-            + " existingVal="+existingVal+" newValue="+fromValue/*, new Throwable("Call stack")*/);
+            + " existingVal="+value+" newValue="+fromValue/*, new Throwable("Call stack")*/);
       }
     }
 
@@ -141,7 +138,7 @@ public class JsonPropertyMerger implements PropertyMerger {
     boolean toValueChanged = false;
     if (isMultivalued(fromValue)) {
       String fromListStr = (String) fromValue; //fromE.getProperty(valSetPropKey);
-      List fromValueList = (List) parseValue(fromListStr); //parseList(compClass, fromListStr);
+      List<Object> fromValueList = (List<Object>) parseValue(fromListStr); //parseList(compClass, fromListStr);
       for (Object fVal : fromValueList) {
         if(key.endsWith(VALUELIST_SUFFIX)){
           valueList.add(fVal); // hopefully, fromValue is the same type as other elements in the set
@@ -225,49 +222,30 @@ public class JsonPropertyMerger implements PropertyMerger {
   @SuppressWarnings("unchecked")
   @Override
   public <T> List<T> getArrayProperty(Element elem, String key) {
-    final Object valueSet = elem.getProperty(key);
-    if (valueSet == null) {
-      Object val = elem.getProperty(key);
-      if(val==null)
-        return null;
-      else {
-        List<T> arr = new ArrayList<>();
-        arr.add((T) val);
-        return arr;
-      }
-    }else{
-      String valueSetStr=(String) valueSet;
-      try{
-        List<T> valueList = (List<T>) mapper.parser().parse(valueSetStr);
-        return valueList;
-      }catch(Exception e){
-        log.error("key="+key+" for node="+elem.getId()+" valueSetStr="+valueSetStr, e);
-        throw new RuntimeException(e);
-      }
+    final Object value = elem.getProperty(key);
+    if(value==null)
+      return null;
+    else if (isMultivalued(value)){
+      return (List<T>) parseValue((String) value);
+    } else {
+      List<T> arr = new ArrayList<>();
+      arr.add((T) value);
+      return arr;
     }
   }
   
   @Override
   public int getArrayPropertySize(Element elem, String key){
-    final Object valueSet = elem.getProperty(key);
-    if (valueSet == null) {
-      Object val = elem.getProperty(key);
-      if(val==null)
-        return 0;
-      else {
-        return 1;
-      }
-    }else{
-      String valueSetStr=(String) valueSet;
-      try{
-        List<?> valueList = (List<?>) mapper.parser().parse(valueSetStr);
-        return valueList.size();
-      }catch(Exception e){
-        log.error("key="+key+" for node="+elem.getId() +" valueSetStr="+valueSetStr, e);
-        throw new RuntimeException(e);
-      }
+    final Object value = elem.getProperty(key);
+    if(value==null)
+      return 0;
+    else if (isMultivalued(value)){
+      return ((List<?>) parseValue((String) value)).size();
+    } else {
+      return 1;
     }
   }
+  
   // TODO: 3: set limit on size of Set
   // TODO: 3: add supernode detection and warning
 

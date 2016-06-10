@@ -72,7 +72,7 @@ public class OriginalNodeCodec {
     if(origId==null)
       return null;
 //    if (pm.isMultivalued(origId))
-    return pm.getArrayProperty(v, origIdPropKey);
+    return pm.getListProperty(v, origIdPropKey);
   }
 
   public List<String> getSrcGraphIdList(Vertex v, IdMapper graphIdMapper) {
@@ -81,7 +81,7 @@ public class OriginalNodeCodec {
       return null;
     
     
-    List<String> shortGraphIds=pm.getArrayProperty(v, graphIdPropKey);
+    List<String> shortGraphIds=pm.getListProperty(v, graphIdPropKey);
     List<String> list=new ArrayList<>();
     for(String shortGraphId:shortGraphIds){
       String longId = graphIdMapper.longId((String) shortGraphId);

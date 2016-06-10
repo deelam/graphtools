@@ -211,7 +211,7 @@ public class IdGraphFactoryNeo4jTest {
     assertEquals(Object.class, objArr.getClass().getComponentType());
     
     Object[] dynArr=(Object[]) Array.newInstance(String.class, 2);
-    assertEquals(String.class, objArr.getClass().getComponentType());
+    assertEquals(String.class, dynArr.getClass().getComponentType());
     
     graph.shutdown();
   }

@@ -29,6 +29,9 @@ public class JsonPropertyMerger implements PropertyMerger {
   @Override
   public void mergeProperties(Element fromE, Element toE) {
     for (String key : fromE.getPropertyKeys()) {
+      if(key.length()==0)
+        throw new IllegalArgumentException("Property key cannot be empty: "+fromE);
+
       if (key.equals(IdGraph.ID)) // needed, in case this method is called for GraphElements
         continue;
 
@@ -40,13 +43,13 @@ public class JsonPropertyMerger implements PropertyMerger {
       // fromValue is not null at this point
       Object toValue = toE.getProperty(key);
       if (toValue == null) {
-        if (isMultivalued(fromValue)) {
-          if(fromValue instanceof Collection){ // created by JavaSetPropertyMerger
-            toE.setProperty(key, mapper.toJson(fromValue));
-          } else {
-            toE.setProperty(key, fromValue);
-          }
-        } else
+//        if (isMultivalued(fromValue)) {
+//          if(fromValue instanceof Collection){ // created by JavaSetPropertyMerger
+//            toE.setProperty(key, mapper.toJson(fromValue));
+//          } else {
+//            toE.setProperty(key, fromValue);
+//          }
+//        } else
           setElementProperty(toE, key, fromValue);
         continue;
       } else if (!key.endsWith(VALUELIST_SUFFIX) && toValue.equals(fromValue)) {
@@ -221,7 +224,7 @@ public class JsonPropertyMerger implements PropertyMerger {
   
   @SuppressWarnings("unchecked")
   @Override
-  public <T> List<T> getArrayProperty(Element elem, String key) {
+  public <T> List<T> getListProperty(Element elem, String key) {
     final Object value = elem.getProperty(key);
     if(value==null)
       return null;
@@ -235,7 +238,7 @@ public class JsonPropertyMerger implements PropertyMerger {
   }
   
   @Override
-  public int getArrayPropertySize(Element elem, String key){
+  public int getListPropertySize(Element elem, String key){
     final Object value = elem.getProperty(key);
     if(value==null)
       return 0;

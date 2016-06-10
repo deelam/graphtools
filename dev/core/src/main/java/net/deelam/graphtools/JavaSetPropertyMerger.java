@@ -14,13 +14,14 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * store primitives and HashSet
  * @author deelam
  */
 @RequiredArgsConstructor
-//@Slf4j
+@Slf4j
 public class JavaSetPropertyMerger implements PropertyMerger {
 
   @SuppressWarnings("unchecked")
@@ -40,17 +41,19 @@ public class JavaSetPropertyMerger implements PropertyMerger {
       // fromValue is not null at this point
       Object toValue = toE.getProperty(key);
       if (toValue == null) { // toNode does not have value
-        toE.setProperty(key, fromValue);
         if (isMultivalued(fromValue)) {
-          Set<Object> fromValueSet = (Set<Object>) fromE.getProperty(key);
-          toE.setProperty(key, new LinkedHashSet<>(fromValueSet)); // don't need to clone() since values are primitives
+          toE.setProperty(key, new LinkedHashSet<>((Set<Object>) fromValue)); // don't need to clone() since values are primitives
+        }else{
+          toE.setProperty(key, fromValue);
         }
         continue;
       } else if (!isMultivalued(fromValue) && toValue.equals(fromValue)) {
         // nothing to do; values are the same
         continue;
-      } else {
+      } else try {
         mergeValues(fromValue, toE, key);
+      } catch (Exception e) {
+        log.warn("Could not merge property values for key=" + key, e);
       }
     }
   }
@@ -137,7 +140,7 @@ public class JavaSetPropertyMerger implements PropertyMerger {
 
   @SuppressWarnings("unchecked")
   @Override
-  public <T> List<T> getArrayProperty(Element elem, String key) {
+  public <T> List<T> getListProperty(Element elem, String key) {
     Object value = elem.getProperty(key);
     Set<T> valueSet = (isMultivalued(value)) ? (Set<T>) value : null;
     if (valueSet == null) {
@@ -155,7 +158,7 @@ public class JavaSetPropertyMerger implements PropertyMerger {
   }
   
   @Override
-  public int getArrayPropertySize(Element elem, String key){
+  public int getListPropertySize(Element elem, String key){
     Set<Object> valueSet = elem.getProperty(key);
     if (valueSet == null) {
       Object val = elem.getProperty(key);

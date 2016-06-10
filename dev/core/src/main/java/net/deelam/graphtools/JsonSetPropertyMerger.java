@@ -262,7 +262,7 @@ public class JsonSetPropertyMerger implements PropertyMerger {
   
   @SuppressWarnings("unchecked")
   @Override
-  public <T> List<T> getArrayProperty(Element elem, String key) {
+  public <T> List<T> getListProperty(Element elem, String key) {
     final Object valueSet = elem.getProperty(key);
     if (valueSet == null) {
       Object val = elem.getProperty(key);
@@ -288,7 +288,7 @@ public class JsonSetPropertyMerger implements PropertyMerger {
   }
   
   @Override
-  public int getArrayPropertySize(Element elem, String key){
+  public int getListPropertySize(Element elem, String key){
     final Object valueSet = elem.getProperty(key);
     if (valueSet == null) {
       Object val = elem.getProperty(key);

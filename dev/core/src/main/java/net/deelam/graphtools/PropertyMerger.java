@@ -13,9 +13,9 @@ public interface PropertyMerger {
   // TODO: add unit tests for different cases and different classes (eg., Date)
   void mergeProperties(Element fromE, Element toE);
   
-  <T> List<T> getArrayProperty(Element elem, String key);
+  <T> List<T> getListProperty(Element elem, String key);
   
-  int getArrayPropertySize(Element elem, String key);
+  int getListPropertySize(Element elem, String key);
 
   boolean addProperty(Element elem, String key, Object value);
 

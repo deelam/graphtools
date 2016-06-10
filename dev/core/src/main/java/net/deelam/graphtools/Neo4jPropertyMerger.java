@@ -1,14 +1,8 @@
 package net.deelam.graphtools;
 
 import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.Map.Entry;
 
 import org.apache.commons.collections.iterators.ArrayIterator;
 
@@ -163,9 +157,9 @@ public class Neo4jPropertyMerger implements PropertyMerger {
       if(!validPropertyClasses.contains(value.getClass()))
         throw new IllegalArgumentException("Not valid: "+value.getClass());
       valueList.add(value);
-      if(!allowedMultivaluedProps.contains(key)){
+      if(!key.endsWith(VALUELIST_SUFFIX) && !allowedMultivaluedProps.contains(key)){
         log.warn("Property has multiple values which is inefficient: key="+key+" for node="+toE.getId()
-            + " existingVal="+value+" newValue="+fromValue/*, new Throwable("Call stack")*/);
+            + " existingVal="+value+" addedValue="+fromValue/*, new Throwable("Call stack")*/);
       }
     }
 
@@ -267,4 +261,45 @@ public class Neo4jPropertyMerger implements PropertyMerger {
     }    
   }
 
+  public Map<String, Object> convertToNeo4j(Map<String, Object> props){
+    Map<String, Object> newMap=new HashMap<>();
+    for(Entry<String, Object> e:props.entrySet()){
+      if (isMultivalued(e.getValue())) { 
+        if (e.getValue() instanceof Collection)
+          newMap.put(e.getKey(), tryConvertCollectionToArray((Collection<?>) e.getValue()));
+        else if(e.getValue().getClass().isArray())
+          newMap.put(e.getKey(), e.getValue());
+        else
+          throw new IllegalArgumentException("How to convert from "+e.getValue().getClass());
+      }else if (validPropertyClasses.contains(e.getValue().getClass())) {
+        newMap.put(e.getKey(), e.getValue());
+      } else {
+        throw new IllegalStateException("Wasn't expecting value of class=" + e.getValue().getClass() + " value=" + e.getValue());
+      }
+    }
+    return newMap;
+  }
+
+  public void convertFromNeo4j(Map<String, Object> existingProps, GraphRecord tempGr) {
+    for(Entry<String, Object> entry:existingProps.entrySet()){
+      Object value = entry.getValue();
+      if(isMultivalued(value)){
+        try{
+          Collection<?> col;
+          if(entry.getKey().endsWith(VALUELIST_SUFFIX)){
+            col=tryConvertArrayToCollection(value);
+          }else{
+            col=new LinkedHashSet<>(tryConvertArrayToCollection(value));
+          }
+          tempGr.setProperty(entry.getKey(), col);
+        }catch(Exception e){
+          log.error("{} {} {}", entry.getValue(), entry.getValue().getClass(), value);
+          throw e;
+        }
+      }else{
+        tempGr.setProperty(entry.getKey(), value);
+      }
+    }
+  }
+  
 }

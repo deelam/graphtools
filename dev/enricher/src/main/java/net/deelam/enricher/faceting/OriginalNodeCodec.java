@@ -68,7 +68,7 @@ public class OriginalNodeCodec {
   }
 
   public List<String> getOrigNodeIdList(Vertex v) {
-    String origId = v.getProperty(origIdPropKey);
+    Object origId = v.getProperty(origIdPropKey);
     if(origId==null)
       return null;
 //    if (pm.isMultivalued(origId))
@@ -76,7 +76,7 @@ public class OriginalNodeCodec {
   }
 
   public List<String> getSrcGraphIdList(Vertex v, IdMapper graphIdMapper) {
-    String srcGraphId = v.getProperty(graphIdPropKey);
+    Object srcGraphId = v.getProperty(graphIdPropKey);
     if(srcGraphId==null)
       return null;
     

@@ -250,14 +250,14 @@ public class Neo4jBatchPopulator implements Populator {
     }
   }
 
-  private JsonPropertyMerger jsonPropMerger = new JsonPropertyMerger();
+  private Neo4jPropertyMerger jsonPropMerger = new Neo4jPropertyMerger();
 
   public long importVertex(BatchInserter graph, GraphRecord gr) {
     String id = gr.getStringId();
     //long longId=getLongId(id);
     Long longId = (Long) idMap.get(id);
     if (longId == null) {
-      Map<String, Object> cProps = jsonPropMerger.convertToJson(gr.getProps());
+      Map<String, Object> cProps = jsonPropMerger.convertToNeo4j(gr.getProps());
       cProps.put(IdGraph.ID, id);
       longId = graph.createNode(cProps);
       ++createdNodes;
@@ -286,7 +286,7 @@ public class Neo4jBatchPopulator implements Populator {
       } else {
         props = gr.getProps();
       }
-      return jsonPropMerger.convertToJson(props);
+      return jsonPropMerger.convertToNeo4j(props);
     }
   }
 
@@ -306,7 +306,7 @@ public class Neo4jBatchPopulator implements Populator {
     Long edgeLongId = (Long) idMap.get(edgeId);
     if (edgeLongId == null) {
       RelationshipType type = DynamicRelationshipType.withName(grE.getLabel());
-      Map<String, Object> cProps = jsonPropMerger.convertToJson(grE.getProps());
+      Map<String, Object> cProps = jsonPropMerger.convertToNeo4j(grE.getProps());
       cProps.put(IdGraph.ID, edgeId);
       if (direction == Direction.OUT) {
         edgeLongId = graph.createRelationship(v1inGraphLongId, v2inGraphLongId, type, cProps);
@@ -357,7 +357,7 @@ public class Neo4jBatchPopulator implements Populator {
   static final String SET_SUFFIX = DefaultGraphRecordMerger.SET_SUFFIX;
 
   @Getter
-  final GraphRecordMerger graphRecordMerger = new DefaultGraphRecordMerger(new JavaSetPropertyMerger());
+  final GraphRecordMerger graphRecordMerger = new DefaultGraphRecordMerger(new Neo4jPropertyMerger());
 
   private GraphRecord tempGr = new GraphRecordImpl("temp");
 
@@ -365,7 +365,7 @@ public class Neo4jBatchPopulator implements Populator {
     log.debug("Copy props from grElement={} \n\t existing={}", grElem.getPropertyKeys(), existingProps.keySet());
     //log.info("Copy props from existing element={} \n\t existing={}", fromE, existingProps);
     tempGr.clearProperties();
-    jsonPropMerger.convertFromJson(existingProps, tempGr);
+    jsonPropMerger.convertFromNeo4j(existingProps, tempGr); // TODO: why 2 conversions by jsonPropMerger and graphRecordMerger
     graphRecordMerger.mergeProperties(grElem, tempGr);
     return tempGr.getProps();
   }

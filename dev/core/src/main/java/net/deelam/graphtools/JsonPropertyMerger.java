@@ -131,9 +131,9 @@ public class JsonPropertyMerger implements PropertyMerger {
     if (valueList == null) {
       valueList = new ValueList(false);
       valueList.add(value);
-      if(!allowedMultivaluedProps.contains(key)){
+      if(!key.endsWith(VALUELIST_SUFFIX) && !allowedMultivaluedProps.contains(key)){
         log.warn("Property has multiple values which is inefficient: key="+key+" for node="+toE.getId()
-            + " existingVal="+value+" newValue="+fromValue/*, new Throwable("Call stack")*/);
+            + " existingVal="+value+" addedValue="+fromValue/*, new Throwable("Call stack")*/);
       }
     }
 

@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.IdGraphFactory;
 import net.deelam.graphtools.JsonPropertyMerger;
+import net.deelam.graphtools.Neo4jPropertyMerger;
 import net.deelam.graphtools.PropertyMerger;
 
 /**
@@ -201,7 +202,7 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
 
   @Override
   public PropertyMerger createPropertyMerger() {
-    return new JsonPropertyMerger();
+    return new Neo4jPropertyMerger();
   }
   
 }

@@ -170,7 +170,7 @@ public class Neo4jPropertyMerger implements PropertyMerger {
       if (fromValue instanceof Collection)
         itr=((Collection<?>)fromValue).iterator();
       else if(fromValue.getClass().isArray())
-        itr=new ArrayIterator((Object[])fromValue); // Collection<?> fromValueList = tryConvertArrayToCollection(fromValue);
+        itr=new ArrayIterator(fromValue); // Collection<?> fromValueList = tryConvertArrayToCollection(fromValue);
       else
         throw new IllegalArgumentException("How to iterate on "+fromValue.getClass());
       while(itr.hasNext()) {

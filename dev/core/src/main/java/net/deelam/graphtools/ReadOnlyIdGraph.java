@@ -28,28 +28,28 @@ public class ReadOnlyIdGraph extends IdGraph<KeyIndexableGraph> {
    * @throws UnsupportedOperationException
    */
   public void removeVertex(final Vertex vertex) throws UnsupportedOperationException {
-      throw new UnsupportedOperationException(ReadOnlyTokens.MUTATE_ERROR_MESSAGE);
+      throw new UnsupportedOperationException(ReadOnlyTokens.MUTATE_ERROR_MESSAGE+": "+this);
   }
 
   /**
    * @throws UnsupportedOperationException
    */
   public Edge addEdge(final Object id, final Vertex outVertex, final Vertex inVertex, final String label) throws UnsupportedOperationException {
-      throw new UnsupportedOperationException(ReadOnlyTokens.MUTATE_ERROR_MESSAGE);
+      throw new UnsupportedOperationException(ReadOnlyTokens.MUTATE_ERROR_MESSAGE+": "+this);
   }
 
   /**
    * @throws UnsupportedOperationException
    */
   public void removeEdge(final Edge edge) throws UnsupportedOperationException {
-      throw new UnsupportedOperationException(ReadOnlyTokens.MUTATE_ERROR_MESSAGE);
+      throw new UnsupportedOperationException(ReadOnlyTokens.MUTATE_ERROR_MESSAGE+": "+this);
   }
 
   /**
    * @throws UnsupportedOperationException
    */
   public Vertex addVertex(final Object id) throws UnsupportedOperationException {
-      throw new UnsupportedOperationException(ReadOnlyTokens.MUTATE_ERROR_MESSAGE);
+      throw new UnsupportedOperationException(ReadOnlyTokens.MUTATE_ERROR_MESSAGE+": "+this);
   }
 
 }

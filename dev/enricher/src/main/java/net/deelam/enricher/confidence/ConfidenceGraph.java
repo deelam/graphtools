@@ -40,7 +40,7 @@ import net.deelam.graphtools.GraphUtils;
 public class ConfidenceGraph {
   static final String CONFIDENCE_SUFFIX = "._conf";
 
-  // FIXME: make static versions of methods in this class ????
+  // TODO: 5: make static versions of methods in this class ????
   private final IdGraph<?> graph;
 
   private final String nodeTypePropertyKey;

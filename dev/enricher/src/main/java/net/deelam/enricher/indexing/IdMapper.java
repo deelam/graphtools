@@ -29,15 +29,20 @@ import com.google.common.base.Preconditions;
 @Slf4j
 public class IdMapper implements AutoCloseable {
   
-  @SuppressWarnings("unchecked")
   public IdMapper copyAs(String newFilename){
+    IdMapper newMapper=clone();
+    newMapper.filename=newFilename;
+    return newMapper;
+  }
+  
+  @SuppressWarnings("unchecked")
+  public IdMapper clone(){
     IdMapper newMapper=new IdMapper();
     newMapper.counter=counter;
-    newMapper.filename=newFilename;
     newMapper.map.putAll(map);
     return newMapper;
   }
-
+  
   @Getter
   String filename = null;
   private final BidiMap map = new DualHashBidiMap();

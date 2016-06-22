@@ -217,9 +217,10 @@ public class MultigraphConsolidator implements AutoCloseable {
     saveIdMapperAsGraphMetaData();
   }
 
-  @Setter
-  private boolean useFileBasedIdMapper = true;
+  @Deprecated
+  private boolean useFileBasedIdMapper = false;
 
+  @Deprecated
   private static final String GRAPHID_MAP_FILE = "_GRAPHID_MAP_FILE";
   private static final String GRAPHID_MAP_SIZE = "_GRAPHID_MAP_SIZE";
   private static final String GRAPHID_MAP_ENTRY_PREFIX = "_GRAPHID_MAP_ENTRY_";
@@ -250,22 +251,18 @@ public class MultigraphConsolidator implements AutoCloseable {
   private void loadIdMapperFromGraphMetaData() throws FileNotFoundException, IOException {
     int tx = GraphTransaction.begin(graph);
     try {
-      if (useFileBasedIdMapper) {
-        String graphIdMapFile = GraphUtils.getMetaData(graph, GRAPHID_MAP_FILE);
-        if (graphIdMapFile != null) {
-          String actualGraphPath=(String) dstGraphUri.getConfig().getProperty("blueprints.neo4j.directory"); //BLUEPRINTS_NEO4J_DIRECTORY); // FIXME: temp until deprecate fileIdMap
-          File absGraphIdMapFile = new File(actualGraphPath, graphIdMapFile);
-          if (absGraphIdMapFile.exists()) {
-            log.info("Using graphIdMapFile={}", graphIdMapFile);
-            graphIdMapper = IdMapper.newFromFile(absGraphIdMapFile.getAbsolutePath());
-          } else {
-            log.error("Could not find graphIdMapFile={}.  Fix this or call setGraphIdMapper() to override with your own.",
-                absGraphIdMapFile);
-          }
+      String graphIdMapFile = GraphUtils.getMetaData(graph, GRAPHID_MAP_FILE);
+      if (graphIdMapFile!=null) {
+        String actualGraphPath=(String) dstGraphUri.getConfig().getProperty("blueprints.neo4j.directory"); //BLUEPRINTS_NEO4J_DIRECTORY); // Neo4j specific
+        File absGraphIdMapFile = new File(actualGraphPath, graphIdMapFile);
+        if (absGraphIdMapFile.exists()) {
+          log.info("Using graphIdMapFile={}", graphIdMapFile);
+          graphIdMapper = IdMapper.newFromFile(absGraphIdMapFile.getAbsolutePath());
+        } else {
+          log.error("Could not find graphIdMapFile={}.  Fix this or call setGraphIdMapper() to override with your own.",
+              absGraphIdMapFile);
         }
-      } else
-      { // TODO why doesn't this work?
-        // load mapper from META_DATA node if it exists
+      } else { // load mapper from META_DATA node if it exists
         Integer graphIdMapSize = GraphUtils.getMetaData(graph, GRAPHID_MAP_SIZE);
         if (graphIdMapSize != null) {
           Vertex mdV = GraphUtils.getMetaDataNode(graph);
@@ -275,6 +272,7 @@ public class MultigraphConsolidator implements AutoCloseable {
             if (k.startsWith(GRAPHID_MAP_ENTRY_PREFIX)) {
               String shortId = k.substring(GRAPHID_MAP_ENTRY_PREFIX.length());
               String longId = mdV.getProperty(k);
+              log.debug("shortId={}, longId={}", shortId, longId);
               graphIdMapper.put(shortId, longId);
             }
           }

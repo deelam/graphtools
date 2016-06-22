@@ -71,7 +71,6 @@ import net.deelam.vertx.jobmarket.JobMarket;
  * requesterPond -> FIND -> all ponds
  * srcPond -> REGISTER(serializedMasterLocation) -> requesterPond
  * requesterPond -> GET(via REST) -> srcPond
- * requesterPond -> RESOURCE_READY(URI) -> app
  * 
  * app -> CHECKIN -> requesterPond
  * 
@@ -160,9 +159,9 @@ public class PondVerticle extends AbstractVerticle {
   }
 
   public enum ADDR {
-    ADD, CHECKOUT, CHECKIN, // from app
+    ADD, CHECKOUT, CHECKIN, // from client
     FIND, REGISTER, // among ponds
-    RESOURCE_READY // to app
+    //RESOURCE_READY // to client
   };
 
   private Map<ResourceId, ResourceLocation> regisTable = new Hashtable<>();
@@ -231,14 +230,16 @@ public class PondVerticle extends AbstractVerticle {
       }
     });
     eb.consumer(addressBase + ADDR.CHECKOUT, (Message<JsonObject> msg) -> {
-      URI rsrcUri = URI.create(msg.body().getString(RESOURCE_URI));
+      String resrcUriStr = msg.body().getString(RESOURCE_URI);
+      checkNotNull(resrcUriStr, msg.body());
+      URI rsrcUri = URI.create(resrcUriStr);
       ResourceId rid = new ResourceId(rsrcUri);
       ResourceLocation rsrcLoc = regisTable.get(rid);
       String clientAddr = msg.body().getString(CLIENT_ADDR);
       if (rsrcLoc == null) {//query all ponds
         JsonObject uriWithAppsRequestMsg = new JsonObject()
             .put(CLIENT_ADDR, clientAddr)
-            .put(RESOURCE_URI, msg.body().getString(RESOURCE_URI))
+            .put(RESOURCE_URI, resrcUriStr)
             .put(REQUESTER_ADDR, addressBase + ADDR.REGISTER);
         log.debug("Broadcast a find for: {}", uriWithAppsRequestMsg);
         eb.publish(EVENTBUS_PREFIX + ADDR.FIND, uriWithAppsRequestMsg);
@@ -258,6 +259,7 @@ public class PondVerticle extends AbstractVerticle {
     });
     eb.consumer(addressBase + ADDR.CHECKIN, (Message<JsonObject> msg) -> {
       String rsrcUriStr = msg.body().getString(RESOURCE_URI);
+      checkNotNull(rsrcUriStr, msg.body());
       ResourceLocation rLoc = checkouts.get(rsrcUriStr);
       if(rLoc==null && rsrcUriStr.endsWith("/")){// try removing '/'
         rsrcUriStr=rsrcUriStr.substring(0, rsrcUriStr.length()-1);
@@ -275,7 +277,9 @@ public class PondVerticle extends AbstractVerticle {
       }
     });
     eb.consumer(EVENTBUS_PREFIX + ADDR.FIND, (Message<JsonObject> msg) -> {
-      URI rsrcUri = URI.create(msg.body().getString(RESOURCE_URI));
+      String rsrcUriStr = msg.body().getString(RESOURCE_URI);
+      checkNotNull(rsrcUriStr, msg.body());
+      URI rsrcUri = URI.create(rsrcUriStr);
       ResourceId rid = new ResourceId(rsrcUri);
       ResourceLocation rsrcLoc = regisTable.get(rid);
       if (rsrcLoc != null) { // since have the resource, register at requesterAddr
@@ -284,27 +288,34 @@ public class PondVerticle extends AbstractVerticle {
       }
     });
     eb.consumer(addressBase + ADDR.REGISTER, (Message<JsonObject> msg) -> {
-      URI rsrcUri = URI.create(msg.body().getString(ORIGINAL_URI));
+      String origRsrcUriStr = msg.body().getString(ORIGINAL_URI);
+      checkNotNull(origRsrcUriStr, msg.body());
+      URI rsrcUri = URI.create(origRsrcUriStr);
       ResourceId resourceId = new ResourceId(rsrcUri);
       log.debug("Registering {}: {}", resourceId, msg.body());
+      Boolean invalidateResource = msg.body().getBoolean(INVALIDATE_RESOURCE, false);
       if (regisTable.containsKey(resourceId)) {
-        if(msg.body().getBoolean(INVALIDATE_RESOURCE, false)){
+        if(invalidateResource){
           log.info(serviceType + ": Invalidating old resource: {}", msg.body());
           regisTable.remove(resourceId);
         }else{
           log.warn(serviceType + ": ResourceId already registered; ignoring msg: {}", msg.body());
         }
       } else {
-        ResourceLocation rsrcLoc = new ResourceLocation(URI.create(msg.body().getString(ORIGINAL_URI)),
-            resourceId, msg.body().getString(SOURCE_HOST), msg.body().getString(ORIGINAL_HOST));
-        rsrcLoc.serializedMasterLocationREST = URI.create(msg.body().getString(SERIALIZED_FILE_REST_URL));
-
-        log.info(serviceType + ": Adding resource: {} -> {}", resourceId, rsrcLoc);
-        regisTable.put(resourceId, rsrcLoc);
-
-        String clientAddr = msg.body().getString(CLIENT_ADDR);
-        if (clientAddr != null) { // if originally caused by a request from an app, then retrieve a copy for app
-          asyncTriggerReponseToClient(rsrcLoc, clientAddr);
+        if(invalidateResource){
+          // don't do anything since it's not in regisTable
+        } else {
+          ResourceLocation rsrcLoc = new ResourceLocation(URI.create(origRsrcUriStr),
+              resourceId, msg.body().getString(SOURCE_HOST), msg.body().getString(ORIGINAL_HOST));
+          rsrcLoc.serializedMasterLocationREST = URI.create(msg.body().getString(SERIALIZED_FILE_REST_URL));
+  
+          log.info(serviceType + ": Adding resource: {} -> {}", resourceId, rsrcLoc);
+          regisTable.put(resourceId, rsrcLoc);
+  
+          String clientAddr = msg.body().getString(CLIENT_ADDR);
+          if (clientAddr != null) { // if originally caused by a request from a client, then retrieve a copy for app
+            asyncTriggerReponseToClient(rsrcLoc, clientAddr);
+          }
         }
       }
     });

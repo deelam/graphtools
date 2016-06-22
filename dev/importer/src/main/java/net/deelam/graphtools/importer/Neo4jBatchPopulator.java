@@ -8,27 +8,35 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import net.deelam.graphtools.*;
-import net.deelam.graphtools.graphfactories.IdGraphFactoryNeo4j;
-import net.openhft.chronicle.map.ChronicleMap;
-import net.openhft.chronicle.map.ChronicleMapBuilder;
-
 import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.index.lucene.unsafe.batchinsert.LuceneBatchInserterIndexProvider;
-import org.neo4j.unsafe.batchinsert.*;
+import org.neo4j.unsafe.batchinsert.BatchInserter;
+import org.neo4j.unsafe.batchinsert.BatchInserterIndex;
+import org.neo4j.unsafe.batchinsert.BatchInserterIndexProvider;
+import org.neo4j.unsafe.batchinsert.BatchInserters;
+import org.neo4j.unsafe.batchinsert.BatchRelationship;
 
-import com.google.common.collect.Iterables;
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.Vertex;
-import com.tinkerpop.blueprints.impls.neo4j.Neo4jGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import net.deelam.graphtools.GraphRecord;
+import net.deelam.graphtools.GraphRecordEdge;
+import net.deelam.graphtools.GraphRecordElement;
+import net.deelam.graphtools.GraphRecordImpl;
+import net.deelam.graphtools.GraphRecordMerger;
+import net.deelam.graphtools.GraphUri;
+import net.deelam.graphtools.GraphUtils;
+import net.deelam.graphtools.Neo4jPropertyMerger;
+import net.openhft.chronicle.map.ChronicleMap;
+import net.openhft.chronicle.map.ChronicleMapBuilder;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -250,14 +258,14 @@ public class Neo4jBatchPopulator implements Populator {
     }
   }
 
-  private Neo4jPropertyMerger jsonPropMerger = new Neo4jPropertyMerger();
+  private Neo4jPropertyMerger neoPropMerger = new Neo4jPropertyMerger();
 
   public long importVertex(BatchInserter graph, GraphRecord gr) {
     String id = gr.getStringId();
     //long longId=getLongId(id);
     Long longId = (Long) idMap.get(id);
     if (longId == null) {
-      Map<String, Object> cProps = jsonPropMerger.convertToNeo4j(gr.getProps());
+      Map<String, Object> cProps = neoPropMerger.convertToNeo4j(gr.getProps());
       cProps.put(IdGraph.ID, id);
       longId = graph.createNode(cProps);
       ++createdNodes;
@@ -274,19 +282,33 @@ public class Neo4jBatchPopulator implements Populator {
     return longId.longValue();
   }
 
-  private Map<String, Object> mergePropsIfNeeded(BatchInserter graph, GraphRecordElement gr, Long longId,
+  private NeoPropsHolder neoPropsHolder = new NeoPropsHolder("neoTemp");
+  class NeoPropsHolder extends GraphRecordImpl {
+    public NeoPropsHolder(String name) {
+      super(name);
+    }
+    public void setProperties(Map<String, Object> existingProps) {
+      props=existingProps;
+    }
+  };
+  
+  private Map<String, Object> mergePropsIfNeeded(BatchInserter graph, GraphRecordElement inputGR, Long longId,
       Map<String, Object> existingProps) {
-    if (gr.getProps().isEmpty()) {
+    if (inputGR.getProps().isEmpty()) {
       // don't changed existingProps
       return null;
     } else {
       Map<String, Object> props = null;
       if (existingProps.size() > 1) { // check if existingProps has more than the ID property
-        props = copyProperties(gr, existingProps);
+        //props = copyProperties(inputGR, existingProps);
+        neoPropsHolder.setProperties(existingProps);
+        neoPropMerger.mergeProperties(inputGR, neoPropsHolder);
+        neoPropsHolder.setProperties(null);
+        return existingProps;
       } else {
-        props = gr.getProps();
+        props = inputGR.getProps();
       }
-      return jsonPropMerger.convertToNeo4j(props);
+      return neoPropMerger.convertToNeo4j(props);
     }
   }
 
@@ -306,7 +328,7 @@ public class Neo4jBatchPopulator implements Populator {
     Long edgeLongId = (Long) idMap.get(edgeId);
     if (edgeLongId == null) {
       RelationshipType type = DynamicRelationshipType.withName(grE.getLabel());
-      Map<String, Object> cProps = jsonPropMerger.convertToNeo4j(grE.getProps());
+      Map<String, Object> cProps = neoPropMerger.convertToNeo4j(grE.getProps());
       cProps.put(IdGraph.ID, edgeId);
       if (direction == Direction.OUT) {
         edgeLongId = graph.createRelationship(v1inGraphLongId, v2inGraphLongId, type, cProps);
@@ -354,8 +376,6 @@ public class Neo4jBatchPopulator implements Populator {
     }
   }
 
-  static final String SET_SUFFIX = DefaultGraphRecordMerger.SET_SUFFIX;
-
   @Getter
   final GraphRecordMerger graphRecordMerger = new DefaultGraphRecordMerger(new Neo4jPropertyMerger());
 
@@ -365,8 +385,8 @@ public class Neo4jBatchPopulator implements Populator {
     log.debug("Copy props from grElement={} \n\t existing={}", grElem.getPropertyKeys(), existingProps.keySet());
     //log.info("Copy props from existing element={} \n\t existing={}", fromE, existingProps);
     tempGr.clearProperties();
-    jsonPropMerger.convertFromNeo4j(existingProps, tempGr); // TODO: why 2 conversions by jsonPropMerger and graphRecordMerger
-    graphRecordMerger.mergeProperties(grElem, tempGr);
+    neoPropMerger.convertFromNeo4j(existingProps, tempGr); // DONE: why 2 conversions by jsonPropMerger and graphRecordMerger
+    neoPropMerger.mergeProperties(grElem, tempGr);
     return tempGr.getProps();
   }
 

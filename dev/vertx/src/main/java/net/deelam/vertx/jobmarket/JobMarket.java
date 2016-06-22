@@ -284,7 +284,8 @@ public class JobMarket extends AbstractVerticle {
   private void asyncSendJobsTo(final String workerAddr, final JsonArray jobList) {
     jobAdded = false;
     log.debug("Sending to {} available jobs={}", workerAddr, jobList);
-    vertx.eventBus().send(workerAddr, jobList, (AsyncResult<Message<JsonObject>> selectedJobReply) -> {
+    DeliveryOptions delivOpt=new DeliveryOptions().setSendTimeout(10000L);
+    vertx.eventBus().send(workerAddr, jobList, delivOpt, (AsyncResult<Message<JsonObject>> selectedJobReply) -> {
       //log.debug("reply from worker={}", selectedJobReply.result().headers().get(WORKER_ADDRESS));
       boolean negotiateWithNextIdle = true;
 

@@ -5,6 +5,7 @@ package net.deelam.vertx.pool;
 
 import java.io.IOException;
 
+import com.google.common.base.Preconditions;
 import com.tinkerpop.blueprints.impls.neo4j.Neo4jGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
@@ -51,7 +52,7 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
       return true;
     
     if(isReadOnly(gUri)){
-      log.error("Graph may exists on another machine; assuming graph exists: {}", gUri);
+      log.warn("Graph may exists on another machine; assuming graph exists: {}", gUri);
       return true;
     } else {
       return false;
@@ -78,10 +79,12 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
       gUri.getConfig().clearProperty(BLUEPRINTS_NEO4J_DIRECTORY); // to ensure we don't open original graph
       poolClient.checkoutSynchronized(gUri.asString(), msg -> { // update the path to newUri of copied resource
         String uri = msg.body();
-        String path = new GraphUri(uri).getUriPath();
-        checkPath(path);
-
+        GraphUri newGraphUri = new GraphUri(uri);
+        String path = newGraphUri.getUriPath();
         log.debug("Got copy of Neo4j graph at path={}", path);
+        checkPath(path);
+        Preconditions.checkArgument(super.exists(newGraphUri), path);
+
         // Set other settings using prefix "blueprints.neo4j.conf"
         gUri.getConfig().setProperty(BLUEPRINTS_NEO4J_DIRECTORY, path);
         gUri.getConfig().setProperty(POOL_RESOURCE_URI, uri);

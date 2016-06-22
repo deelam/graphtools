@@ -5,6 +5,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -226,7 +228,9 @@ public class MultigraphConsolidator implements AutoCloseable {
     int tx = GraphTransaction.begin(graph);
     try {
       if (useFileBasedIdMapper) {
-        GraphUtils.setMetaData(graph, GRAPHID_MAP_FILE, graphIdMapper.getFilename());
+        Path absPath = Paths.get(graphIdMapper.getFilename());
+        Path relativePath = Paths.get(dstGraphUri.getUriPath()).relativize(absPath);
+        GraphUtils.setMetaData(graph, GRAPHID_MAP_FILE, relativePath.toString());
       } 
       {
         // save mapper in META_DATA node
@@ -249,13 +253,14 @@ public class MultigraphConsolidator implements AutoCloseable {
       if (useFileBasedIdMapper) {
         String graphIdMapFile = GraphUtils.getMetaData(graph, GRAPHID_MAP_FILE);
         if (graphIdMapFile != null) {
-          if (new File(graphIdMapFile).exists()) {
+          String actualGraphPath=(String) dstGraphUri.getConfig().getProperty("blueprints.neo4j.directory"); //BLUEPRINTS_NEO4J_DIRECTORY); // FIXME: temp until deprecate fileIdMap
+          File absGraphIdMapFile = new File(actualGraphPath, graphIdMapFile);
+          if (absGraphIdMapFile.exists()) {
             log.info("Using graphIdMapFile={}", graphIdMapFile);
-            graphIdMapper = IdMapper.newFromFile(graphIdMapFile);
+            graphIdMapper = IdMapper.newFromFile(absGraphIdMapFile.getAbsolutePath());
           } else {
-            log.warn(
-                "Could not find graphIdMapFile={}.  Fix this or call setGraphIdMapper() to override with your own.",
-                graphIdMapFile);
+            log.error("Could not find graphIdMapFile={}.  Fix this or call setGraphIdMapper() to override with your own.",
+                absGraphIdMapFile);
           }
         }
       } else

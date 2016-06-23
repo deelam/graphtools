@@ -172,8 +172,7 @@ public class JsonSetPropertyMerger implements PropertyMerger {
       valueList = (List) parsedV;
     }
 
-    Class<?> compClass = getPropertyValueClass(toE, key);
-
+    Class<?> compClass=null;
     if (valueList == null) {
       valueList = new ValueList(false);
       Object existingVal = toE.getProperty(key);
@@ -183,11 +182,11 @@ public class JsonSetPropertyMerger implements PropertyMerger {
         log.warn("Property has multiple values which is inefficient: key="+key+" for node="+toE.getId()
             + " existingVal="+existingVal+" newValue="+fromValue/*, new Throwable("Call stack")*/);
       }
-
-      if (compClass == null) {
-        compClass = existingVal.getClass();
-      }
+      compClass = existingVal.getClass();
     }
+    
+    if(compClass==null)
+      compClass = getPropertyValueClass(toE, key);
 
     /// check if fromValue is already in toValueList
     boolean toValueChanged = false;

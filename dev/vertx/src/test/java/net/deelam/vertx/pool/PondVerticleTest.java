@@ -72,11 +72,9 @@ public class PondVerticleTest {
     pond2.register("string", serializer, deserializer);
     
     client1=new ResourcePoolClient(svcType1);
-    client1.setResourceConsumer(msg -> {});
     vertx.deployVerticle(client1, deployHandler);
 
     client2=new ResourcePoolClient(svcType2);
-    client1.setResourceConsumer(msg -> {});
     vertx.deployVerticle(client2, deployHandler);
 
     async.await(30000); // fails when timeout occurs

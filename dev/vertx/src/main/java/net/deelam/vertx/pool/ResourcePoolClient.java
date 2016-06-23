@@ -52,14 +52,14 @@ public class ResourcePoolClient extends AbstractVerticle {
           }
         }
       }
+      
+      if(resourceConsumer!=null)
+        resourceConsumer.accept(msg);
 
       if(syncToken!=null) synchronized(syncToken){
         syncToken.accept(msg);
         syncToken.notify();
       }
-      
-      if(resourceConsumer!=null)
-        resourceConsumer.accept(msg);
     });
   }
 
@@ -94,23 +94,38 @@ public class ResourcePoolClient extends AbstractVerticle {
   //
   
   private MultiMap<String,Consumer<Message<String>>> waitingObjs=new MultiMapImpl<>();
+
+  // This class is not really required but it appeases FindBugs to check isDone before calling syncToken.wait()
+  @RequiredArgsConstructor
+  private static class SyncTokenHolder implements Consumer<Message<String>>{
+    final Consumer<Message<String>> syncToken;
+    boolean isDone=false;
+    @Override
+    public void accept(Message<String> arg0) {
+      syncToken.accept(arg0);
+      isDone=true;
+    }
+  }
   
   public Consumer<Message<String>> checkoutSynchronized(String resourceUri, Consumer<Message<String>> syncToken){
+    SyncTokenHolder syncTokenH=new SyncTokenHolder(syncToken);
     synchronized(waitingObjs){
       log.debug("Putting {} into waitingGraphUris={}", resourceUri, waitingObjs.baseMap());
-      waitingObjs.put(resourceUri, syncToken);
+      waitingObjs.put(resourceUri, syncTokenH);
     }
 
-    synchronized(syncToken){
-      new Thread(()->checkout(resourceUri)).start(); // async; can finish at any time
+    synchronized(syncTokenH){
+      new Thread(()->checkout(resourceUri)).start(); // thread can finish at any time after 
+      // waiting for lock on syncToken, which will be provided when syncToken.wait() is called.
       try {
         log.info("Waiting for pool to get resource={}", resourceUri);
-        syncToken.wait(); // wait for response
+        if(!syncTokenH.isDone) 
+          syncTokenH.wait(); // wait for response
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
     }
-    return syncToken;
+    return syncTokenH;
   }
 
   public static void main(String[] args) {

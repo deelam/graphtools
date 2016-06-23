@@ -81,7 +81,8 @@ public class TarGzipUtils {
         File curfile = new File(dirPath, entry.getName());
         File parent = curfile.getParentFile();
         if (!parent.exists()) {
-          parent.mkdirs();
+          if(!parent.mkdirs())
+            log.error("Could not create dir={}", parent);
         }
         if(!overwrite && curfile.exists())
           throw new IllegalArgumentException("Destination directory already exists: "+curfile.getAbsolutePath());

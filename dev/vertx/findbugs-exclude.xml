@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+<Match>
+    <Class name="net.deelam.vertx.pool.ResourcePoolClient" />
+    <Method name="checkoutSynchronized" />
+    <Bug pattern="WA_NOT_IN_LOOP" />
+</Match>
+</FindBugsFilter>

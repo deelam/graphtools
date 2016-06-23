@@ -45,7 +45,7 @@ public class DependentJobManager {
 
   // TODO: remove job and connected jobs
   private final BlockingDeque<DependentJob> queue = new LinkedBlockingDeque<>();
-  private final String $queue="queueModificationToken"; // since should not sync on queue itself (according to FindBugs)
+  private final Object $queue=new Long(201606231600l); // since should not sync on queue itself (according to FindBugs)
   private final FramedTransactionalGraph<TransactionalGraph> graph;
 
   public DependentJobManager(IdGraph<?> dependencyGraph) {

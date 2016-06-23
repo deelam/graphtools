@@ -139,7 +139,7 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
       public  void run() {
         log.info("Started 1");
         GraphUri guri = new GraphUri("neo4j:neoOneAtATime");
-        IdGraph graph1 = guri.openIdGraph();
+        guri.openIdGraph();
         try {
           Thread.sleep(5000);
         } catch (InterruptedException e) {
@@ -154,7 +154,7 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
       public  void run() {
         log.info("Started 2");
         GraphUri guri = new GraphUri("neo4j:neoOneAtATime");
-        IdGraph graph1 = guri.openIdGraph();
+        guri.openIdGraph();
         try {
           Thread.sleep(5000);
         } catch (InterruptedException e) {

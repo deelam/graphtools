@@ -15,8 +15,9 @@ public class DependentJobManagerTest {
   public void test() throws IOException, InterruptedException {
     IdGraphFactoryTinker.register();
     GraphUri gUri = new GraphUri("tinker:"/*"neo4j:depJobGraph"*/);
-    DependentJobManager mgr = new DependentJobManager(5, gUri.createNewIdGraph(true));
-
+    DependentJobManager mgr = new DependentJobManager(gUri.createNewIdGraph(true));
+    mgr.startJobRunnerThreads(5);
+    
     mgr.addJobProcessor("typeA", new MyProc());
     mgr.addJobProcessor("typeB", new MyProc());
 
@@ -86,13 +87,11 @@ public class DependentJobManagerTest {
 
     @Override
     public Class<DependentJob> getJobClass() {
-      // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public boolean runJobJO(DependentJob jobObj) {
-      // TODO Auto-generated method stub
       return false;
     }
   }

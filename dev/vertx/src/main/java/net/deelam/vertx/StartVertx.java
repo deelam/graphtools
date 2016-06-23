@@ -27,7 +27,7 @@ public class StartVertx {
             int lastOctet = i.getAddress()[3] & 0xFF; // convert to unsigned int
             log.debug("ip={} [3]={}", i, lastOctet);
             if (lastOctet > 1) { // if last byte is 0 or 1, don't choose it
-              if(ipPrefix==null || i.getHostAddress().startsWith(ipPrefix));
+              if(ipPrefix==null || i.getHostAddress().startsWith(ipPrefix))
                 return i.getHostAddress();
             }
           }

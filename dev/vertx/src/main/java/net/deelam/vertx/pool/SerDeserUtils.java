@@ -14,8 +14,10 @@ public final class SerDeserUtils {
     PondVerticle.Serializer ser=createDirectoryUriSerializer();
     PondVerticle.Deserializer deser=createDirectoryUriDeserializer();
     
-    String localPondDir="/home/dd/dev/pondtest";
-    new File(localPondDir).mkdirs();
+    String localPondDir="pondtest";
+    File pondDir = new File(localPondDir);
+    if(!pondDir.mkdirs() && !pondDir.exists())
+      log.warn("Couldn't create {}", pondDir);
     URI uri=URI.create("lucene:/home/dd/dev/query2-491307018-1897g/indexer");
 //    File dir=new File(uri.getPath());
 //    System.out.println(dir+" exists? "+dir.exists());

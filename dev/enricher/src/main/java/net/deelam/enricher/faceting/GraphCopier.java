@@ -169,7 +169,7 @@ public class GraphCopier implements AutoCloseable {
   public void setOrigIdPropKey(String originalIdPropKeyPrefix) {
     if(origIdPropKey!=null)
       throw new IllegalStateException("OrigIdPropKey already set to "+origIdPropKey);
-    if(origIdPropKey==null){
+    if(originalIdPropKeyPrefix==null){
       origIdPropKey=null;
     } else {
       origIdPropKey=originalIdPropKeyPrefix+PropertyMerger.VALUELIST_SUFFIX;

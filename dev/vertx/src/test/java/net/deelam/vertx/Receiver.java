@@ -35,7 +35,6 @@ public class Receiver extends AbstractVerticle {
       try {
         Thread.sleep(20);
       } catch (Exception e) {
-        // TODO Auto-generated catch block
         e.printStackTrace();
       }
       // Now send back reply

@@ -72,7 +72,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <artifactId>lucene-misc</artifactId>
       <version>${lucene.ver}</version>
     </dependency>
-    
+
+	<dependency>
+		<groupId>commons-io</groupId>
+		<artifactId>commons-io</artifactId>
+	</dependency>
+	
     <!--  -->
     <dependency>
 		<groupId>net.deelam</groupId>

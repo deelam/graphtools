@@ -45,15 +45,17 @@ public class DependentJobManager {
 
   // TODO: remove job and connected jobs
   private final BlockingDeque<DependentJob> queue = new LinkedBlockingDeque<>();
+  private final String $queue="queueModificationToken"; // since should not sync on queue itself (according to FindBugs)
   private final FramedTransactionalGraph<TransactionalGraph> graph;
-  private final List<JobThread> jobRunners;
 
-  public DependentJobManager(int numJobThreads, IdGraph<?> dependencyGraph) {
+  public DependentJobManager(IdGraph<?> dependencyGraph) {
     Class<?>[] typedClasses = {DependentJobFrame.class};
     FramedGraphProvider provider = new FramedGraphProvider(typedClasses);
     graph = provider.get(dependencyGraph);
-
-    jobRunners = new ArrayList<>(numJobThreads);
+  }
+  
+  private final List<JobThread> jobRunners = new ArrayList<>();
+  public void startJobRunnerThreads(int numJobThreads){
     for (int i = 0; i < numJobThreads; ++i) {
       JobThread thread = new JobThread("depJobThread-" + i, this);
       jobRunners.add(thread);
@@ -75,8 +77,10 @@ public class DependentJobManager {
   }
 
   public void addEndJobs() {
-    for (int i = 0; i < jobRunners.size(); ++i) {
-      queue.add(STOP_THREAD_JOB);
+    synchronized ($queue) {
+      for (int i = 0; i < jobRunners.size(); ++i) {
+        queue.add(STOP_THREAD_JOB);
+      }
     }
   }
 
@@ -161,7 +165,7 @@ public class DependentJobManager {
         break;
       case QUEUED:
         // remove from queue
-        synchronized (queue) {
+        synchronized ($queue) {
           for (Iterator<DependentJob> itr = queue.iterator(); itr.hasNext(); itr.next()) {
             DependentJob j = itr.next();
             if (j.getId().equals(jobId)) {
@@ -253,7 +257,7 @@ public class DependentJobManager {
         //        }else
         try {
           DependentJob job;
-          synchronized (jobMgr.queue) {
+          synchronized (jobMgr.$queue) {
             job = jobMgr.queue.takeFirst(); // blocks
             log.debug(Thread.currentThread().getName() + " takeJob: {} size={}", job, jobMgr.queue.size());
           }
@@ -380,7 +384,7 @@ public class DependentJobManager {
   }
 
   private void pushAheadInQueue(DependentJobFrame outV) throws InterruptedException {
-    synchronized (queue) {
+    synchronized ($queue) {
       outV.setState(STATE.QUEUED);
       log.debug("pushAheadInQueue: {}", outV);
       queue.putFirst(waitingJobs.remove(outV.getNodeId()));

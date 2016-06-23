@@ -4,6 +4,7 @@
 package net.deelam.graphtools.importer.csv;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -33,17 +34,15 @@ public class CsvFileToBeanSourceData<B> implements SourceData<B> {
       e.printStackTrace();
     }
     
-    Reader fileReader = new BufferedReader(new FileReader(file));
+    Reader fileReader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
     beanReader = new CsvBeanReader(fileReader, parser.getCsvPreferences());
     this.parser = parser;
   }
 
   private static int countLines(File file) throws IOException {
-    try(LineNumberReader lnr=new LineNumberReader(new FileReader(file))){
+    try(LineNumberReader lnr=new LineNumberReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))){
       while(lnr.skip(Long.MAX_VALUE)>0){}
       int lineCount=lnr.getLineNumber();
-      if(lineCount==0)
-        return lineCount=1;
       return lineCount;
     }
   }
@@ -87,6 +86,8 @@ public class CsvFileToBeanSourceData<B> implements SourceData<B> {
   public int getPercentProcessed() {
     int percent=0;
     log.debug("line={} total={}", beanReader.getLineNumber(), totalLines);
+    if(totalLines==0)
+      return 99;
     if(beanReader.getLineNumber()>0 && totalLines>0)
       percent=beanReader.getLineNumber()*100/totalLines;
     return percent;

@@ -27,14 +27,7 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.deelam.graphtools.GraphRecord;
-import net.deelam.graphtools.GraphRecordEdge;
-import net.deelam.graphtools.GraphRecordElement;
-import net.deelam.graphtools.GraphRecordImpl;
-import net.deelam.graphtools.GraphRecordMerger;
-import net.deelam.graphtools.GraphUri;
-import net.deelam.graphtools.GraphUtils;
-import net.deelam.graphtools.Neo4jPropertyMerger;
+import net.deelam.graphtools.*;
 import net.openhft.chronicle.map.ChronicleMap;
 import net.openhft.chronicle.map.ChronicleMapBuilder;
 
@@ -283,7 +276,8 @@ public class Neo4jBatchPopulator implements Populator {
   }
 
   private NeoPropsHolder neoPropsHolder = new NeoPropsHolder("neoTemp");
-  class NeoPropsHolder extends GraphRecordImpl {
+  static class NeoPropsHolder extends GraphRecordImpl {
+    private static final long serialVersionUID = 201606231255L;
     public NeoPropsHolder(String name) {
       super(name);
     }

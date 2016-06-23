@@ -56,7 +56,7 @@ public class GraphRecordBuilder<B> {
             if (outFv == null) {
               String nodeType = srcNodeFiller.getType();
               if(nodeType==null)
-                log.warn("nodeType={} for id={}", nodeType, outVertexId);
+                log.warn("nodeType=null for id={}", outVertexId);
               outFv = grFactory.create(outVertexId, nodeType);
               outFv.setProperty(IdGraph.ID, outVertexId);
               gRecords.put(outVertexId, outFv);
@@ -73,7 +73,7 @@ public class GraphRecordBuilder<B> {
             if (inFv == null) {
               String nodeType = dstNodeFiller.getType();
               if(nodeType==null)
-                log.warn("nodeType={} for id={}", nodeType, inVertexId);
+                log.warn("nodeType=null for id={}", inVertexId);
               inFv = grFactory.create(inVertexId, nodeType);
               inFv.setProperty(IdGraph.ID, inVertexId);
               gRecords.put(inVertexId, inFv);
@@ -166,12 +166,12 @@ public class GraphRecordBuilder<B> {
   }
 
   public static void main(String[] args) {
-    Object i=1d;
+/*    Object i=1d;
     System.out.println(i.getClass());
     System.out.println((i instanceof String));
     System.out.println((i instanceof Integer));
     System.out.println((i instanceof Long));
     System.out.println((i instanceof Float));
-    System.out.println((i instanceof Boolean));
+    System.out.println((i instanceof Boolean));*/
   }
 }

@@ -30,12 +30,12 @@ public class VerticleDiscoveryTest {
     @Override
     public void start() throws Exception {
       String serverEventBusAddr = deploymentID() + ".addr";
-      String serviceContactInfo = serverEventBusAddr;
-      VerticleUtils.announceServiceType(vertx, "typeA", serviceContactInfo);
       vertx.eventBus().consumer(serverEventBusAddr, msg -> {
         log.info(serverEventBusAddr+": Discovered client: " + msg.body());
         clients.add((String) msg.body());
       });
+
+      VerticleUtils.announceServiceType(vertx, "typeA", serverEventBusAddr);
     }
   }
 

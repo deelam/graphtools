@@ -102,7 +102,15 @@ public final class VerticleUtils {
 
   private static final String YP_ADDRESS_PREFIX = "net.deelam.";
 
+  /**
+   * Reminder: call this method after setting up the verticle's consumers to handle incoming messages.
+   * @param vertx
+   * @param type
+   * @param serviceContactInfo
+   * @return
+   */
   public static MessageConsumer<Object> announceServiceType(Vertx vertx, String type, String serviceContactInfo){
+    // TODO: add utility to detect existence of services listening on the same eventBus topic 
     log.info("Announcing service type={}: {} on vertx={}", type, serviceContactInfo, vertx);
     // in response to client's broadcast, notify that particular client (Vertx does not allow msg.reply())
     MessageConsumer<Object> consumer = vertx.eventBus().consumer(YP_ADDRESS_PREFIX+"clients."+type, msg ->{

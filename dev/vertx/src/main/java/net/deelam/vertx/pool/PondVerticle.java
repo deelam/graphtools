@@ -196,7 +196,6 @@ public class PondVerticle extends AbstractVerticle {
   @Override
   public void start() throws Exception {
     addressBase = VerticleUtils.getConfig(this, addressBase, JobMarket.EVENT_BUS_PREFIX, deploymentID());
-    VerticleUtils.announceServiceType(vertx, serviceType, addressBase);
 
     EventBus eb = vertx.eventBus();
     eb.consumer(addressBase + ADDR.ADD, (Message<String> msg) -> {
@@ -331,6 +330,7 @@ public class PondVerticle extends AbstractVerticle {
     }).listen(port);
 
     log.info("Ready: " + this + " addressPrefix=" + addressBase);
+    VerticleUtils.announceServiceType(vertx, serviceType, addressBase);
   }
 
   private void asyncTriggerReponseToClient(ResourceLocation rsrcLoc, String clientAddr) {

@@ -1,6 +1,8 @@
 package net.deelam.vertx.pool;
 
 import java.net.URI;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 import org.boon.collections.MultiMap;
@@ -106,6 +108,8 @@ public class ResourcePoolClient extends AbstractVerticle {
       isDone=true;
     }
   }
+
+  private ExecutorService threadPool = Executors.newCachedThreadPool();
   
   public Consumer<Message<String>> checkoutSynchronized(String resourceUri, Consumer<Message<String>> syncToken){
     SyncTokenHolder syncTokenH=new SyncTokenHolder(syncToken);
@@ -115,7 +119,7 @@ public class ResourcePoolClient extends AbstractVerticle {
     }
 
     synchronized(syncTokenH){
-      new Thread(()->checkout(resourceUri)).start(); // thread can finish at any time after 
+      threadPool.execute(()->checkout(resourceUri)); // thread can finish at any time after 
       // waiting for lock on syncToken, which will be provided when syncToken.wait() is called.
       try {
         log.info("Waiting for pool to get resource={}", resourceUri);

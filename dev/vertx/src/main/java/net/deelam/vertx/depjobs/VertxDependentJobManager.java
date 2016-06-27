@@ -10,6 +10,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import com.google.common.collect.Iterables;
 import com.tinkerpop.blueprints.Element;
@@ -272,13 +274,15 @@ public class VertxDependentJobManager<T> {
     return jobV.getState();
   }
   
+  private ExecutorService threadPool = Executors.newCachedThreadPool();
+  
   public Map<String, Object> queryJobStats(String jobId) {
     DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
     checkNotNull(jobV, "Cannot find "+jobId);
     
     Map<String,Object> map=new HashMap<>();
     if(jobV.getState() == STATE.PROCESSING){
-      new Thread(()->{
+      threadPool.execute(()->{
         jobProd.getProgress(jobId, reply -> {
           synchronized (map) {
             JsonObject bodyJO=(JsonObject) reply.result().body();
@@ -287,7 +291,8 @@ public class VertxDependentJobManager<T> {
             map.notify();
           }
         });
-      }).start();
+      });
+      
       // wait for reply
       synchronized (map) {
         while(map.size()==0) 

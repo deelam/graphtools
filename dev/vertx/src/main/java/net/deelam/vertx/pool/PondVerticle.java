@@ -12,6 +12,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.commons.io.FileUtils;
 
@@ -193,6 +195,8 @@ public class PondVerticle extends AbstractVerticle {
     saveState();
   }
 
+  private ExecutorService threadPool = Executors.newCachedThreadPool();
+
   @Override
   public void start() throws Exception {
     addressBase = VerticleUtils.getConfig(this, addressBase, JobMarket.EVENT_BUS_PREFIX, deploymentID());
@@ -249,7 +253,8 @@ public class PondVerticle extends AbstractVerticle {
           if(false)
             replicateResourceAndNotify(rsrcLoc, clientAddr); // potentially takes too long and Vertx complains
           else
-            new Thread(() -> replicateResourceAndNotify(rsrcLoc, clientAddr)).start(); // multiple of these threads may clash; added synchronized block in deserialize()
+            threadPool.execute(() -> replicateResourceAndNotify(rsrcLoc, clientAddr)); 
+          // multiple of these threads may clash; added synchronized block in deserialize()
         } else {
           log.debug("Found available resource: {}", rsrc);
           asyncSendResourceReady(clientAddr, rsrc, rsrcLoc);
@@ -383,7 +388,7 @@ public class PondVerticle extends AbstractVerticle {
 
   private void asyncSerializeResourceAndRegister(ResourceLocation rsrcLoc, String requesterAddr, String clientAddr) {
     if (rsrcLoc.serializedMasterLocationREST == null) { // not yet serialized
-      new Thread(() -> {
+      threadPool.execute(() -> {
         try {
           serializeIfNeeded(rsrcLoc);
 
@@ -391,7 +396,7 @@ public class PondVerticle extends AbstractVerticle {
         } catch (IOException e) {
           log.error("Could not serialize " + rsrcLoc.originalUri, e);
         }
-      }).start();
+      });
     } else {
       asyncRegisterWithOtherPond(rsrcLoc, requesterAddr, clientAddr);
     }

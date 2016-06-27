@@ -3,20 +3,13 @@
  */
 package net.deelam.graphtools;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.function.BiConsumer;
-
-import lombok.Getter;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.commons.configuration.Configuration;
@@ -24,6 +17,10 @@ import org.apache.commons.configuration.Configuration;
 import com.google.common.base.Preconditions;
 import com.tinkerpop.blueprints.KeyIndexableGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
+
+import lombok.Getter;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * GraphUri examples:

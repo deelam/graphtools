@@ -4,7 +4,12 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import com.hazelcast.config.Config;
@@ -85,6 +90,7 @@ public class StartVertx {
       Vertx.clusteredVertx(options, res -> {
         if (res.succeeded()) {
           Vertx vertx = res.result();
+          vertxList.add(vertx);
           vertxCons.accept(vertx);
         } else {
           log.error("Could not initialize Vertx", res.cause());
@@ -93,25 +99,36 @@ public class StartVertx {
       });
     } else {
       Vertx vertx = Vertx.vertx();
+      vertxList.add(vertx);
       vertxCons.accept(vertx);
     }
     
     Runtime.getRuntime().addShutdownHook(new Thread(()->{
-      System.out.println("Shutting down... (please wait)");
+      System.out.println("Shutting down Vertx... (please wait)");
       try {
-        int sec=6;
-        Context vertx = Vertx.currentContext();
-        if(vertx!=null){
-          sec=vertx.getInstanceCount();
-        }
-        log.info("Sleeping {} seconds to allow Vertx's shutdown hook to finish completely...", sec);
-        Thread.sleep(sec*1000);
-        log.info("Done waiting for Vertx's shutdown hook");
+        final CountDownLatch latch=new CountDownLatch(vertxList.size());
+        
+        Thread closer=new Thread(()->{
+          for(Vertx v:vertxList){
+            log.info("Closing Vertx={}", v);
+            v.close(res->{
+              log.info("Is this ever called? -- Vertx closed: {}", v);
+              latch.countDown();
+            });
+          }
+        }, "shutdown-closing-vertx");
+        closer.start();
+        
+        log.info("Waiting to allow Vertx instances to finish closing...");
+        latch.await(3, TimeUnit.SECONDS);
+        log.info("Done waiting for Vertx to shutdown");
       } catch (Exception e) {
         e.printStackTrace();
       }
     }, "vertx-shutdown-hook"));
     
   }
+  
+  final static List<Vertx> vertxList = new ArrayList<>();
 }
 

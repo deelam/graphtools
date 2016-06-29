@@ -94,11 +94,14 @@ public class JobWorker extends AbstractVerticle {
     // reply immediately so conversation doesn't timeout
     msg.reply(pickedJob, deliveryOptions);  // must reply even if picked==null
 
-    if (pickedJob != null) {
+    if (pickedJob != null) try{
       if (worker.apply(pickedJob))
         jobDone(); // creates new conversation
       else
         jobFailed(); // creates new conversation
+    }catch(Exception e){
+      log.error("Worker "+worker+" threw exception; notifying job failed:", e);
+      jobFailed(); // creates new conversation
     }
   };
 

@@ -37,6 +37,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class GraphUri {
   
+  public static final String CREATE_META_DATA_NODE = "createMetaDataNode";
+
   public static void main(String[] args) {
     GraphUri graphU = new GraphUri("titan:tablename");
     System.out.println(graphU.getScheme()+" "+graphU.getUri()+" "+graphU.getUriPath());
@@ -200,8 +202,10 @@ public class GraphUri {
     //printConfig(config);
     try{
       graph = getFactory().open(this);
-      log.debug("  Opened graph={}", graph);
-      GraphUtils.addMetaDataNode(this, graph);
+      boolean createMetaDataNode = config.getBoolean(CREATE_META_DATA_NODE, true);
+      log.debug("  Opened graph={}, createMetaDataNode={}", graph, createMetaDataNode);
+      if(createMetaDataNode)
+        GraphUtils.addMetaDataNode(this, graph);
     }catch(RuntimeException re){
       log.error("Could not open graphUri="+this, re);
       throw re;

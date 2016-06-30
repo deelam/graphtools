@@ -87,18 +87,19 @@ public class JobWorker extends AbstractVerticle {
   
   @Setter
   private Handler<Message<JsonArray>> jobListHandler = msg -> {
-    JsonArray jobs = msg.body();
-    checkState(pickedJob==null, "Job in progress! "+pickedJob);
-    pickedJob=pickJob(jobs);
-    
-    // reply immediately so conversation doesn't timeout
-    msg.reply(pickedJob, deliveryOptions);  // must reply even if picked==null
+    try{
+      JsonArray jobs = msg.body();
+      checkState(pickedJob == null, "Job in progress! " + pickedJob);
+      pickedJob = pickJob(jobs);
 
-    if (pickedJob != null) try{
-      if (worker.apply(pickedJob))
-        jobDone(); // creates new conversation
-      else
-        jobFailed(); // creates new conversation
+      // reply immediately so conversation doesn't timeout
+      msg.reply(pickedJob, deliveryOptions); // must reply even if picked==null
+
+      if (pickedJob != null)
+        if (worker.apply(pickedJob))
+          jobDone(); // creates new conversation
+        else
+          jobFailed(); // creates new conversation
     }catch(Exception e){
       log.error("Worker "+worker+" threw exception; notifying job failed:", e);
       jobFailed(); // creates new conversation

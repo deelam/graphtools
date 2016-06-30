@@ -115,6 +115,7 @@ public final class VerticleUtils {
     // in response to client's broadcast, notify that particular client (Vertx does not allow msg.reply())
     MessageConsumer<Object> consumer = vertx.eventBus().consumer(YP_ADDRESS_PREFIX+"clients."+type, msg ->{
       String clientAddress=(String) msg.body();
+      log.debug("Got {} client registration from {}", type, clientAddress);
       vertx.eventBus().send(clientAddress, serviceContactInfo);
     });
     
@@ -123,7 +124,6 @@ public final class VerticleUtils {
   }
 
   static int clientCount=0;
-  static long startMillis=System.currentTimeMillis();
   
   /**
    * 
@@ -140,12 +140,13 @@ public final class VerticleUtils {
       serverRespHandler.handle(msg); 
     }); // handle server's broadcast
     
-    String myAddress=YP_ADDRESS_PREFIX+serviceType+".clientInbox_"+(++clientCount)+"_"+(System.currentTimeMillis()-startMillis);
+    String myAddress=YP_ADDRESS_PREFIX+serviceType+".clientInbox_"+(++clientCount)+"_"+System.currentTimeMillis();
     vertx.eventBus().consumer(myAddress, (Message<String> msg) ->{
       log.debug("{}: Got server reply: {}", myAddress, msg.body());
       serverRespHandler.handle(msg); 
     }); // handle server response to client's broadcast
     
+    log.debug("Publishing client address for service={}: {}", serviceType, myAddress);
     vertx.eventBus().publish(YP_ADDRESS_PREFIX+"clients."+serviceType, myAddress); // client's broadcast
     return myAddress;
   }

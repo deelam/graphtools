@@ -112,7 +112,7 @@ public class StartVertx {
           for(Vertx v:vertxList){
             log.info("Closing Vertx={}", v);
             v.close(res->{
-              log.info("Is this ever called? -- Vertx closed: {}", v);
+              log.info("Vertx closed: {}", v);
               latch.countDown();
             });
           }

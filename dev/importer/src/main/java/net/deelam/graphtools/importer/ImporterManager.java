@@ -42,7 +42,7 @@ public class ImporterManager {
     SourceData sData = openSourceDatas.get(currFile);
     if(sData==null){
       //log.warn("No SourceData found for file={}", currFile);
-      return -1;
+      return -1; // FIXME: either done or not started
     }
     return sData.getPercentProcessed();
   }

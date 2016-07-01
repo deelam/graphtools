@@ -8,21 +8,21 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.TcpIpConfig;
 
-import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.file.FileSystemException;
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class StartVertx {
+
   public static String guessMyIPv4Address(String ipPrefix) {
     try {
       for (Enumeration<NetworkInterface> e = NetworkInterface.getNetworkInterfaces(); e.hasMoreElements();) {
@@ -86,7 +86,9 @@ public class StartVertx {
           cfg.getNetworkConfig().setPort(serverPort + 1);
         }
       }
-      options.setClusterManager(new HazelcastClusterManager(cfg));
+      HazelcastClusterManager clusterManager = new HazelcastClusterManager(cfg);
+      clusterManagers.add(clusterManager);
+      options.setClusterManager(clusterManager);
       Vertx.clusteredVertx(options, res -> {
         if (res.succeeded()) {
           Vertx vertx = res.result();
@@ -103,32 +105,44 @@ public class StartVertx {
       vertxCons.accept(vertx);
     }
     
-    Runtime.getRuntime().addShutdownHook(new Thread(()->{
-      System.out.println("Shutting down Vertx... (please wait)");
-      try {
-        final CountDownLatch latch=new CountDownLatch(vertxList.size());
-        
-        Thread closer=new Thread(()->{
-          for(Vertx v:vertxList){
-            log.info("Closing Vertx={}", v);
-            v.close(res->{
-              log.info("Vertx closed: {}", v);
-              latch.countDown();
-            });
-          }
-        }, "shutdown-closing-vertx");
-        closer.start();
-        
-        log.info("Waiting to allow Vertx instances to finish closing...");
-        latch.await(3, TimeUnit.SECONDS);
-        log.info("Done waiting for Vertx to shutdown");
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-    }, "vertx-shutdown-hook"));
+//    Runtime.getRuntime().addShutdownHook(new Thread(()->{
+//      shutdown()
+//    }, "vertx-shutdown-hook"));
     
+    // OSGi workaround to make sure this class is loaded before shutdown() is called when the Vertx bundle may be already removed
+    new FileSystemException("");
   }
   
-  final static List<Vertx> vertxList = new ArrayList<>();
+  private final static List<Vertx> vertxList = new ArrayList<>();
+  private final static List<HazelcastClusterManager> clusterManagers = new ArrayList<>();
+  
+  public static void shutdown() {
+    System.out.println("Shutting down Vertx... (please wait)");
+    try {
+      final CountDownLatch latch=new CountDownLatch(vertxList.size());
+      
+      Thread closer=new Thread(()->{
+        for(HazelcastClusterManager m:clusterManagers){
+          log.info("Closing clusterManager={}", m);
+          m.getHazelcastInstance().shutdown();
+        }
+        
+        for(Vertx v:vertxList){
+          log.info("Closing Vertx={}", v);
+          v.close(res->{
+            log.info("Vertx closed: {}", v);
+            latch.countDown();
+          });
+        }
+      }, "shutdown-closing-vertx");
+      closer.start();
+      
+      log.info("Waiting to allow Vertx instances to finish closing...");
+      latch.await(3, TimeUnit.SECONDS);
+      log.info("Done waiting for Vertx to shutdown");
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
 }
 

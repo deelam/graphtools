@@ -116,7 +116,13 @@ public final class VerticleUtils {
     MessageConsumer<Object> consumer = vertx.eventBus().consumer(YP_ADDRESS_PREFIX+"clients."+type, msg ->{
       String clientAddress=(String) msg.body();
       log.debug("Got {} client registration from {}", type, clientAddress);
-      vertx.eventBus().send(clientAddress, serviceContactInfo);
+      vertx.eventBus().send(clientAddress, serviceContactInfo, 
+          clientResp ->{}); // clientResp is needed to address Vertx problem of not sending response to ALL clients (Thread.sleep(100) also works)   
+      if(false)try {
+        Thread.sleep(100);
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
     });
     
     vertx.eventBus().publish(YP_ADDRESS_PREFIX+"servers."+type, serviceContactInfo); // server's broadcast
@@ -144,6 +150,7 @@ public final class VerticleUtils {
     vertx.eventBus().consumer(myAddress, (Message<String> msg) ->{
       log.debug("{}: Got server reply: {}", myAddress, msg.body());
       serverRespHandler.handle(msg); 
+      msg.reply("");
     }); // handle server response to client's broadcast
     
     log.debug("Publishing client address for service={}: {}", serviceType, myAddress);

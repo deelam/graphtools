@@ -1,0 +1,48 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>net.deelam</groupId>
+		<artifactId>graphtools-dev-pom</artifactId>
+		<version>0.0.4-SNAPSHOT</version>
+	</parent>
+	<artifactId>osgi-autoloader</artifactId>
+	<packaging>bundle</packaging>
+	<name>Automatic bundle loader</name>
+	<description>Recursively loads bundles in alphabetical order from the autoload directory</description>
+	<properties>
+		<bundle.activator>net.deelam.osgi.AutoLoader</bundle.activator>
+	</properties>
+	<dependencies>
+      <dependency>
+         <groupId>org.osgi</groupId>
+         <artifactId>org.osgi.core</artifactId>
+         <version>4.3.1</version>
+         <scope>provided</scope>
+         <optional>true</optional>
+      </dependency>
+	</dependencies>
+  <build>
+      <plugins>
+         <plugin>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>maven-bundle-plugin</artifactId>
+            <version>3.0.1</version>
+            <extensions>true</extensions>
+            <configuration>
+               <manifestLocation>META-INF</manifestLocation>
+               <instructions>
+                  <Bundle-Activator>${bundle.activator}</Bundle-Activator>
+                  <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+                  <!--<Import-Package>*</Import-Package>-->
+                  <Export-Package>${bundle.exportPackage}</Export-Package>
+                  <!-- still need to embed since some packages are not listed in bundle.exportPackage property -->
+                  <Embed-Dependency>${bundle.embedDependency}</Embed-Dependency>
+                  <Embed-Transitive>true</Embed-Transitive>
+                  <Embed-Directory>target/dependency</Embed-Directory>
+                  <Embed-StripGroup>true</Embed-StripGroup>
+               </instructions>
+            </configuration>
+         </plugin>
+      </plugins>
+   </build>
+</project>

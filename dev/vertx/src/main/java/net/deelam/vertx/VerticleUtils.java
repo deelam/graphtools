@@ -118,7 +118,7 @@ public final class VerticleUtils {
       log.debug("Got {} client registration from {}", type, clientAddress);
       vertx.eventBus().send(clientAddress, serviceContactInfo, 
           clientResp ->{}); // clientResp is needed to address Vertx problem of not sending response to ALL clients (Thread.sleep(100) also works)   
-      if(false)try {
+      try {
         Thread.sleep(100);
       } catch (Exception e) {
         e.printStackTrace();

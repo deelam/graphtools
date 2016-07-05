@@ -38,11 +38,21 @@ public class ImporterManager {
 
   private Map<File,SourceData> openSourceDatas=new HashMap<>();
   
+  static SourceData COMPLETED_SD=new SourceData<Object>() {
+    @Override
+    public Object getNextRecord() throws IOException {
+      return null;
+    }
+    @Override
+    public int getPercentProcessed() {
+      return 100;
+    }};
+  
   public int getPercentProcessed(File currFile){
     SourceData sData = openSourceDatas.get(currFile);
     if(sData==null){
       //log.warn("No SourceData found for file={}", currFile);
-      return -1; // FIXME: either done or not started
+      return -1;
     }
     return sData.getPercentProcessed();
   }
@@ -62,7 +72,7 @@ public class ImporterManager {
 //    log.info("{}  {}", sData.toString(), importer);
     importData(sData, importer, graphUri);
     sData=null;
-    openSourceDatas.remove(file);
+    openSourceDatas.put(file, COMPLETED_SD);
   }
 
   @SuppressWarnings({"unchecked"})

@@ -94,10 +94,12 @@ public class MultigraphConsolidator implements AutoCloseable {
   }
   
   private OriginalNodeCodec origNodeCodec=null;
+  
+  public static int MAX_SRCGRAPH_CACHE_SIZE=100; 
       
   public MultigraphConsolidator(GraphUri graphUri, boolean shouldAlreadyExist) throws IOException {
     srcGraphs = CacheBuilder.newBuilder()
-        .maximumSize(100)  // TODO: 0: make this configurable
+        .maximumSize(MAX_SRCGRAPH_CACHE_SIZE)
         .removalListener(notification -> {
           GraphUri guri = srcGraphUrisToShutdown.remove(notification.getKey());
           log.debug("cache element removal: {}={}", notification.getKey(), guri);

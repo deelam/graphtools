@@ -22,7 +22,7 @@ public class AverageConfidenceMerger implements ConfidenceMerger {
     Integer toWeight = getConfidenceWeight(toElem, propName);
     
     if(! fromElem.getProperty(propName).equals(toElem.getProperty(propName))){
-      // TODO 4: handle multiple different values when merging confidences 
+      // TODO: 4: handle multiple different values when merging confidences 
       log.warn("Property values are not equal: {} != {}", fromElem.getProperty(propName), toElem.getProperty(propName));
     }
     

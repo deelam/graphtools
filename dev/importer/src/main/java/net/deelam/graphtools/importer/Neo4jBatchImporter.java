@@ -48,16 +48,18 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
   public void importFile(SourceData<B> sourceData, GraphUri graphUri) throws IOException {
     encoder.reinit(sourceData);
     populator.reinit(graphUri);
+    int gRecCounter = 0;
+    long recordNum=0;
     try {
-      int gRecCounter = 0;
       Map<String,GraphRecord> gRecordsBuffered=new HashMap<>(bufferThreshold+100);
-      B inRecord;
-      long recordNum=0;
-      while ((inRecord = sourceData.getNextRecord()) != null) {
+      while (true) {
         //log.info("{} {}", inRecord.getClass(), ((net.deelam.graphtools.importer.csv.CsvFileToBeanSourceData) sourceData).getParser().getBeanClass().getSimpleName());
         ++recordNum;
-        log.debug("{}: record={}", recordNum, inRecord);
         try{
+          B inRecord = sourceData.getNextRecord();
+          if(inRecord == null)
+            break;
+          log.debug("{}: record={}", recordNum, inRecord);
           Collection<GraphRecord> gRecords = grBuilder.build(inRecord);
           //log.debug(gRecords.toString());
           gRecCounter += gRecords.size();
@@ -72,7 +74,7 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
             gRecCounter = 0;
           }
         }catch(Exception e){
-          log.info("Skipping record; got exception for recordNum=~"+recordNum+": "+inRecord, e);
+          log.info("Skipping record; got exception for recordNum=~"+recordNum+": ", e);
         }
       }
       log.debug("Last graph populate and transaction commit: {}", recordNum);
@@ -80,7 +82,7 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
       log.debug("  commit done.");
       log.info("Importer counts: {} records", recordNum);
     } catch (RuntimeException re) {
-      log.warn("Done reading records but got exception during graph population", re);
+      log.warn("Done reading "+recordNum+" records but got exception during graph population", re);
       throw re;
     } finally {
       populator.shutdown();

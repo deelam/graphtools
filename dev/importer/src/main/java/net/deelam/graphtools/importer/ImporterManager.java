@@ -64,8 +64,9 @@ public class ImporterManager {
     Preconditions.checkNotNull(factories, "importerFactory not registered: " + ingesterId);
     
     SourceData sData = factories.sourceDataFactory.createFrom(file);
-    if(openSourceDatas.put(file, sData)!=null)
-      log.warn("Overrode sourceData for file={}", file);
+    SourceData prevSD = openSourceDatas.put(file, sData);
+    if(prevSD!=null && prevSD!=COMPLETED_SD)
+      log.warn("Overrode sourceData for incompletely-read file={}", file);
     final ImporterFactory importerF = factories.importerFactory;
     Importer importer=importerF.create();
     

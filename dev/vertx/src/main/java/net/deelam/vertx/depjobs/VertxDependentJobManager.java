@@ -5,11 +5,7 @@ package net.deelam.vertx.depjobs;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -151,6 +147,20 @@ public class VertxDependentJobManager<T> {
       }
     }
   }
+  
+  public synchronized Collection<String> listJobs(DependentJobFrame.STATE state){
+    Collection<String> col=new ArrayList<>();
+    if(state==null){
+      for(Vertex v:graph.getVertices()){
+        col.add((String) v.getId());
+      }
+    }else{
+      for(Vertex v:graph.getVertices(DependentJobFrame.STATE_PROPKEY, state.name())){
+        col.add((String) v.getId());
+      }
+    }
+    return col;
+  }
 
   /**
    * If job is waiting, move job to end of queue.
@@ -226,10 +236,10 @@ public class VertxDependentJobManager<T> {
       case FAILED:
       case NEEDS_UPDATE:
       case DONE:
-        log.info("Not cancelling. Job's current state={}", jobV.getState());
+        log.info("Not cancelling {}. Job's current state={}", jobId, jobV.getState());
         break;
       case PROCESSING:
-        log.info("Not cancelling. Job's current state={}.  Ask jobProcessor to cancel job.", jobV.getState());
+        log.info("Not cancelling {}. Job's current state={}.  Ask jobProcessor to cancel job.", jobId, jobV.getState());
         break;
       case WAITING:
         waitingJobs.remove(jobV.getNodeId());
@@ -249,6 +259,16 @@ public class VertxDependentJobManager<T> {
       jobV.setState(STATE.CANCELLED);
       log.info("Cancelled job={}", jobV);
       graph.commit();
+    }
+  }
+  
+  public void cancelJobsDependentOn(String jobId, List<String> canceledJobs){
+    DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
+    boolean cancelled = cancelJob(jobId);
+    if(canceledJobs!=null && cancelled)
+      canceledJobs.add(jobId);
+    for(DependentJobFrame outJ:jobV.getOutputJobs()){
+      cancelJobsDependentOn(outJ.getNodeId(), canceledJobs);
     }
   }
   

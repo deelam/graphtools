@@ -26,10 +26,12 @@ public interface DependentJobFrame extends VertexFrame {
     NEEDS_UPDATE // the task was DONE but an input to the task has changed; can transition back to QUEUED if another relevant request is submitted by Client
   }
   
-  @Property(value="state")
+  public static final String STATE_PROPKEY = "state";
+  
+  @Property(value=STATE_PROPKEY)
   STATE getState();
   
-  @Property(value="state")
+  @Property(value=STATE_PROPKEY)
   void setState(STATE state);
   
   @Property(value="order")

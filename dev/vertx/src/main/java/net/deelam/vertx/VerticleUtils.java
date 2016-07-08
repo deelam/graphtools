@@ -116,17 +116,21 @@ public final class VerticleUtils {
     MessageConsumer<Object> consumer = vertx.eventBus().consumer(YP_ADDRESS_PREFIX+"clients."+type, msg ->{
       String clientAddress=(String) msg.body();
       log.debug("Got {} client registration from {}", type, clientAddress);
-      vertx.eventBus().send(clientAddress, serviceContactInfo, 
-          clientResp ->{}); // clientResp is needed to address Vertx problem of not sending response to ALL clients (Thread.sleep(100) also works)   
-      try {
-        Thread.sleep(100);
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
+      connectWithClient(vertx, serviceContactInfo, clientAddress);
     });
     
     vertx.eventBus().publish(YP_ADDRESS_PREFIX+"servers."+type, serviceContactInfo); // server's broadcast
     return consumer;
+  }
+
+  private static void connectWithClient(Vertx vertx, String serviceContactInfo, String clientAddress) {
+    vertx.eventBus().send(clientAddress, serviceContactInfo, clientResp -> {
+      if (clientResp.failed()) {
+        log.error("Didn't get ACK from client={}; retrying", clientAddress /*, clientResp.cause()*/);
+        // to address Vertx problem of not sending response to ALL clients
+        connectWithClient(vertx, serviceContactInfo, clientAddress); //retry
+      }
+    });    
   }
 
   static int clientCount=0;
@@ -150,7 +154,7 @@ public final class VerticleUtils {
     vertx.eventBus().consumer(myAddress, (Message<String> msg) ->{
       log.debug("{}: Got server reply: {}", myAddress, msg.body());
       serverRespHandler.handle(msg); 
-      msg.reply("");
+      msg.reply("Got it");
     }); // handle server response to client's broadcast
     
     log.debug("Publishing client address for service={}: {}", serviceType, myAddress);

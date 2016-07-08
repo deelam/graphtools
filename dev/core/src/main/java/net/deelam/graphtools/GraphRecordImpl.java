@@ -67,7 +67,7 @@ public class GraphRecordImpl extends GraphRecordElementImpl implements GraphReco
 
   // TODO: 5: address supernode memory problem (i.e., in-memory Map of in and out edges) by splitting node.  How does Faunus/Gremlin address this?
   @Setter
-  private static int SUPERNODE_THRESHOLD = 100000;
+  protected static int SUPERNODE_THRESHOLD = 100000;
 
   @Getter
   protected Map<String, Edge> inEdges = new HashMap<>();

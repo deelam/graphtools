@@ -72,9 +72,6 @@ public class GraphRecordWriteable extends GraphRecordImpl implements GraphRecord
     readEdges(in, outEdges);
   }
 
-  // TODO: 5: address supernode memory problem (i.e., in-memory Map of in and out edges) by splitting node.  How does Faunus/Gremlin address this?
-  private static final int SUPERNODE_THRESHOLD=100000;
-
   private void writeEdges(DataOutput out, Map<String, Edge> edges) throws IOException {
     int size = edges.size();
     if (size > SUPERNODE_THRESHOLD) { // supernode warning

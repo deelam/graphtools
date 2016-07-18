@@ -68,7 +68,7 @@ public class ImporterManager {
     if(prevSD!=null && prevSD!=COMPLETED_SD)
       log.warn("Overrode sourceData for incompletely-read file={}", file);
     final ImporterFactory importerF = factories.importerFactory;
-    Importer importer=importerF.create();
+    Importer importer=importerF.create(sData);
     
 //    log.info("{}  {}", sData.toString(), importer);
     importData(sData, importer, graphUri);
@@ -85,7 +85,7 @@ public class ImporterManager {
     SourceData sData = factories.sourceDataFactory.createFrom(readable);
     final ImporterFactory importerF = factories.importerFactory;
     
-    importData(sData, importerF.create(), graphUri);
+    importData(sData, importerF.create(sData), graphUri);
     sData=null;
   }
   

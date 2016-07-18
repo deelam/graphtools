@@ -73,6 +73,7 @@ public class VertxDependentJobManager<T> {
 
   private Map<String, T> waitingJobs = Collections.synchronizedMap(new HashMap<>());
   private Map<String, T> submittedJobs = Collections.synchronizedMap(new HashMap<>());
+  private Map<String, T> unsubmittedJobs = Collections.synchronizedMap(new HashMap<>());
 
 
   public String toString() {
@@ -125,6 +126,9 @@ public class VertxDependentJobManager<T> {
   public int counter=0;
   
   public synchronized void addJob(String jobId, T job, String... inJobIds) {
+    addJob(true, jobId, job, inJobIds);
+  }
+  public synchronized void addJob(boolean addToQueue, String jobId, T job, String... inJobIds) {
     // add to graph
     DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
     if (jobV == null) {
@@ -137,6 +141,13 @@ public class VertxDependentJobManager<T> {
     }
     addDependentJobs(jobV, inJobIds);
 
+    if(addToQueue)
+      addToQueue(job, jobV);
+    else
+      unsubmittedJobs.put(jobId, job);
+  }
+  
+  private void addToQueue(T job, DependentJobFrame jobV) {
     synchronized (graph) {
       if (isJobReady(jobV)) {
         log.debug("Submitting jobId={}", jobV.getNodeId());
@@ -147,7 +158,7 @@ public class VertxDependentJobManager<T> {
       }
     }
   }
-  
+
   public synchronized Collection<String> listJobs(DependentJobFrame.STATE state){
     Collection<String> col=new ArrayList<>();
     if(state==null){

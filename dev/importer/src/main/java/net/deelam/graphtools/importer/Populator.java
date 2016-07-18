@@ -20,7 +20,7 @@ public interface Populator {
   
   void populateGraph(GraphUri graphUri, Collection<GraphRecord> gRecords) throws IOException;
 
-  void reinit(GraphUri graphUri) throws IOException;
+  void reinit(GraphUri graphUri, SourceData sourceData) throws IOException;
 
   void shutdown();
 

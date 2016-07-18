@@ -3,6 +3,8 @@ package net.deelam.vertx.jobmarket;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Function;
 
 import io.vertx.core.AbstractVerticle;
@@ -85,24 +87,31 @@ public class JobWorker extends AbstractVerticle {
     }
   };
   
+  private ExecutorService threadPool=Executors.newCachedThreadPool();
+  
   @Setter
   private Handler<Message<JsonArray>> jobListHandler = msg -> {
     try{
-      JsonArray jobs = msg.body();
       checkState(pickedJob == null, "Job in progress! " + pickedJob);
+      JsonArray jobs = msg.body();
       pickedJob = pickJob(jobs);
-
+    } finally {
       // reply immediately so conversation doesn't timeout
       msg.reply(pickedJob, deliveryOptions); // must reply even if picked==null
+    }
 
-      if (pickedJob != null)
-        if (worker.apply(pickedJob))
-          jobDone(); // creates new conversation
-        else
+    if (pickedJob != null){
+      threadPool.execute(()->{
+        try{
+          if (worker.apply(pickedJob))
+            jobDone(); // creates new conversation
+          else
+            jobFailed(); // creates new conversation
+        }catch(Exception|Error e){
+          log.error("Worker "+worker+" threw exception; notifying job failed", e);
           jobFailed(); // creates new conversation
-    }catch(Exception e){
-      log.error("Worker "+worker+" threw exception; notifying job failed:", e);
-      jobFailed(); // creates new conversation
+        }
+      });
     }
   };
 

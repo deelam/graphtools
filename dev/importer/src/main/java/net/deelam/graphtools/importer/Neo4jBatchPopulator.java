@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
 
 import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.RelationshipType;
@@ -26,6 +27,7 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.*;
 import net.openhft.chronicle.map.ChronicleMap;
@@ -135,16 +137,19 @@ public class Neo4jBatchPopulator implements Populator {
       rootNodeProps.put(IdGraph.ID, ROOT_ID);
       inserter.setNodeProperties(0l, rootNodeProps);
       addStringIdToIndex(nodeStringIdIndex, 0l, ROOT_ID);
-
     }
-
     return inserter;
   }
 
   private GraphUri graphUri;
   private long createdNodes = 0, createdEdges = 0;
+  
+  @Setter
+  Function<SourceData,Integer> idMapSizeFunction=sd->{
+    return 1_000_000;
+  };
 
-  public void reinit(GraphUri graphUri) throws IOException {
+  public void reinit(GraphUri graphUri, SourceData sourceData) throws IOException {
     this.graphUri = graphUri;
     createdNodes = 0;
     createdEdges = 0;
@@ -152,8 +157,9 @@ public class Neo4jBatchPopulator implements Populator {
     if (inserter != null || idMap != null)
       throw new IllegalStateException("Populator was not shutdown() from previous use: " + this);
 
-    log.info("Using default maxMapSize: 1000000");
-    idMap = createIdMap(1000000); // TODO: make this configurable
+    Integer idMapSize = idMapSizeFunction.apply(sourceData);
+    log.info("Using default maxMapSize: {}", idMapSize);
+    idMap = createIdMap(idMapSize);
 
     log.debug("Creating BatchInserter={}", graphUri);
     inserter = createBatchInserter(graphUri);

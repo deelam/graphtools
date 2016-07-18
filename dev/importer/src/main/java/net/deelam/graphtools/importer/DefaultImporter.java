@@ -41,7 +41,7 @@ public class DefaultImporter<B> implements Importer<B> {
   @Override
   public void importFile(SourceData<B> sourceData, GraphUri graphUri) throws IOException {
     encoder.reinit(sourceData);
-    populator.reinit(graphUri);
+    populator.reinit(graphUri, sourceData);
     graphUri.createNewIdGraph(true);
     int tx = GraphTransaction.begin(graphUri.getGraph());
     try {

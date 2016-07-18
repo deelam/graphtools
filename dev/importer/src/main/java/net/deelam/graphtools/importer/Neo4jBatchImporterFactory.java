@@ -13,7 +13,7 @@ public class Neo4jBatchImporterFactory<B> implements ImporterFactory{
   final String importerPropertyVal;
   
   @Override
-  public Importer<B> create() {
+  public Importer<B> create(SourceData sd) {
     Encoder<B> encoder = encoderFactory.get();
     log.info("Creating Neo4jBatchImporter: "+encoder);
     return new Neo4jBatchImporter<B>(encoder, 

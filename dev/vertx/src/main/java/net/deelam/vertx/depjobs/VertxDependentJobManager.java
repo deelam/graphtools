@@ -186,33 +186,28 @@ public class VertxDependentJobManager<T> {
     }
     
     T job;
-    switch(jobV.getState()){
-      case CANCELLED:
-      case DONE:
-      case FAILED:
-      case NEEDS_UPDATE:
-        log.info("re-add job: {}", jobId);
-        job=submittedJobs.get(jobId);
-        break;
-      case WAITING:
-        jobV.setOrder(++counter);
-        log.info("re-add job: {} is currently waiting; adjusting order to {}", jobId, counter);
-        return;
-      case SUBMITTED:
-      case PROCESSING:
-      default:
-        throw new IllegalStateException("Cannot re-add job "+jobId+" with state="+jobV.getState());
+    if(jobV.getState()==null)
+      job=unsubmittedJobs.get(jobId);
+    else
+      switch(jobV.getState()){
+        case CANCELLED:
+        case DONE:
+        case FAILED:
+        case NEEDS_UPDATE:
+          log.info("re-add job: {}", jobId);
+          job=submittedJobs.get(jobId);
+          break;
+        case WAITING:
+          jobV.setOrder(++counter);
+          log.info("re-add job: {} is currently waiting; adjusting order to {}", jobId, counter);
+          return;
+        case SUBMITTED:
+        case PROCESSING:
+        default:
+          throw new IllegalStateException("Cannot re-add job "+jobId+" with state="+jobV.getState());
     }
-    
-    synchronized (graph) {
-      if (isJobReady(jobV)) {
-        log.debug("Submitting jobId={}", jobV.getNodeId());
-        submitJob(jobV, job);
-      } else {
-        log.info("Input to job={} is not ready; setting state=WAITING.  {}", job);
-        putJobInWaitingArea(jobV, job);
-      }
-    }
+
+    addToQueue(job, jobV);
   }
   
   public synchronized void addDependentJobs(String jobId, String... inJobIds) {
@@ -221,6 +216,18 @@ public class VertxDependentJobManager<T> {
       if (jobV == null) {
         throw new IllegalArgumentException("Job with id does not exist: " + jobId);
       } else {
+        if(jobV.getState()!=null)
+          switch(jobV.getState()){
+            case CANCELLED:
+            case DONE:
+            case FAILED:
+            case SUBMITTED:
+            case PROCESSING:
+              log.warn("Job={} in state={}; adding dependent jobs at this point may be ineffectual: {}", jobV, jobV.getState(), inJobIds);
+              break;
+            default:
+              // okay
+          }
         //log.info("addInputJobs " + jobId);
         addDependentJobs(jobV, inJobIds);
       }

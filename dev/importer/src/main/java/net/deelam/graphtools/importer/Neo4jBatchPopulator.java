@@ -133,7 +133,6 @@ public class Neo4jBatchPopulator implements Populator {
           EXACT_CONFIG);
       //edgeStringIdIndex.setCacheCapacity(IdGraph.ID, 100000);
 
-
       rootNodeProps.put(IdGraph.ID, ROOT_ID);
       inserter.setNodeProperties(0l, rootNodeProps);
       addStringIdToIndex(nodeStringIdIndex, 0l, ROOT_ID);
@@ -143,6 +142,7 @@ public class Neo4jBatchPopulator implements Populator {
 
   private GraphUri graphUri;
   private long createdNodes = 0, createdEdges = 0;
+  public static final String MAX_IDMAP_SIZE_PROP = "neoBatchPopulator.maxIdMapSize";
   
   @Setter
   Function<SourceData,Integer> idMapSizeFunction=sd->{
@@ -153,12 +153,18 @@ public class Neo4jBatchPopulator implements Populator {
     this.graphUri = graphUri;
     createdNodes = 0;
     createdEdges = 0;
-
     if (inserter != null || idMap != null)
       throw new IllegalStateException("Populator was not shutdown() from previous use: " + this);
 
+    long maxSize=1_000_000;
+    // TODO: get from graphUri.config
+    String maxSizeStr=System.getProperty(MAX_IDMAP_SIZE_PROP);
+    log.info("System property maxSizeStr={}", maxSizeStr);
+    if(maxSizeStr!=null)
+      maxSize=Long.parseLong(maxSizeStr);
+    log.info("Using maxMapSize={}", maxSize);
+
     Integer idMapSize = idMapSizeFunction.apply(sourceData);
-    log.info("Using default maxMapSize: {}", idMapSize);
     idMap = createIdMap(idMapSize);
 
     log.debug("Creating BatchInserter={}", graphUri);

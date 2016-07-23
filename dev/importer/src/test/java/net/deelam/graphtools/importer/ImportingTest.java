@@ -67,6 +67,7 @@ public class ImportingTest {
 
     // create new graph
     GraphUri graphUri = new GraphUri("tinker:///./target/us500test?fileType=graphml");
+    graphUri.delete();
     mgr.importFile("companyContactsCsv", csvFile, graphUri);
   }
 

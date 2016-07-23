@@ -249,6 +249,8 @@ public class VertxDependentJobManager<T> {
 
   public synchronized boolean cancelJob(String jobId) {
     DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
+    if(jobV==null)
+      throw new IllegalArgumentException("Unknown jobId="+jobId);
     switch (jobV.getState()) {
       case CANCELLED:
       case FAILED:

@@ -126,7 +126,7 @@ public final class VerticleUtils {
   private static void connectWithClient(Vertx vertx, String serviceContactInfo, String clientAddress) {
     vertx.eventBus().send(clientAddress, serviceContactInfo, clientResp -> {
       if (clientResp.failed()) {
-        log.error("Didn't get ACK from client={}; retrying", clientAddress /*, clientResp.cause()*/);
+        log.info("Didn't get ACK from client={}; retrying", clientAddress /*, clientResp.cause()*/);
         // to address Vertx problem of not sending response to ALL clients
         connectWithClient(vertx, serviceContactInfo, clientAddress); //retry
       }

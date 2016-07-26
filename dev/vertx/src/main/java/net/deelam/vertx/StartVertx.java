@@ -11,12 +11,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import com.google.common.base.Stopwatch;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.TcpIpConfig;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.file.FileSystemException;
+import io.vertx.core.json.Json;
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import lombok.extern.slf4j.Slf4j;
 
@@ -46,12 +48,15 @@ public class StartVertx {
   public static void create(VertxOptions options, boolean isServer, String serverIp, int serverPort,
       Consumer<Vertx> vertxCons) {
     if (options.isClustered()) {
+      Stopwatch sw= Stopwatch.createStarted();
       System.setProperty("hazelcast.phone.home.enabled", "false");
+      //System.setProperty("hazelcast.local.localAddress", "10.14.120.129");
       Config cfg = new Config(); //new XmlConfigBuilder().build(); //new Config();
 
       { /// configure Hazelcast
         // turn off the multicast
         cfg.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(false);
+        cfg.getNetworkConfig().getJoin().getAwsConfig().setEnabled(false);
 
         // turn on the tcp/ip join
         TcpIpConfig tcpconfig = cfg.getNetworkConfig().getJoin().getTcpIpConfig();
@@ -80,17 +85,21 @@ public class StartVertx {
           cfg.getNetworkConfig().setPortAutoIncrement(false);
           //cfg.getNetworkConfig().getInterfaces().addInterface(serverIp+":"+serverPort);
         } else {
-          log.info("Starting hazelcast instance as client");
+          log.info("Starting hazelcast instance as client to server={}", serverIp);
           //            lsMembers.add(serverIp+":"+port);
           tcpconfig.setRequiredMember(serverIp + ":" + serverPort);
-          cfg.getNetworkConfig().setPort(serverPort + 1);
+          cfg.getNetworkConfig().setPort(serverPort + 1); // start client on next port number
+          cfg.getNetworkConfig().setPortAutoIncrement(true);
         }
       }
+      log.debug("Hazelcast config={}", cfg);
+      
       HazelcastClusterManager clusterManager = new HazelcastClusterManager(cfg);
       clusterManagers.add(clusterManager);
       options.setClusterManager(clusterManager);
       Vertx.clusteredVertx(options, res -> {
         if (res.succeeded()) {
+          log.info("Clustered Vertx instance created in {}", sw);
           Vertx vertx = res.result();
           vertxList.add(vertx);
           vertxCons.accept(vertx);

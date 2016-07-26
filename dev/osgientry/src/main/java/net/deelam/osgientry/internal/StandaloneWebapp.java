@@ -100,7 +100,8 @@ public class StandaloneWebapp {
 
         String requireClientKeystoreStr=config.getOrDefault("requireClientKeystore", "false");
         boolean requireClientKeystore=Boolean.parseBoolean(requireClientKeystoreStr);
-        checkForTrustStore(requireClientKeystore);
+        if(requireClientKeystore)
+          checkForTrustStore(requireClientKeystore, config);
       } else {
         System.out.println("\n========  Starting application ===========");
       }
@@ -168,7 +169,7 @@ public class StandaloneWebapp {
       "javax.net.ssl.keyStore",
       "javax.net.ssl.keyStorePassword"};
 
-  private static void checkForTrustStore(boolean requireClientKeystore) {
+  private static void checkForTrustStore(boolean requireClientKeystore, Map<String, String> config) {
     Map<String, String> env = System.getenv();
     for (String key : trustStorePropertyKeys) {
       String val = System.getProperty(key);
@@ -180,11 +181,20 @@ public class StandaloneWebapp {
         else
           envVal = env.get("KEYSTORE_FILE");
         if (envVal == null) {
-          if(requireClientKeystore){
-            System.err.println("  Please set and export KEYSTORE_FILE and KEYSTORE_PWD environment variables!!");
-            System.exit(101);
-          }else{
-            System.out.println("  KEYSTORE_FILE and KEYSTORE_PWD environment variables not set; not setting client-side keystore.");
+          String confVal=config.get(key);
+          if(confVal==null){
+            if(requireClientKeystore){
+              System.err.println("  Please set and export KEYSTORE_FILE and KEYSTORE_PWD environment variables!!");
+              System.exit(101);
+            }else{
+              System.out.println("  KEYSTORE_FILE and KEYSTORE_PWD environment variables not set; not setting client-side keystore.");
+            }
+          } else {
+            if (key.contains("ssword"))
+              System.out.println("  Setting system property: " + key + " from config file");
+            else
+              System.out.println("  Setting system property: " + key + " = " + confVal + " from config file");
+            System.setProperty(key, confVal);
           }
         } else {
           if (key.contains("ssword"))

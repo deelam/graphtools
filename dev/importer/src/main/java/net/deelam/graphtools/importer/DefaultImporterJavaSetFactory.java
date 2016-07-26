@@ -10,13 +10,13 @@ import net.deelam.graphtools.JavaSetPropertyMerger;
 @RequiredArgsConstructor
 @Slf4j
 public class DefaultImporterJavaSetFactory<B> implements ImporterFactory{
-  final Supplier<Encoder<B>> encoder;
+  final Supplier<Encoder<B>> encoderFactory;
   final String importerPropertyVal;
   
   @Override
-  public Importer<B> create() {
+  public Importer<B> create(SourceData sd) {
     log.info("Creating DefaultImporter");
-    return new DefaultImporter<B>(encoder.get(), 
+    return new DefaultImporter<B>(encoderFactory.get(), 
         new DefaultPopulator(importerPropertyVal, new DefaultGraphRecordMerger(new JavaSetPropertyMerger())),
         new GraphRecordImpl.Factory()
     );

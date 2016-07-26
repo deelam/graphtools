@@ -66,10 +66,15 @@ public class NodeIndexer implements AutoCloseable {
     int count = 0;
     try (IndexWriter writer = new IndexWriter(dir, config)) {
       for (Vertex v : graph.getVertices()) {
-        if (indexNode(writer, v, inputGraphname))
-          ++count;
-        if (count % 500 == 0)
-          log.debug("  processed " + count + " nodes");
+        try{
+          if (indexNode(writer, v, inputGraphname))
+            ++count;
+          if (count % 500 == 0)
+            log.debug("  processed " + count + " nodes");
+        }catch(Exception e){
+          log.error("Couldn't index node; skipping "+v, e);
+          // TODO: add to metric
+        }
       }
       writer.commit();
     }

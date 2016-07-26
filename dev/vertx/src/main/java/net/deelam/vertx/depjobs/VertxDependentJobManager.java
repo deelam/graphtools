@@ -73,6 +73,7 @@ public class VertxDependentJobManager<T> {
 
   private Map<String, T> waitingJobs = Collections.synchronizedMap(new HashMap<>());
   private Map<String, T> submittedJobs = Collections.synchronizedMap(new HashMap<>());
+  private Map<String, T> unsubmittedJobs = Collections.synchronizedMap(new HashMap<>());
 
 
   public String toString() {
@@ -125,6 +126,9 @@ public class VertxDependentJobManager<T> {
   public int counter=0;
   
   public synchronized void addJob(String jobId, T job, String... inJobIds) {
+    addJob(true, jobId, job, inJobIds);
+  }
+  public synchronized void addJob(boolean addToQueue, String jobId, T job, String... inJobIds) {
     // add to graph
     DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
     if (jobV == null) {
@@ -137,6 +141,13 @@ public class VertxDependentJobManager<T> {
     }
     addDependentJobs(jobV, inJobIds);
 
+    if(addToQueue)
+      addToQueue(job, jobV);
+    else
+      unsubmittedJobs.put(jobId, job);
+  }
+  
+  private void addToQueue(T job, DependentJobFrame jobV) {
     synchronized (graph) {
       if (isJobReady(jobV)) {
         log.debug("Submitting jobId={}", jobV.getNodeId());
@@ -147,7 +158,7 @@ public class VertxDependentJobManager<T> {
       }
     }
   }
-  
+
   public synchronized Collection<String> listJobs(DependentJobFrame.STATE state){
     Collection<String> col=new ArrayList<>();
     if(state==null){
@@ -175,33 +186,28 @@ public class VertxDependentJobManager<T> {
     }
     
     T job;
-    switch(jobV.getState()){
-      case CANCELLED:
-      case DONE:
-      case FAILED:
-      case NEEDS_UPDATE:
-        log.info("re-add job: {}", jobId);
-        job=submittedJobs.get(jobId);
-        break;
-      case WAITING:
-        jobV.setOrder(++counter);
-        log.info("re-add job: {} is currently waiting; adjusting order to {}", jobId, counter);
-        return;
-      case SUBMITTED:
-      case PROCESSING:
-      default:
-        throw new IllegalStateException("Cannot re-add job "+jobId+" with state="+jobV.getState());
+    if(jobV.getState()==null)
+      job=unsubmittedJobs.get(jobId);
+    else
+      switch(jobV.getState()){
+        case CANCELLED:
+        case DONE:
+        case FAILED:
+        case NEEDS_UPDATE:
+          log.info("re-add job: {}", jobId);
+          job=submittedJobs.get(jobId);
+          break;
+        case WAITING:
+          jobV.setOrder(++counter);
+          log.info("re-add job: {} is currently waiting; adjusting order to {}", jobId, counter);
+          return;
+        case SUBMITTED:
+        case PROCESSING:
+        default:
+          throw new IllegalStateException("Cannot re-add job "+jobId+" with state="+jobV.getState());
     }
-    
-    synchronized (graph) {
-      if (isJobReady(jobV)) {
-        log.debug("Submitting jobId={}", jobV.getNodeId());
-        submitJob(jobV, job);
-      } else {
-        log.info("Input to job={} is not ready; setting state=WAITING.  {}", job);
-        putJobInWaitingArea(jobV, job);
-      }
-    }
+
+    addToQueue(job, jobV);
   }
   
   public synchronized void addDependentJobs(String jobId, String... inJobIds) {
@@ -210,6 +216,18 @@ public class VertxDependentJobManager<T> {
       if (jobV == null) {
         throw new IllegalArgumentException("Job with id does not exist: " + jobId);
       } else {
+        if(jobV.getState()!=null)
+          switch(jobV.getState()){
+            case CANCELLED:
+            case DONE:
+            case FAILED:
+            case SUBMITTED:
+            case PROCESSING:
+              log.warn("Job={} in state={}; adding dependent jobs at this point may be ineffectual: {}", jobV, jobV.getState(), inJobIds);
+              break;
+            default:
+              // okay
+          }
         //log.info("addInputJobs " + jobId);
         addDependentJobs(jobV, inJobIds);
       }
@@ -231,6 +249,8 @@ public class VertxDependentJobManager<T> {
 
   public synchronized boolean cancelJob(String jobId) {
     DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
+    if(jobV==null)
+      throw new IllegalArgumentException("Unknown jobId="+jobId);
     switch (jobV.getState()) {
       case CANCELLED:
       case FAILED:

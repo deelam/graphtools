@@ -27,6 +27,7 @@ public class GraphTransactionTest {
   public void setUp() throws Exception {
     GraphTransaction.checkTransactionsClosed();
     //System.out.println("Resetting");
+    System.gc(); // addresses problem with NFS files still being held by JVM 
     FileUtils.deleteDirectory(new File("target/transGraph"));
     counter = 0;
     outGraph = new IdGraph<Neo4jGraph>(new Neo4jGraph("target/transGraph"));
@@ -42,6 +43,7 @@ public class GraphTransactionTest {
   @After
   public void cleanFiles() throws IOException {
     outGraph.shutdown();
+    System.gc(); // addresses problem with NFS files still being held by JVM 
     FileUtils.deleteDirectory(new File("target/transGraph"));
   }
 

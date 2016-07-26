@@ -47,8 +47,8 @@ public class ConsolidatingImporter<B> implements Importer<B> {
   @Override
   public void importFile(SourceData<B> sourceData, GraphUri graphUri) throws IOException {
     encoder.reinit(sourceData);
-    populator.reinit(graphUri);
-    graphUri.createNewIdGraph(true);
+    populator.reinit(graphUri, sourceData);
+//    graphUri.createNewIdGraph(true);
     int tx = GraphTransaction.begin(graphUri.getGraph());
     try {
       int gRecCounter = 0;
@@ -86,7 +86,7 @@ public class ConsolidatingImporter<B> implements Importer<B> {
       throw re;
     } finally {
       populator.shutdown();
-      graphUri.shutdown();
+//      graphUri.shutdown();
       encoder.close(sourceData);
     }
   }

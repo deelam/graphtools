@@ -51,8 +51,9 @@ public class DefaultPopulator implements Populator {
   private GraphUri graphUri;
   private long createdNodes = 0, createdEdges = 0;
   
-  public void reinit(GraphUri graphUri){
+  public void reinit(GraphUri graphUri, SourceData sourceData){
     this.graphUri = graphUri;
+    graphUri.openIdGraph();
     createdNodes=0;
     createdEdges=0;
   }
@@ -63,8 +64,10 @@ public class DefaultPopulator implements Populator {
       mdV.setProperty("createdNodes", createdNodes);
       mdV.setProperty("createdEdges", createdEdges);
       if (importerName != null) {
-        mdV.setProperty(IMPORTER_KEY, importerName);        
+        mdV.setProperty(IMPORTER_KEY, importerName);
       }
+      if(graphUri.isOpen())
+        graphUri.shutdown();
     }
   }
 

@@ -49,7 +49,7 @@ public class ImportingSpeedTest {
         new CsvBeanSourceDataFactory<CompanyContactBean>(()->new CompanyContactsCsvParser()),
         new ImporterFactory() {
           @Override
-          public Importer<CompanyContactBean> create() {
+          public Importer<CompanyContactBean> create(SourceData sd) {
             DefaultImporter<CompanyContactBean> importer = new DefaultImporter<CompanyContactBean>(
                 new CompanyContactsEncoder(),
                 new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())),
@@ -63,7 +63,7 @@ public class ImportingSpeedTest {
         new CsvBeanSourceDataFactory<CompanyContactBean>(()->new CompanyContactsCsvParser()),
         new ImporterFactory() {
           @Override
-          public Importer<CompanyContactBean> create() {
+          public Importer<CompanyContactBean> create(SourceData sd) {
             BufferedImporter<CompanyContactBean> importer = new BufferedImporter<CompanyContactBean>(
                 new CompanyContactsEncoder(),
                 new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())),
@@ -77,7 +77,7 @@ public class ImportingSpeedTest {
         new CsvBeanSourceDataFactory<CompanyContactBean>(()->new CompanyContactsCsvParser()),
         new ImporterFactory() {
           @Override
-          public Importer<CompanyContactBean> create() {
+          public Importer<CompanyContactBean> create(SourceData sd) {
             ConsolidatingImporter<CompanyContactBean> importer = new ConsolidatingImporter<CompanyContactBean>(
                 new CompanyContactsEncoder(),
                 new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JsonPropertyMerger())),

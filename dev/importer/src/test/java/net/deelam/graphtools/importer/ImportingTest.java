@@ -36,7 +36,7 @@ public class ImportingTest {
         new CsvBeanSourceDataFactory<CompanyContactBean>(()->new CompanyContactsCsvParser()),
         new ImporterFactory() {
           @Override
-          public Importer<CompanyContactBean> create() {
+          public Importer<CompanyContactBean> create(SourceData sd) {
             return new DefaultImporter<CompanyContactBean>(
                 new CompanyContactsEncoder(),
                 new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JavaSetPropertyMerger())),
@@ -49,7 +49,7 @@ public class ImportingTest {
     mgr.register("companyContactsCsvConsolidating", new CsvBeanSourceDataFactory<CompanyContactBean>(()->new CompanyContactsCsvParser()), 
         new ImporterFactory() {
           @Override
-          public Importer<CompanyContactBean> create() {
+          public Importer<CompanyContactBean> create(SourceData sd) {
             ConsolidatingImporter<CompanyContactBean> importer = new ConsolidatingImporter<CompanyContactBean>(
                 new CompanyContactsEncoder(),
                 new DefaultPopulator("telephoneCsv", new DefaultGraphRecordMerger(new JavaSetPropertyMerger())),
@@ -67,6 +67,7 @@ public class ImportingTest {
 
     // create new graph
     GraphUri graphUri = new GraphUri("tinker:///./target/us500test?fileType=graphml");
+    graphUri.delete();
     mgr.importFile("companyContactsCsv", csvFile, graphUri);
   }
 

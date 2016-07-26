@@ -47,7 +47,7 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
   @Override
   public void importFile(SourceData<B> sourceData, GraphUri graphUri) throws IOException {
     encoder.reinit(sourceData);
-    populator.reinit(graphUri);
+    populator.reinit(graphUri, sourceData);
     int gRecCounter = 0;
     long recordNum=0;
     try {

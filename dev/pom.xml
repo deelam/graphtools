@@ -17,6 +17,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     *</bundle.import_package>
   </properties>
   <modules>
+    <module>osgientry</module>
     <module>core</module>
     <module>importer</module>
     <module>hadoop</module>

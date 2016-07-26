@@ -98,7 +98,9 @@ public class StandaloneWebapp {
           }
         }
 
-        checkForTrustStore();
+        String requireClientKeystoreStr=config.getOrDefault("requireClientKeystore", "false");
+        boolean requireClientKeystore=Boolean.parseBoolean(requireClientKeystoreStr);
+        checkForTrustStore(requireClientKeystore);
       } else {
         System.out.println("\n========  Starting application ===========");
       }
@@ -166,7 +168,7 @@ public class StandaloneWebapp {
       "javax.net.ssl.keyStore",
       "javax.net.ssl.keyStorePassword"};
 
-  private static void checkForTrustStore() {
+  private static void checkForTrustStore(boolean requireClientKeystore) {
     Map<String, String> env = System.getenv();
     for (String key : trustStorePropertyKeys) {
       String val = System.getProperty(key);
@@ -178,8 +180,12 @@ public class StandaloneWebapp {
         else
           envVal = env.get("KEYSTORE_FILE");
         if (envVal == null) {
-          System.err.println("  Please set and export KEYSTORE_FILE and KEYSTORE_PWD environment variables!!");
-          System.exit(101);
+          if(requireClientKeystore){
+            System.err.println("  Please set and export KEYSTORE_FILE and KEYSTORE_PWD environment variables!!");
+            System.exit(101);
+          }else{
+            System.out.println("  KEYSTORE_FILE and KEYSTORE_PWD environment variables not set; not setting client-side keystore.");
+          }
         } else {
           if (key.contains("ssword"))
             System.out.println("  Setting system property: " + key + " from environment variable");

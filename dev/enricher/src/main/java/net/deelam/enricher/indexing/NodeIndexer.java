@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphRecordImpl;
 
@@ -58,6 +60,15 @@ public class NodeIndexer implements AutoCloseable {
     dir.close();
   }
 
+  @Getter
+  private Map<String, Number> metrics=new HashMap<>();
+  private AtomicLong indexCount = new AtomicLong();
+  private AtomicLong skipCount = new AtomicLong();
+  { // TODO: 1: add metrics for other jobs
+    metrics.put("INDEXED", indexCount);
+    metrics.put("SKIPPED", skipCount);
+  }
+  
   public void indexGraph(Graph graph, String inputGraphname) throws IOException {
     //    The same analyzer should be used for indexing and searching
     PerFieldAnalyzerWrapper analyzers =
@@ -67,13 +78,15 @@ public class NodeIndexer implements AutoCloseable {
     try (IndexWriter writer = new IndexWriter(dir, config)) {
       for (Vertex v : graph.getVertices()) {
         try{
-          if (indexNode(writer, v, inputGraphname))
+          if (indexNode(writer, v, inputGraphname)){
             ++count;
+            indexCount.incrementAndGet();
+          }
           if (count % 500 == 0)
             log.debug("  processed " + count + " nodes");
         }catch(Exception e){
           log.error("Couldn't index node; skipping "+v, e);
-          // TODO: add to metric
+          skipCount.incrementAndGet();
         }
       }
       writer.commit();

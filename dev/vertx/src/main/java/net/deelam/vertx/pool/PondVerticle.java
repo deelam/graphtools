@@ -107,6 +107,7 @@ public class PondVerticle extends AbstractVerticle {
     return uri.getScheme() + "://" + uri.getPath() + "?" + uri.getQuery();
   }
 
+  @Getter
   private final String serviceType;
   private final String pondDir;
 

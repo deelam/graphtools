@@ -61,10 +61,10 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
   
   @Deprecated
   public static void register() {
-    throw new UnsupportedOperationException("Use register(ResourcePoolClient client) instead!"); 
+    throw new UnsupportedOperationException("Use registerWithGraphUri(ResourcePoolClient client) instead!"); 
   }
   
-  public static void register(ResourcePoolClient client) {
+  public static void registerWithGraphUri(ResourcePoolClient client) {
     GraphUri.register(new IdGraphFactoryNeo4jPool(client));
   }
 

@@ -59,7 +59,7 @@ public class IdGraphFactoryNeo4jPoolTest {
       }
     });
 
-    IdGraphFactoryNeo4jPool.register(injector.getInstance(ResourcePoolClient.class));
+    IdGraphFactoryNeo4jPool.registerWithGraphUri(injector.getInstance(ResourcePoolClient.class));
   }
 
   @After

@@ -44,7 +44,9 @@ public interface IdGraphFactory {
    */
   public boolean exists(GraphUri gUri);
 
-  public void shutdown(GraphUri gUri, IdGraph<?> graph) throws IOException;
+  default public void shutdown(GraphUri gUri, IdGraph<?> graph) throws IOException{
+    graph.shutdown();
+  }
 
   public PropertyMerger createPropertyMerger();
 

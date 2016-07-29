@@ -91,6 +91,7 @@ public class GraphUri {
     baseUri=URI.create(uri.substring(colonIndx+1));
     this.config = config;
     parseUriPath(baseUri);
+    parseQuery(baseUri.toString());
   }
 
   @Getter
@@ -197,7 +198,6 @@ public class GraphUri {
   public <T extends KeyIndexableGraph> IdGraph<T> openIdGraph(Class<T> baseGraphClass) {
     checkNotOpen();
     config.setProperty(URI_SCHEMA_PART, baseUri.getSchemeSpecificPart());
-    parseQuery(baseUri.toString());
     log.info("Opening graphUri={} using {}", this, getFactory());
     //printConfig(config);
     try{

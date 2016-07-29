@@ -165,10 +165,6 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
     }).start();
     
   }
-
-  public void shutdown(GraphUri gUri, IdGraph<?> graph){
-    graph.shutdown();
-  }
   
   protected void checkPath(String path) {
     if (path == null || path.equals("/")) {

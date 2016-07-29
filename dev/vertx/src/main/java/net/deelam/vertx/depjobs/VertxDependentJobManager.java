@@ -251,25 +251,30 @@ public class VertxDependentJobManager<T> {
     DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
     if(jobV==null)
       throw new IllegalArgumentException("Unknown jobId="+jobId);
-    switch (jobV.getState()) {
-      case CANCELLED:
-      case FAILED:
-      case NEEDS_UPDATE:
-      case DONE:
-        log.info("Not cancelling {}. Job's current state={}", jobId, jobV.getState());
-        break;
-      case PROCESSING:
-        log.info("Not cancelling {}. Job's current state={}.  Ask jobProcessor to cancel job.", jobId, jobV.getState());
-        break;
-      case WAITING:
-        waitingJobs.remove(jobV.getNodeId());
-        setJobCancelled(jobV);
-        break;
-      case SUBMITTED:
-        jobProd.removeJob(jobId, null); // may fail
-        submittedJobs.remove(jobId);
-        setJobCancelled(jobV);
-        break;
+    if(jobV.getState()==null){
+      unsubmittedJobs.remove(jobId);
+      setJobCancelled(jobV);
+    } else {
+      switch (jobV.getState()) {
+        case CANCELLED:
+        case FAILED:
+        case NEEDS_UPDATE:
+        case DONE:
+          log.info("Not cancelling {}. Job's current state={}", jobId, jobV.getState());
+          break;
+        case PROCESSING:
+          log.info("Not cancelling {}. Job's current state={}.  Ask jobProcessor to cancel job.", jobId, jobV.getState());
+          break;
+        case WAITING:
+          waitingJobs.remove(jobV.getNodeId());
+          setJobCancelled(jobV);
+          break;
+        case SUBMITTED:
+          jobProd.removeJob(jobId, null); // may fail
+          submittedJobs.remove(jobId);
+          setJobCancelled(jobV);
+          break;
+      }
     }
     return true;
   }
@@ -399,26 +404,30 @@ public class VertxDependentJobManager<T> {
         SortedSet<DependentJobFrame> readyJobs=new TreeSet<>( (e1,e2) -> {
           return Integer.compare(e1.getOrder(), e2.getOrder()); });
         for (DependentJobFrame outV : outJobs) {
-          switch (outV.getState()) {
-            case SUBMITTED:
-            case DONE:
-              log.info("Job dependent on {} has state={}. Marking {} as NEEDS_UPDATE.", doneJob.getNodeId(), outV.getState(), outV.getNodeId());
-              outV.setState(STATE.NEEDS_UPDATE);
-              break;
-            case NEEDS_UPDATE:
-              break;
-            case WAITING:
-              if (isJobReady(outV))
-                readyJobs.add(outV);
-              break;
-            case PROCESSING:
-              log.info("Job dependent on {} is currently processing. Marking {} as NEEDS_UPDATE.", doneJob.getNodeId(), outV.getNodeId());
-              outV.setState(STATE.NEEDS_UPDATE);
-              break;
-            case CANCELLED:
-            case FAILED:
-              log.info("Not marking job={} as NEEDS_UPDATE since job's current state={}", outV.getNodeId(), outV.getState());
-              break;
+          if(outV.getState()==null){
+            log.info("Not marking job={} as NEEDS_UPDATE since job's current state={} (hasn't been submitted)", outV.getNodeId(), outV.getState());
+          } else {
+            switch (outV.getState()) {
+              case SUBMITTED:
+              case DONE:
+                log.info("Job dependent on {} has state={}. Marking {} as NEEDS_UPDATE.", doneJob.getNodeId(), outV.getState(), outV.getNodeId());
+                outV.setState(STATE.NEEDS_UPDATE);
+                break;
+              case NEEDS_UPDATE:
+                break;
+              case WAITING:
+                if (isJobReady(outV))
+                  readyJobs.add(outV);
+                break;
+              case PROCESSING:
+                log.info("Job dependent on {} is currently processing. Marking {} as NEEDS_UPDATE.", doneJob.getNodeId(), outV.getNodeId());
+                outV.setState(STATE.NEEDS_UPDATE);
+                break;
+              case CANCELLED:
+              case FAILED:
+                log.info("Not marking job={} as NEEDS_UPDATE since job's current state={}", outV.getNodeId(), outV.getState());
+                break;
+            }
           }
         }
         for (DependentJobFrame readyV : readyJobs) { // submit in order

@@ -8,10 +8,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Properties;
 
-import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 
@@ -35,7 +32,6 @@ import net.deelam.graphtools.IdGraphFactory;
 import net.deelam.graphtools.JsonPropertyMerger;
 import net.deelam.graphtools.PropertyMerger;
 import net.deelam.graphtools.util.IdUtils;
-import net.deelam.graphtools.util.PropertiesUtils;
 
 /**
  * @author deelam
@@ -44,6 +40,7 @@ import net.deelam.graphtools.util.PropertiesUtils;
 @Slf4j
 public class IdGraphFactoryTitan implements IdGraphFactory {
 
+  /// GraphUri configuration parameters
   private static final String CLUSTER_HOST = "clusterHost";
   private static final String CLUSTER_PORT = "clusterPort";
   private static final String HADOOP_PROPS_FILE = "hadoopPropsFile";
@@ -103,7 +100,7 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
     log.debug("Opening Titan graph with name={}", tablename);
     //GraphUri.printConfig(conf);
     try {
-      TitanGraph tgraph = TitanFactory.open(getConfigs(gUri).titanConf);
+      TitanGraph tgraph = TitanFactory.open(getConfig(gUri).htConfigs.getTitanConfig());
       return (IdGraph<T>) toIdGraph(tgraph);
     } catch (ConfigurationException | IOException e) {
       throw new RuntimeException(e);
@@ -131,11 +128,11 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
 
   ///
 
-  private UseGetterInstead getConfigs(GraphUri gUri) {
-    UseGetterInstead configs = (UseGetterInstead) gUri.getConfig().getProperty("CONFIGS");
+  private TitanHBaseGraphUriConfig getConfig(GraphUri gUri) {
+    TitanHBaseGraphUriConfig configs = (TitanHBaseGraphUriConfig) gUri.getConfig().getProperty("CONFIGS");
     if (configs == null) {
       try {
-        configs = new UseGetterInstead(gUri);
+        configs = new TitanHBaseGraphUriConfig(gUri);
         gUri.getConfig().setProperty("CONFIGS", configs);
       } catch (ConfigurationException | IOException e) {
         throw new RuntimeException(e);
@@ -144,19 +141,12 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
     return configs;
   }
 
-  public static final String STORAGE_HOSTNAME = "storage.hostname";
-  public static final String STORAGE_PORT = "storage.port";
-  public static final String STORAGE_HBASE_TABLE = "storage.hbase.table";
-  public static final String STORAGE_BACKEND = "storage.backend";
-
-  private static class UseGetterInstead {
-    org.apache.hadoop.conf.Configuration hadoopConf = null;
-    Configuration titanConf = null;
-
+  private static class TitanHBaseGraphUriConfig {
+    final HadoopTitanConfigs htConfigs;
+    
     @AllArgsConstructor
     private static class PropNames {
       String titanProp; // property name to read
-      String titanWriteProp; // property name for writing
       
       String hadoopProp;// property name to read
     }
@@ -165,11 +155,9 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
 
     static {
       GURI_PROPNAME_MAP.put(CLUSTER_HOST, new PropNames(
-          STORAGE_HOSTNAME,
-          STORAGE_HOSTNAME,
+          HadoopTitanConfigs.STORAGE_HOSTNAME,
           "hbase.zookeeper.quorum"));
       GURI_PROPNAME_MAP.put(CLUSTER_PORT, new PropNames(
-          STORAGE_PORT,
           "hbase.zookeeper.property.clientPort", // use the hbase-specific property to avoid WARNING 
           "hbase.zookeeper.property.clientPort"));
     }
@@ -177,12 +165,20 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
     // for properties that should be passed to TitanFactory
     private static final String GURI_TITAN_PREFIX = "t.";
 
-    boolean DEBUG = true;
+    final boolean DEBUG = true;
 
-    public UseGetterInstead(GraphUri gUri) throws ConfigurationException, FileNotFoundException, IOException {
+    public TitanHBaseGraphUriConfig(GraphUri gUri) throws ConfigurationException, FileNotFoundException, IOException {
+      htConfigs=new HadoopTitanConfigs(
+         gUri.getConfig().getString(TITAN_PROPS_FILE), 
+         gUri.getConfig().getString(HADOOP_PROPS_FILE));
+      
       /// load all configs
-      getHadoopConfig(gUri);
-      getTitanConfig(gUri);
+      String tablename = gUri.getUriPath();
+      htConfigs.loadConfigs(tablename);
+      htConfigs.setMissingTitanProperties();
+      
+      Configuration titanConf = htConfigs.getTitanConfig();
+      org.apache.hadoop.conf.Configuration hadoopConf = htConfigs.getHadoopConfig();
 
       // pass graphUri configs to titanConfig
       for (@SuppressWarnings("unchecked")
@@ -191,7 +187,7 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
         titanConf.setProperty(key.substring(GURI_TITAN_PREFIX.length()), gUri.getConfig().getProperty(key));
       }
 
-      // determine final value and set in gUri.getConfig() and propagate to other configs 
+      // determine final value and propagate to other configs 
       GURI_PROPNAME_MAP.forEach((key, propNames) -> {
         String val = gUri.getConfig().getString(key);
         if (val == null) {
@@ -213,7 +209,7 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
             log.info("Overridding Hadoop config {}={} with {}", propNames.hadoopProp, hadoopVal, val);
         }
 
-        titanConf.setProperty(propNames.titanWriteProp, val);
+        titanConf.setProperty(propNames.titanProp, val);
         hadoopConf.set(propNames.hadoopProp, val);
         log.info("Set {} and {} to {}", propNames.titanProp, propNames.hadoopProp, val);
       });
@@ -221,57 +217,6 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
       //log.info("Connecting to Titan with tablename={} at host='{}' using backend={}", tablename, hostname, backendType);
     }
 
-    // create configuration with only Titan-specific entries, otherwise Exceptions are logged
-    private Configuration getTitanConfig(GraphUri gUri)
-        throws ConfigurationException, FileNotFoundException, IOException {
-      if (titanConf == null) {
-        titanConf = new BaseConfiguration();
-        String titanPropsFile = gUri.getConfig().getString(TITAN_PROPS_FILE);
-        if (titanPropsFile != null) {
-          Properties titanProps = new Properties();
-          PropertiesUtils.loadProperties(titanPropsFile, titanProps);
-          for (Entry<Object, Object> e : titanProps.entrySet()) {
-            titanConf.setProperty((String) e.getKey(), e.getValue());
-          }
-        }
-
-        String tablename = gUri.getUriPath();
-        titanConf.setProperty(STORAGE_HBASE_TABLE, tablename);
-        log.debug("Setting {}={}", STORAGE_HBASE_TABLE, tablename);
-
-        /// Set sensible defaults
-        if (!titanConf.containsKey(STORAGE_BACKEND)) { // then assume HBase
-          // http://s3.thinkaurelius.com/docs/titan/0.5.1/configuration.html
-          titanConf.setProperty(STORAGE_BACKEND, "hbase");
-        }
-        String backendType = titanConf.getString(STORAGE_BACKEND);
-        if (backendType.equals("hbase") && !titanConf.containsKey("storage.hbase.compat-class")) {
-          // Use 0.98 until HBase 1.0.0 support is added to Titan
-          titanConf.setProperty("storage.hbase.compat-class",
-              "com.thinkaurelius.titan.diskstorage.hbase.HBaseCompat0_98");
-          // without this, you'll get an "Unrecognized or unsupported HBase version 1.0.0-cdh5.4.4" exception
-        }
-      }
-      return titanConf;
-    }
-
-
-    private org.apache.hadoop.conf.Configuration getHadoopConfig(GraphUri gUri) throws ConfigurationException {
-      if (hadoopConf == null) {
-        String hadoopPropsFile = gUri.getConfig().getString(HADOOP_PROPS_FILE);
-        hadoopConf=new HadoopConfigurationHelper().loadHadoopConfig(hadoopPropsFile);
-      }
-      return hadoopConf;
-    }
-
-    HdfsUtils hdfsUtils;
-
-    HdfsUtils getHdfsUtils(GraphUri gUri) {
-      if (hdfsUtils == null) {
-        hdfsUtils = new HdfsUtils(hadoopConf);
-      }
-      return hdfsUtils;
-    }
   };
 
 
@@ -295,11 +240,11 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
     log.info("backendDescription={}", descrip);
     */
     try {
-      UseGetterInstead configs = getConfigs(gUri);
-      String backendType = configs.titanConf.getString(STORAGE_BACKEND);
+      TitanHBaseGraphUriConfig config = getConfig(gUri);
+      String backendType = config.htConfigs.getTitanConfig().getString(HadoopTitanConfigs.STORAGE_BACKEND);
       if (backendType.equals("hbase")) {
         String tablename = gUri.getUriPath();
-        return configs.getHdfsUtils(gUri).hasTable(tablename);
+        return config.htConfigs.getHdfsUtils().hasTable(tablename);
       } else
         return false;
     } catch (IOException e) {

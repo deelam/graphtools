@@ -92,6 +92,8 @@ public class GraphUri {
     this.config = config;
     parseUriPath(baseUri);
     parseQuery(baseUri.toString());
+    
+    getFactory().init(this);
   }
 
   @Getter

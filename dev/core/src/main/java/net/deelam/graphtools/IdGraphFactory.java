@@ -17,6 +17,8 @@ public interface IdGraphFactory {
 
   public String getScheme();
 
+  default public void init(GraphUri graphUri){}
+  
   /**
    * Open existing or create a new graph
    * @param gUri

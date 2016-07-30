@@ -80,7 +80,7 @@ public class HadoopTitanConfigs {
 
   private org.apache.hadoop.conf.Configuration loadHadoopConfig() throws ConfigurationException {
     if (hadoopConfig == null) {
-      hadoopConfig = new HadoopConfigurationHelper().loadHadoopConfig(hadoopPropsFile); // FIXME: inline *Helper
+      hadoopConfig = new HadoopConfigurationHelper().loadHadoopConfig(hadoopPropsFile);
     }
     return hadoopConfig;
   }

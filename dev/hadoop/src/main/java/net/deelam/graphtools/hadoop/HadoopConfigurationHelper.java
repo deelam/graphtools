@@ -29,14 +29,14 @@ public final class HadoopConfigurationHelper {
   private Configuration hadoopConfig=null;
   
   public Configuration loadHadoopConfig(String hadoopPropsFile) throws ConfigurationException {
-    Properties conf = loadHadoopBaseConfiguration(hadoopPropsFile);
+    Properties conf = loadHadoopProperties(hadoopPropsFile);
     //    conf.setProperty("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
     //    conf.setProperty("fs.file.impl", LocalFileSystem.class.getName());
     hadoopConfig=loadHadoopConfigDirs(conf);
     return hadoopConfig;
   }
 
-  private Properties loadHadoopBaseConfiguration(String hadoopPropsFile)
+  private Properties loadHadoopProperties(String hadoopPropsFile)
       throws ConfigurationException {
 
     Properties hadoopBaseConfig = new Properties();

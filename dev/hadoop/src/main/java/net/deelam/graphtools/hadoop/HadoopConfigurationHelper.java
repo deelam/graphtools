@@ -22,31 +22,38 @@ import net.deelam.graphtools.util.PropertiesUtils;
 @Slf4j
 public class HadoopConfigurationHelper {
 
+  public static Configuration getHadoopConfig(String hadoopPropsFile) throws ConfigurationException {
+    Properties conf = HadoopConfigurationHelper.getHadoopBaseConfiguration(hadoopPropsFile);
+    //    conf.setProperty("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
+    //    conf.setProperty("fs.file.impl", LocalFileSystem.class.getName());
+    return HadoopConfigurationHelper.toHadoopConfig(conf);
+  }
+
   static synchronized Properties getHadoopBaseConfiguration(String hadoopPropsFile)
       throws ConfigurationException {
 
-    Properties hadoopBaseConfig=new Properties();
+    Properties hadoopBaseConfig = new Properties();
     if (hadoopPropsFile != null) {
       try {
-         PropertiesUtils.loadProperties(hadoopPropsFile, hadoopBaseConfig);
+        PropertiesUtils.loadProperties(hadoopPropsFile, hadoopBaseConfig);
       } catch (IOException e1) {
-        log.error("Error when reading "+hadoopPropsFile, e1);
+        log.error("Error when reading " + hadoopPropsFile, e1);
       }
     } else {
       log.info("Hadoop property file not specified; not loading file."); // for Spark jobs
     }
 
-//    for (Entry<Object, Object> e : hadoopBaseConfig.entrySet()) {
-//      Object existingV = hadoopBaseConfig.getProperty((String) e.getKey());
-//      if (existingV != null && !e.getValue().equals(existingV))
-//        log.warn("Overriding Hadoop config property {}={}  oldValue:" + existingV, e.getKey(), e.getValue());
-//      hadoopBaseConfig.setProperty((String) e.getKey(), (String) e.getValue());
-//      log.debug("Hadoop config property {}={}", e.getKey(), e.getValue());
-//    }
+    //    for (Entry<Object, Object> e : hadoopBaseConfig.entrySet()) {
+    //      Object existingV = hadoopBaseConfig.getProperty((String) e.getKey());
+    //      if (existingV != null && !e.getValue().equals(existingV))
+    //        log.warn("Overriding Hadoop config property {}={}  oldValue:" + existingV, e.getKey(), e.getValue());
+    //      hadoopBaseConfig.setProperty((String) e.getKey(), (String) e.getValue());
+    //      log.debug("Hadoop config property {}={}", e.getKey(), e.getValue());
+    //    }
 
     setHadoopUser(hadoopBaseConfig);
 
-    setYarnJobJar(hadoopBaseConfig);
+    checkYarnJobJar(hadoopBaseConfig);
 
     String yarnMgr = hadoopBaseConfig.getProperty("yarn.resourcemanager.hostname");
     if ("localhost".equals(yarnMgr)) {
@@ -57,7 +64,10 @@ public class HadoopConfigurationHelper {
   }
 
   private static void checkYarnApplicationClasspath(Properties hadoopBaseConfig) {
+    log.info("Checking files in yarn.application.classpath exist ...");
     String cpStr = hadoopBaseConfig.getProperty("yarn.application.classpath");
+    if (cpStr == null)
+      return;
     String[] cpArr = cpStr.split(":");
     for (String jarFile : cpArr) {
       int starIndex = jarFile.indexOf("*");
@@ -86,14 +96,14 @@ public class HadoopConfigurationHelper {
     }
   }
 
-  private static void setYarnJobJar(Properties conf) {
+  private static void checkYarnJobJar(Properties conf) {
     String jobJar = conf.getProperty("mapreduce.job.jar");
     if (jobJar == null) {
-      log.info("mapreduce.job.jar is not set"); 
+      log.info("mapreduce.job.jar is not set");
     }
   }
 
-  public static final boolean debug=false; // = true;
+  public static final boolean debug = false; // = true;
 
   /**
    * Notes regarding Configuration and OSGi:
@@ -102,8 +112,9 @@ public class HadoopConfigurationHelper {
    * In OSGi, this is complicated since the classpath is only within the bundle and
    * the bundle cannot access the 'System' classpath (specified with the -cp java option on the commandline).
    * 
-   * To address this, we add the xml files as URL or Path resources to the Configuration instance.
-   * The advantage is that this is self-contained compared to alternative below.
+   * To address this, we manually add the xml files as URL or Path resources to the Configuration instance
+   * so that we don't have to rely on the classpath being correct.
+   * The advantage is that this is self-contained compared to the following alternative.
    * 
    * An alternative is to create a new Configuration() while in a bundle activator class where
    * the 'Thread.currentThread().getContextClassLoader()' is the 'System' classloader which has
@@ -119,12 +130,15 @@ public class HadoopConfigurationHelper {
         log.info("Using YARN_CONF_DIR={}", yarnConfDir);
         importFilesToConfig(yarnConfDir, hadoopConf, "xml");
 
-        log.info("Since YARN_CONF_DIR exists, setting mapreduce.framework.name=yarn");
-        props.setProperty("mapreduce.framework.name", "yarn");
+        if (!props.containsKey("mapreduce.framework.name")) {
+          log.info("Since YARN_CONF_DIR exists, inferring missing property: mapreduce.framework.name=yarn");
+          props.setProperty("mapreduce.framework.name", "yarn");
+        }
       }
     }
 
-    // HBaseConfiguration.create() loads hbase-default.xml in classpath and calls "new Configuration()" 
+    // HBaseConfiguration.create() loads hbase-default.xml found by HBaseConfiguration's classloader and 
+    // calls "new Configuration()", 
     // which loads core-default.xml and hadoop-site.xml, as well as resources added by addDefaultResource()
 
     Configuration hbaseConf = HBaseConfiguration.create(hadoopConf);
@@ -155,11 +169,13 @@ public class HadoopConfigurationHelper {
       ServiceLoader<FileSystem> serviceLoader = ServiceLoader.load(FileSystem.class);
       for (FileSystem fs : serviceLoader) {
         final String fsImplKey = "fs." + fs.getScheme() + ".impl";
-        if (props.getProperty(fsImplKey) == null) {
-          log.debug("Setting Hadoop config property fs.{}.impl={}", fs.getScheme(), fs.getClass());
+        String propFsClass = props.getProperty(fsImplKey);
+        if (propFsClass == null) {
+          log.info("  Setting missing Hadoop config property {}={}", fsImplKey, fs.getClass());
           hbaseConf.set(fsImplKey, fs.getClass().getName());
         } else {
-          log.info("Not overriding manually set {} property with discovered {}", fsImplKey, fs.getClass().getName());
+          log.info("  Overriding with {}={} from property file", fsImplKey, propFsClass);
+          hbaseConf.set(fsImplKey, propFsClass);
         }
       }
       //org.apache.hadoop.fs.FileSystem.getFileSystemClass("file", hbaseConf); // loadFileSystems() scans classpath for FileSystem implementations
@@ -177,7 +193,7 @@ public class HadoopConfigurationHelper {
         e.printStackTrace();
       }
     }
-    log.debug("###########  {}", conf.get("fs.defaultFS"));
+    //log.debug("###########  {}", conf.get("fs.defaultFS"));
   }
 
   public static void print(Configuration conf, String filename) {

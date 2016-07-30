@@ -64,8 +64,8 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
 
     GraphUri guri = new GraphUri("titan:" + DEFAULT_GRAPHNAME + "?"
         + CLUSTER_HOST + "=luster4&"
-    //+ HADOOP_PROPS_FILE + "=hadoop2.props.old&"
-    //+TITAN_PROPS_FILE+"=titan.props"
+    + HADOOP_PROPS_FILE + "=hadoop2.props.old&"
+//    +TITAN_PROPS_FILE+"=titan1.props"
     );
     if (guri.exists()) {
       IdGraph<?> graph = guri.openIdGraph();
@@ -259,10 +259,7 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
     private org.apache.hadoop.conf.Configuration getHadoopConfig(GraphUri gUri) throws ConfigurationException {
       if (hadoopConf == null) {
         String hadoopPropsFile = gUri.getConfig().getString(HADOOP_PROPS_FILE);
-        Properties conf = HadoopConfigurationHelper.getHadoopBaseConfiguration(hadoopPropsFile);
-        //    conf.setProperty("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
-        //    conf.setProperty("fs.file.impl", LocalFileSystem.class.getName());
-        hadoopConf = HadoopConfigurationHelper.toHadoopConfig(conf);
+        hadoopConf=HadoopConfigurationHelper.getHadoopConfig(hadoopPropsFile);
       }
       return hadoopConf;
     }

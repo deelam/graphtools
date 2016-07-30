@@ -259,7 +259,7 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
     private org.apache.hadoop.conf.Configuration getHadoopConfig(GraphUri gUri) throws ConfigurationException {
       if (hadoopConf == null) {
         String hadoopPropsFile = gUri.getConfig().getString(HADOOP_PROPS_FILE);
-        hadoopConf=HadoopConfigurationHelper.getHadoopConfig(hadoopPropsFile);
+        hadoopConf=new HadoopConfigurationHelper().loadHadoopConfig(hadoopPropsFile);
       }
       return hadoopConf;
     }

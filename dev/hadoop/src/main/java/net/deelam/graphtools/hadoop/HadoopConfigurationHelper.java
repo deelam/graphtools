@@ -8,6 +8,7 @@ import java.net.MalformedURLException;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.ServiceLoader;
+import java.util.function.Supplier;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.io.FileUtils;
@@ -15,21 +16,27 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.util.ClassLoaderContext;
 import net.deelam.graphtools.util.PropertiesUtils;
 
 @Slf4j
-public class HadoopConfigurationHelper {
+public final class HadoopConfigurationHelper {
 
-  public static Configuration getHadoopConfig(String hadoopPropsFile) throws ConfigurationException {
-    Properties conf = HadoopConfigurationHelper.getHadoopBaseConfiguration(hadoopPropsFile);
+  @Getter
+  private Configuration hadoopConfig=null;
+  
+  public Configuration loadHadoopConfig(String hadoopPropsFile) throws ConfigurationException {
+    Properties conf = loadHadoopBaseConfiguration(hadoopPropsFile);
     //    conf.setProperty("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
     //    conf.setProperty("fs.file.impl", LocalFileSystem.class.getName());
-    return HadoopConfigurationHelper.toHadoopConfig(conf);
+    hadoopConfig=loadHadoopConfigDirs(conf);
+    return hadoopConfig;
   }
 
-  static synchronized Properties getHadoopBaseConfiguration(String hadoopPropsFile)
+  private Properties loadHadoopBaseConfiguration(String hadoopPropsFile)
       throws ConfigurationException {
 
     Properties hadoopBaseConfig = new Properties();
@@ -53,7 +60,7 @@ public class HadoopConfigurationHelper {
 
     setHadoopUser(hadoopBaseConfig);
 
-    checkYarnJobJar(hadoopBaseConfig);
+    setYarnJobJar(hadoopBaseConfig);
 
     String yarnMgr = hadoopBaseConfig.getProperty("yarn.resourcemanager.hostname");
     if ("localhost".equals(yarnMgr)) {
@@ -96,8 +103,16 @@ public class HadoopConfigurationHelper {
     }
   }
 
-  private static void checkYarnJobJar(Properties conf) {
+  @Setter
+  private Supplier<File> jobJarFinder=null;
+  
+  private void setYarnJobJar(Properties conf) {
     String jobJar = conf.getProperty("mapreduce.job.jar");
+    if(jobJarFinder!=null){
+      File jobJarF=jobJarFinder.get();
+      log.info("Setting mapreduce.job.jar={}", jobJarF.getAbsolutePath());
+      conf.setProperty("mapreduce.job.jar", jobJarF.getAbsolutePath());
+    }
     if (jobJar == null) {
       log.info("mapreduce.job.jar is not set");
     }
@@ -122,7 +137,7 @@ public class HadoopConfigurationHelper {
    * Disadvantage of this is dependence on an activator class.
    * 
    */
-  static Configuration toHadoopConfig(Properties props) {
+  static Configuration loadHadoopConfigDirs(Properties props) {
     Configuration hadoopConf = new Configuration();
     {
       String yarnConfDir = props.getProperty("YARN_CONF_DIR", "./yarn-conf");

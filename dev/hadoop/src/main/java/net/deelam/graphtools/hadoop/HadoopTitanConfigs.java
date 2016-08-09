@@ -114,9 +114,10 @@ public class HadoopTitanConfigs {
 
   static {
     TITAN_PROPNAME_MAP.put(STORAGE_HOSTNAME, "hbase.zookeeper.quorum");
-    TITAN_PROPNAME_MAP.put(
-        "hbase.zookeeper.property.clientPort", // use the hbase-specific property to avoid WARNING 
-        "hbase.zookeeper.property.clientPort");
+// Don't need to set titan property if it is set in hbase-site.xml (based on HBaseStoreManager code)
+//    TITAN_PROPNAME_MAP.put(
+//        STORAGE_PORT, //"storage.hbase.ext.hbase.zookeeper.property.clientPort", // use the hbase-specific property to avoid HBaseStoreManager WARNING 
+//        "hbase.zookeeper.property.clientPort");
   }
 
   public void setMissingTitanProperties() {

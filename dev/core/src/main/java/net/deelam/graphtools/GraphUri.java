@@ -66,7 +66,8 @@ public class GraphUri {
 
   String origUri;
   public String asString() {
-    return origUri;
+    String str = getFactory().asString(this);
+    return str;
   }
   
   @Override
@@ -251,8 +252,10 @@ public class GraphUri {
     String queryStr=uriStr.substring(queryIndx+1);
     if (queryStr != null) {
       for (String kv : queryStr.split("&")) {
-        String[] pair = kv.split("=");
-        config.setProperty(pair[0], pair[1]);
+        if(kv.length()>0){
+          String[] pair = kv.split("=");
+          config.setProperty(pair[0], pair[1]);
+        }
       }
     }
   }

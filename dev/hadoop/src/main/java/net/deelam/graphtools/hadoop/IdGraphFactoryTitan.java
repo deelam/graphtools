@@ -5,6 +5,8 @@ package net.deelam.graphtools.hadoop;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -41,6 +43,7 @@ import net.deelam.graphtools.util.IdUtils;
 public class IdGraphFactoryTitan implements IdGraphFactory {
 
   /// GraphUri configuration parameters
+  private static final String CLUSTER_BACKEND = "clusterBackend";
   private static final String CLUSTER_HOST = "clusterHost";
   private static final String CLUSTER_PORT = "clusterPort";
   private static final String HADOOP_PROPS_FILE = "hadoopPropsFile";
@@ -55,7 +58,7 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
     GraphUri.register(new IdGraphFactoryTitan());
   }
 
-  public static void main(String[] args) throws InterruptedException {
+  public static void main(String[] args) throws InterruptedException, URISyntaxException {
     final String DEFAULT_GRAPHNAME = "tmp-adidis-sessions-query1-__-src1-20803-aisd-telephone.csv"; //"dnlam-testGraph3";
     IdGraphFactoryTitan.register();
 
@@ -65,11 +68,16 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
 //    +TITAN_PROPS_FILE+"=titan1.props"
     );
     if (guri.exists()) {
-      IdGraph<?> graph = guri.openIdGraph();
-      System.out.println(GraphUtils.toString(graph));
-      guri.shutdown();
-      System.out.println("Shutdown");
-      System.out.println(guri.exists());
+//      IdGraph<?> graph = guri.openIdGraph();
+//      System.out.println(GraphUtils.toString(graph));
+//      guri.shutdown();
+//      System.out.println("Shutdown");
+      
+      System.out.println(guri.asString());
+      String str=guri.asString();
+      System.out.println(new URI(str));
+      GraphUri gUri2 = new GraphUri(str);
+      System.out.println(gUri2.asString());
     }
   }
 
@@ -88,6 +96,30 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
     if (path == null || path.equals("/")) {
       throw new IllegalArgumentException("Provide a graphname like so: 'titan:graphname'");
     }
+  }
+  
+  @Override
+  public String asString(GraphUri graphUri) {
+    TitanHBaseGraphUriConfig config = getConfig(graphUri);
+    Configuration tConf = config.htConfigs.getTitanConfig();
+    
+    StringBuilder sb=new StringBuilder(getScheme());
+    sb.append(":").append(graphUri.getUriPath());
+    sb.append("?");
+    
+    String backend=tConf.getString(HadoopTitanConfigs.STORAGE_BACKEND);
+    if(backend!=null && !backend.equals("hbase"))
+      sb.append("&").append(CLUSTER_BACKEND).append("=").append(backend);
+    
+    String hostname=tConf.getString(HadoopTitanConfigs.STORAGE_HOSTNAME);
+    if(hostname!=null)
+      sb.append("&").append(CLUSTER_HOST).append("=").append(hostname);
+    
+    String hostport=tConf.getString(HadoopTitanConfigs.STORAGE_PORT);
+    if(hostport!=null)
+      sb.append("&").append(CLUSTER_PORT).append("=").append(hostport);
+
+    return sb.toString();
   }
 
   //  private static final String CONFIG_PREFIX = "blueprints.titan.";

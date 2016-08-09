@@ -52,4 +52,7 @@ public interface IdGraphFactory {
 
   public PropertyMerger createPropertyMerger();
 
+  default public String asString(GraphUri graphUri){
+    return graphUri.origUri;
+  }
 }

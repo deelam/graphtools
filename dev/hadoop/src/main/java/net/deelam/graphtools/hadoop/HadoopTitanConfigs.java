@@ -11,7 +11,6 @@ import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.util.PropertiesUtils;
@@ -33,8 +32,16 @@ public class HadoopTitanConfigs {
   public static final String STORAGE_HBASE_TABLE = "storage.hbase.table";
   public static final String STORAGE_BACKEND = "storage.backend";
 
-  @Getter
   private Configuration titanConfig = null;
+  public Configuration getTitanConfig() {
+    if(titanConfig==null){
+      throw new IllegalStateException("Must call getTitanConfig(tablename) or loadConfigs(titanTablename) first");
+    }
+    return titanConfig;
+  }
+  public Configuration getTitanConfig(String tablename) throws ConfigurationException, FileNotFoundException, IOException {
+    return loadTitanConfig(tablename);
+  }
 
   // create configuration with only Titan-specific entries, otherwise Exceptions are logged
   private Configuration loadTitanConfig(String tablename)
@@ -48,9 +55,6 @@ public class HadoopTitanConfigs {
           titanConfig.setProperty((String) e.getKey(), e.getValue());
         }
       }
-
-      titanConfig.setProperty(STORAGE_HBASE_TABLE, tablename);
-      log.debug("Setting {}={}", STORAGE_HBASE_TABLE, tablename);
 
       /// Set sensible defaults
       if (!titanConfig.containsKey(STORAGE_BACKEND)) { // then assume HBase
@@ -72,11 +76,21 @@ public class HadoopTitanConfigs {
         }
       }
     }
+    if(tablename!=null){
+      String existing = titanConfig.getString(STORAGE_HBASE_TABLE);
+      if(existing!=null && existing.equals(tablename))
+        log.warn("Overriding existing tablename={} with {}", existing, tablename);
+      titanConfig.setProperty(STORAGE_HBASE_TABLE, tablename);
+      log.debug("Setting {}={}", STORAGE_HBASE_TABLE, tablename);
+    }
+
     return titanConfig;
   }
 
-  @Getter
   private org.apache.hadoop.conf.Configuration hadoopConfig = null;
+  public org.apache.hadoop.conf.Configuration getHadoopConfig() throws ConfigurationException{
+    return loadHadoopConfig();
+  }
 
   private org.apache.hadoop.conf.Configuration loadHadoopConfig() throws ConfigurationException {
     if (hadoopConfig == null) {

@@ -205,10 +205,12 @@ public class GraphUri {
     //printConfig(config);
     try{
       graph = getFactory().open(this);
-      boolean createMetaDataNode = config.getBoolean(CREATE_META_DATA_NODE, true);
-      log.debug("  Opened graph={}, createMetaDataNode={}", graph, createMetaDataNode);
-      if(createMetaDataNode)
-        GraphUtils.addMetaDataNode(this, graph);
+      if(!isReadOnly()){
+        boolean createMetaDataNode = config.getBoolean(CREATE_META_DATA_NODE, true);
+        log.debug("  Opened graph={}, createMetaDataNode={}", graph, createMetaDataNode);
+        if(createMetaDataNode)
+          GraphUtils.addMetaDataNode(this, graph);
+      }
     }catch(RuntimeException re){
       log.error("Could not open graphUri="+this, re);
       throw re;
@@ -300,7 +302,11 @@ public class GraphUri {
   }
 
   public GraphUri readOnly() {
-    return setConfig(IdGraphFactory.READONLY, "true");
+    return setConfig(IdGraphFactory.READONLY, true);
+  }
+  
+  public boolean isReadOnly() {
+    return config.getBoolean(IdGraphFactory.READONLY, false);
   }
 
 // use GraphUtils.addMetaData() instead

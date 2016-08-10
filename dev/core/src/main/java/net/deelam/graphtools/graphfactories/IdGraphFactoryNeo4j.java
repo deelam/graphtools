@@ -79,7 +79,7 @@ public class IdGraphFactoryNeo4j implements IdGraphFactory {
     for (String key : keys) {
       if (key.startsWith("blueprints.neo4j"))
         continue;
-      String val = gUri.getConfig().getString(key);
+      Object val = gUri.getConfig().getProperty(key);
       if(!conf.containsKey(CONFIG_PREFIX + key))
         conf.setProperty(CONFIG_PREFIX + key, val);
     }

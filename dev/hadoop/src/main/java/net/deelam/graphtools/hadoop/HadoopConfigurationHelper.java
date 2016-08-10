@@ -25,7 +25,7 @@ import net.deelam.graphtools.util.PropertiesUtils;
 @Slf4j
 public final class HadoopConfigurationHelper {
 
-  @Getter
+//  @Getter
   private Configuration hadoopConfig=null;
   
   public Configuration loadHadoopConfig(String hadoopPropsFile) throws ConfigurationException {
@@ -71,10 +71,10 @@ public final class HadoopConfigurationHelper {
   }
 
   private static void checkYarnApplicationClasspath(Properties hadoopBaseConfig) {
-    log.info("Checking files in yarn.application.classpath exist ...");
     String cpStr = hadoopBaseConfig.getProperty("yarn.application.classpath");
     if (cpStr == null)
       return;
+    log.info("Checking files in yarn.application.classpath exist ...");
     String[] cpArr = cpStr.split(":");
     for (String jarFile : cpArr) {
       int starIndex = jarFile.indexOf("*");

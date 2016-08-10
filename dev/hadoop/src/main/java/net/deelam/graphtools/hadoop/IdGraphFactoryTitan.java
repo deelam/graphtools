@@ -3,6 +3,7 @@
  */
 package net.deelam.graphtools.hadoop;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -84,11 +85,23 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
       }
   }
 
-  @Setter
   public static String titanPropsFile;
+  public static void setTitanPropsFile(String propFile) throws FileNotFoundException {
+    if(new File(propFile).exists()){
+      titanPropsFile = propFile;
+      log.info("Set default titanPropsFile={}", hadoopPropsFile);
+    } else
+      throw new FileNotFoundException(propFile);
+  }
   
-  @Setter
   public static String hadoopPropsFile;
+  public static void setHadoopPropsFile(String propFile) throws FileNotFoundException {
+    if(new File(propFile).exists()){
+      hadoopPropsFile = propFile;
+      log.info("Set default hadoopPropsFile={}", hadoopPropsFile);
+    }else
+      throw new FileNotFoundException(propFile);
+  }
   
   public void init(GraphUri gUri) {
     String tablename = gUri.getUriPath();

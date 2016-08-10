@@ -27,6 +27,7 @@ import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 import lombok.AllArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.GraphUtils;
@@ -83,6 +84,12 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
       }
   }
 
+  @Setter
+  public static String titanPropsFile;
+  
+  @Setter
+  public static String hadoopPropsFile;
+  
   public void init(GraphUri gUri) {
     String tablename = gUri.getUriPath();
     checkUriPath(tablename);
@@ -92,6 +99,15 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
     if (!tablename.equals(safeTablename)) {
       throw new RuntimeException("Unsafe tablename for HBase: " + tablename);
     }
+
+    if(gUri.getConfig().getBoolean("loadDefaultPropFiles", true)){
+      if(titanPropsFile!=null && !gUri.getConfig().containsKey(TITAN_PROPS_FILE)){
+        gUri.getConfig().setProperty(TITAN_PROPS_FILE, titanPropsFile); 
+      }
+      if(hadoopPropsFile!=null && !gUri.getConfig().containsKey(HADOOP_PROPS_FILE)){
+        gUri.getConfig().setProperty(HADOOP_PROPS_FILE, hadoopPropsFile); 
+      }
+    }      
   }
 
   private void checkUriPath(String path) {
@@ -99,6 +115,8 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
       throw new IllegalArgumentException("Provide a graphname like so: 'titan:graphname'");
     }
   }
+  
+  private static final String HBASE_BACKEND = "hbase";
   
   @Override
   public String asString(GraphUri graphUri) {
@@ -110,7 +128,7 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
     sb.append("?");
     
     String backend=tConf.getString(HadoopTitanConfigs.STORAGE_BACKEND);
-    if(backend!=null && !backend.equals("hbase"))
+    if(backend!=null && !backend.equals(HBASE_BACKEND))
       sb.append("&").append(CLUSTER_BACKEND).append("=").append(backend);
     
     String hostname=tConf.getString(HadoopTitanConfigs.STORAGE_HOSTNAME);
@@ -278,11 +296,12 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
     try {
       TitanHBaseGraphUriConfig config = getConfig(gUri);
       String backendType = config.htConfigs.getTitanConfig().getString(HadoopTitanConfigs.STORAGE_BACKEND);
-      if (backendType.equals("hbase")) {
+      if (backendType.equals(HBASE_BACKEND)) {
         String tablename = gUri.getUriPath();
         return config.htConfigs.getHdfsUtils().hasTable(tablename);
-      } else
-        return false;
+      } else {
+        throw new UnsupportedOperationException("Unimplemented for backend="+backendType);
+      }
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

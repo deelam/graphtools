@@ -18,6 +18,14 @@ import net.deelam.graphtools.util.PropertiesUtils;
 @RequiredArgsConstructor
 @Slf4j
 public class HadoopTitanConfigs {
+  
+  public HadoopTitanConfigs copy(){
+    HadoopTitanConfigs copy=new HadoopTitanConfigs(titanPropsFile, hadoopPropsFile);
+    copy.titanConfig=(BaseConfiguration) titanConfig.clone();
+    copy.hadoopConfig=new org.apache.hadoop.conf.Configuration(hadoopConfig);
+    return copy;
+  }
+  
   final String titanPropsFile;
   final String hadoopPropsFile;
 
@@ -32,7 +40,7 @@ public class HadoopTitanConfigs {
   public static final String STORAGE_HBASE_TABLE = "storage.hbase.table";
   public static final String STORAGE_BACKEND = "storage.backend";
 
-  private Configuration titanConfig = null;
+  private BaseConfiguration titanConfig = null;
   public Configuration getTitanConfig() {
     if(titanConfig==null){
       throw new IllegalStateException("Must call getTitanConfig(tablename) or loadConfigs(titanTablename) first");

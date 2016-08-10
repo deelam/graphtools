@@ -5,7 +5,6 @@ package net.deelam.graphtools.hadoop;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -22,6 +21,7 @@ import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.schema.TitanGraphIndex;
 import com.thinkaurelius.titan.core.schema.TitanManagement;
 import com.thinkaurelius.titan.core.util.TitanCleanup;
+import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.KeyIndexableGraph;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
@@ -59,7 +59,7 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
   }
 
   public static void main(String[] args) throws InterruptedException, URISyntaxException {
-    final String DEFAULT_GRAPHNAME = "tmp-adidis-sessions-query1-20883-810ns-j-propFiles-src2-21179-dummy_sat.csv";
+    final String DEFAULT_GRAPHNAME = "tmp-adidis-sessions-query1-24490-810ns-k-src1-24666-dummy_legacy.csv";
     IdGraphFactoryTitan.register();
 
     GraphUri guri = new GraphUri("titan:" + DEFAULT_GRAPHNAME + "?"
@@ -149,15 +149,17 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
 
     TitanGraphIndex idGraphIndex = mgmt.getGraphIndex("vByIdString");
     if (idGraphIndex == null) {
-      PropertyKey idGraphId =
-          mgmt.makePropertyKey(IdGraph.ID).dataType(String.class).cardinality(Cardinality.SINGLE).make();
+      PropertyKey idGraphId =mgmt.makePropertyKey(IdGraph.ID).dataType(String.class).cardinality(Cardinality.SINGLE).make();
       mgmt.buildIndex("vByIdString", Vertex.class).addKey(idGraphId).unique().buildCompositeIndex(); //buildInternalIndex();
+
       // IllegalArgumentException: Unique indexes can only be created on vertices: mgmt.buildIndex("byeid", Edge.class).addKey(id).unique().buildCompositeIndex();
+      // https://groups.google.com/forum/#!msg/aureliusgraphs/A_h1WxuUJzM/ruIWIK0czggJ
+      mgmt.buildIndex("eByIdString", Edge.class).addKey(idGraphId).buildCompositeIndex();
     }
     //other index options: http://s3.thinkaurelius.com/docs/titan/0.5.0/indexes.html
     // Also checkout https://github.com/thinkaurelius/titan/wiki/Advanced-Indexing
     mgmt.commit();
-    return new IdGraph<>(g, true, false);
+    return new IdGraph<>(g, true, true);
   }
 
   ///

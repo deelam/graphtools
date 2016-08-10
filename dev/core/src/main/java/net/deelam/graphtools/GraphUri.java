@@ -256,6 +256,8 @@ public class GraphUri {
       for (String kv : queryStr.split("&")) {
         if(kv.length()>0){
           String[] pair = kv.split("=");
+          if(config.containsKey(pair[0]))
+            log.warn("Overriding configuration {}={} with {}", pair[0], config.getProperty(pair[0]), pair[1]);
           config.setProperty(pair[0], pair[1]);
         }
       }

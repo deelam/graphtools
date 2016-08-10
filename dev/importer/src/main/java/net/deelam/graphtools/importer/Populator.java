@@ -16,6 +16,8 @@ import net.deelam.graphtools.GraphUri;
  */
 public interface Populator {
 
+  String IMPORTER_KEY = "_ingester";
+
   GraphRecordMerger getGraphRecordMerger();
   
   void populateGraph(GraphUri graphUri, Collection<GraphRecord> gRecords) throws IOException;

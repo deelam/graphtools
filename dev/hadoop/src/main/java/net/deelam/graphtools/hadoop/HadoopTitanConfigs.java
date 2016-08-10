@@ -78,8 +78,9 @@ public class HadoopTitanConfigs {
     }
     if(tablename!=null){
       String existing = titanConfig.getString(STORAGE_HBASE_TABLE);
-      if(existing!=null && !existing.equals(tablename))
+      if(existing!=null && !existing.equals(tablename)){
         log.warn("Overriding existing tablename={} with {}", existing, tablename);
+      }
       titanConfig.setProperty(STORAGE_HBASE_TABLE, tablename);
       log.debug("Setting {}={}", STORAGE_HBASE_TABLE, tablename);
     }

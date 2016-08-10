@@ -46,8 +46,8 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
   private static final String CLUSTER_BACKEND = "clusterBackend";
   private static final String CLUSTER_HOST = "clusterHost";
   private static final String CLUSTER_PORT = "clusterPort";
-  private static final String HADOOP_PROPS_FILE = "hadoopPropsFile";
-  private static final String TITAN_PROPS_FILE = "titanPropsFile";
+  public static final String HADOOP_PROPS_FILE = "hadoopPropsFile";
+  public static final String TITAN_PROPS_FILE = "titanPropsFile";
 
   @Override
   public String getScheme() {
@@ -59,26 +59,28 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
   }
 
   public static void main(String[] args) throws InterruptedException, URISyntaxException {
-    final String DEFAULT_GRAPHNAME = "tmp-adidis-sessions-query1-__-src1-20803-aisd-telephone.csv"; //"dnlam-testGraph3";
+    final String DEFAULT_GRAPHNAME = "tmp-adidis-sessions-query1-20883-810ns-j-propFiles-src2-21179-dummy_sat.csv";
     IdGraphFactoryTitan.register();
 
     GraphUri guri = new GraphUri("titan:" + DEFAULT_GRAPHNAME + "?"
-        + CLUSTER_HOST + "=luster4&"
-    + HADOOP_PROPS_FILE + "=hadoop2.props.old&"
+        + CLUSTER_HOST + "=luster3&"
+//    + HADOOP_PROPS_FILE + "=hadoop2.props.old&"
 //    +TITAN_PROPS_FILE+"=titan1.props"
     );
     if (guri.exists()) {
-//      IdGraph<?> graph = guri.openIdGraph();
-//      System.out.println(GraphUtils.toString(graph));
-//      guri.shutdown();
-//      System.out.println("Shutdown");
+      IdGraph<?> graph = guri.openIdGraph();
+      System.out.println(GraphUtils.toString(graph));
+      guri.shutdown();
+      System.out.println("Shutdown");
       
+/*
       System.out.println(guri.asString());
       String str=guri.asString();
       System.out.println(new URI(str));
       GraphUri gUri2 = new GraphUri(str);
       System.out.println(gUri2.asString());
-    }
+*/
+      }
   }
 
   public void init(GraphUri gUri) {
@@ -189,9 +191,9 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
       GURI_PROPNAME_MAP.put(CLUSTER_HOST, new PropNames(
           HadoopTitanConfigs.STORAGE_HOSTNAME,
           "hbase.zookeeper.quorum"));
-      GURI_PROPNAME_MAP.put(CLUSTER_PORT, new PropNames(
-          "hbase.zookeeper.property.clientPort", // use the hbase-specific property to avoid WARNING 
-          "hbase.zookeeper.property.clientPort"));
+//      GURI_PROPNAME_MAP.put(CLUSTER_PORT, new PropNames(
+//          "hbase.zookeeper.property.clientPort", // use the hbase-specific property to avoid WARNING 
+//          "hbase.zookeeper.property.clientPort"));
     }
 
     // for properties that should be passed to TitanFactory

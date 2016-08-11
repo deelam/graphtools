@@ -322,7 +322,7 @@ public class GraphUri {
   }
 
   public void createIndices(PropertyKeys pks) {
-    if(this.isOpen())
+    if(!this.isOpen())
       throw new IllegalStateException("Graph must not be open to create indices.");
     getFactory().createIndices(graph, pks);
   }

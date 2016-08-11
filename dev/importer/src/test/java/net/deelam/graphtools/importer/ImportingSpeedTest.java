@@ -31,9 +31,6 @@ import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory;
 import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
-import edu.utexas.arlut.adidis.domain.DomainConstants;
-import edu.utexas.arlut.adidis.domain.DomainConstants.PropKeysIds;
-
 /**
  * @author deelam
  */

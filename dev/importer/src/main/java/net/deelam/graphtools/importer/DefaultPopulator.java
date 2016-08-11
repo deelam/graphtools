@@ -20,8 +20,6 @@ public class DefaultPopulator implements Populator {
   @Getter
   private final String importerName;
 
-  private static final String IMPORTER_KEY = "_ingester";
-
   private void markRecords(Collection<GraphRecord> gRecords) {
     for (GraphRecord rec : gRecords) {
       rec.setProperty(IMPORTER_KEY, importerName);

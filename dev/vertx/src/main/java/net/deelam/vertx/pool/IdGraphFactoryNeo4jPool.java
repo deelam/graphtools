@@ -11,7 +11,6 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphUri;
-import net.deelam.graphtools.IdGraphFactory;
 import net.deelam.graphtools.ReadOnlyIdGraph;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryNeo4j;
 
@@ -25,7 +24,7 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
   private final ResourcePoolClient poolClient;
   
   private boolean isReadOnly(GraphUri gUri) {
-    return gUri.getConfig().getBoolean(IdGraphFactory.READONLY, false);
+    return gUri.isReadOnly();
   }
   
   @Override

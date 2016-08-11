@@ -66,7 +66,8 @@ public class GraphUri {
 
   String origUri;
   public String asString() {
-    return origUri;
+    String str = getFactory().asString(this);
+    return str;
   }
   
   @Override
@@ -204,10 +205,12 @@ public class GraphUri {
     //printConfig(config);
     try{
       graph = getFactory().open(this);
-      boolean createMetaDataNode = config.getBoolean(CREATE_META_DATA_NODE, true);
-      log.debug("  Opened graph={}, createMetaDataNode={}", graph, createMetaDataNode);
-      if(createMetaDataNode)
-        GraphUtils.addMetaDataNode(this, graph);
+      if(!isReadOnly()){
+        boolean createMetaDataNode = config.getBoolean(CREATE_META_DATA_NODE, true);
+        log.debug("  Opened graph={}, createMetaDataNode={}", graph, createMetaDataNode);
+        if(createMetaDataNode)
+          GraphUtils.addMetaDataNode(this, graph);
+      }
     }catch(RuntimeException re){
       log.error("Could not open graphUri="+this, re);
       throw re;
@@ -251,8 +254,12 @@ public class GraphUri {
     String queryStr=uriStr.substring(queryIndx+1);
     if (queryStr != null) {
       for (String kv : queryStr.split("&")) {
-        String[] pair = kv.split("=");
-        config.setProperty(pair[0], pair[1]);
+        if(kv.length()>0){
+          String[] pair = kv.split("=");
+          if(config.containsKey(pair[0]))
+            log.warn("Overriding configuration {}={} with {}", pair[0], config.getProperty(pair[0]), pair[1]);
+          config.setProperty(pair[0], pair[1]);
+        }
       }
     }
   }
@@ -297,7 +304,11 @@ public class GraphUri {
   }
 
   public GraphUri readOnly() {
-    return setConfig(IdGraphFactory.READONLY, "true");
+    return setConfig(IdGraphFactory.READONLY, true);
+  }
+  
+  public boolean isReadOnly() {
+    return config.getBoolean(IdGraphFactory.READONLY, false);
   }
 
 // use GraphUtils.addMetaData() instead

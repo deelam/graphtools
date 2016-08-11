@@ -193,12 +193,12 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
   ///
 
   @Override
-  public void createIndices(IdGraph<?> graph, PropertyKeys pks) {
+  public void createIndices(GraphUri gUri, IdGraph<?> graph, PropertyKeys pks) {
     TitanManagement mgmt = ((TitanGraph) graph.getBaseGraph()).getManagementSystem();
     pks.getVertexKeys().forEach((propKey,params)->{
       String indexName="v"+propKey;
       if (!mgmt.containsGraphIndex(indexName)) {
-        log.info("Creating node key index for {} in graph={}", propKey, graph);
+        log.info("Creating node key index for {} in graph={} {}", propKey, graph, gUri);
         PropertyKey propKeyObj = createPropertyKey(mgmt, propKey, params);
         mgmt.buildIndex(indexName, Vertex.class).addKey(propKeyObj).buildCompositeIndex(); //buildInternalIndex();
       }
@@ -206,7 +206,7 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
     pks.getEdgeKeys().forEach((propKey,params)->{
       String indexName="e"+propKey;
       if (!mgmt.containsGraphIndex(indexName)) {
-        log.info("Creating edge key index for {} in graph={}", propKey, graph);
+        log.info("Creating edge key index for {} in graph={} {}", propKey, graph, gUri);
         PropertyKey propKeyObj = createPropertyKey(mgmt, propKey, params);
         mgmt.buildIndex(indexName, Edge.class).addKey(propKeyObj).buildCompositeIndex(); //buildInternalIndex();
       }

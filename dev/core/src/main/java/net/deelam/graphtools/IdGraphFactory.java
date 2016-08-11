@@ -67,7 +67,7 @@ public interface IdGraphFactory {
 
   static Logger log=LoggerFactory.getLogger(IdGraphFactory.class);
   
-  default public void createIndices(IdGraph<?> graph, GraphIndexConstants.PropertyKeys pks){
+  default public void createIndices(GraphUri gUri, IdGraph<?> graph, GraphIndexConstants.PropertyKeys pks){
     checkNotNull(graph);
     checkNotNull(pks);
     pks.getVertexKeys().forEach((propKey,params)->{

@@ -324,7 +324,7 @@ public class GraphUri {
   public void createIndices(PropertyKeys pks) {
     if(!this.isOpen())
       throw new IllegalStateException("Graph must not be open to create indices.");
-    getFactory().createIndices(graph, pks);
+    getFactory().createIndices(this, graph, pks);
   }
 
 // use GraphUtils.addMetaData() instead

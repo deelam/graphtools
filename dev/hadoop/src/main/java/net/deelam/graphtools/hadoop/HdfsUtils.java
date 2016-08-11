@@ -13,6 +13,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -153,7 +154,11 @@ public final class HdfsUtils {
         log.debug("Deleting table: " + tablename);
         TableName tn = TableName.valueOf(tablename);
         try (Admin admin = utils.getAdmin()) {
-          admin.disableTable(tn);
+          try{
+            admin.disableTable(tn);
+          }catch(TableNotEnabledException e){
+            log.info("TableNotEnabled: {}", tn);
+          }
           admin.deleteTable(tn);
         }
         return true;

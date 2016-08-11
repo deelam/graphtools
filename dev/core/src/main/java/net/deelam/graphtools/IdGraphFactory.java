@@ -3,6 +3,8 @@
  */
 package net.deelam.graphtools;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.io.IOException;
 
 import org.slf4j.Logger;
@@ -66,6 +68,8 @@ public interface IdGraphFactory {
   static Logger log=LoggerFactory.getLogger(IdGraphFactory.class);
   
   default public void createIndices(IdGraph<?> graph, GraphIndexConstants.PropertyKeys pks){
+    checkNotNull(graph);
+    checkNotNull(pks);
     pks.getVertexKeys().forEach((propKey,params)->{
       if (!graph.getIndexedKeys(Vertex.class).contains(propKey)) {
         log.info("Creating node key index for {} in graph={}", propKey, graph);

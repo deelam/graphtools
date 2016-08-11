@@ -288,7 +288,7 @@ public class GraphUri {
 
   public void backupTo(GraphUri dstGraphUri) throws IOException {
     if(this.isOpen())
-      throw new IllegalStateException("This graph must not be open so underlying files can be copied.");
+      throw new IllegalStateException("Source graph must not be open so underlying files can be copied.");
     if(dstGraphUri.isOpen())
       throw new IllegalStateException("Destination graph must not be open so underlying files can be copied.");
     if(dstGraphUri.exists())
@@ -314,6 +314,8 @@ public class GraphUri {
   }
 
   public void createIndices(PropertyKeys pks) {
+    if(this.isOpen())
+      throw new IllegalStateException("Graph must not be open to create indices.");
     getFactory().createIndices(graph, pks);
   }
 

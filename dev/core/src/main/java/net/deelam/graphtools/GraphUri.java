@@ -9,8 +9,8 @@ import java.net.URI;
 import java.nio.file.FileAlreadyExistsException;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.commons.configuration.Configuration;
@@ -20,6 +20,7 @@ import com.tinkerpop.blueprints.KeyIndexableGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphIndexConstants.PropertyKeys;
@@ -194,6 +195,9 @@ public class GraphUri {
     }
   }
 
+  @Setter
+  private Consumer<IdGraph<?>> openHook=null;
+  
   /**
    * Open existing or create a new graph
    * @param baseGraphClass
@@ -207,12 +211,16 @@ public class GraphUri {
     //printConfig(config);
     try{
       graph = getFactory().open(this);
+      
       if(!isReadOnly()){
         boolean createMetaDataNode = config.getBoolean(CREATE_META_DATA_NODE, true);
         log.debug("  Opened graph={}, createMetaDataNode={}", graph, createMetaDataNode);
         if(createMetaDataNode)
           GraphUtils.addMetaDataNode(this, graph);
       }
+
+      if(openHook!=null)
+        openHook.accept(graph);
     }catch(RuntimeException re){
       log.error("Could not open graphUri="+this, re);
       throw re;

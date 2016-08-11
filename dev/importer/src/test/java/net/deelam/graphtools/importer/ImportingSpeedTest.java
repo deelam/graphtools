@@ -31,6 +31,9 @@ import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory;
 import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
+import edu.utexas.arlut.adidis.domain.DomainConstants;
+import edu.utexas.arlut.adidis.domain.DomainConstants.PropKeysIds;
+
 /**
  * @author deelam
  */
@@ -187,6 +190,9 @@ public class ImportingSpeedTest {
     {
       GraphUri graphUri = new GraphUri("neo4j:./target/neo-us500test");
       sw.start();
+      graphUri.setOpenHook(g->{
+        //graphUri.createIndices(DomainConstants.getPropertyKeys(PropKeysIds.INGEST));
+      });
       mgr.importFile("companyContactsCsv", csvFile, graphUri);
     }
     System.err.println("Neo4j: " + sw);

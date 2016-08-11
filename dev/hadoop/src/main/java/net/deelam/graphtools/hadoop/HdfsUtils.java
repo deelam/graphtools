@@ -33,8 +33,9 @@ public final class HdfsUtils {
 
   synchronized Connection getHBaseConnection() throws IOException {
     { // To avoid IOException, https://github.com/brianfrankcooper/YCSB/issues/446
-    //log.error("dynDir={} fileImpl={}", hadoopConf.get("hbase.dynamic.jars.dir"), hadoopConf.get("fs.file.impl"));
-      hadoopConf.unset("hbase.dynamic.jars.dir"); // not needed for HDFS client
+      // Doesn't stop error: hadoopConf.unset("hbase.dynamic.jars.dir"); // not needed for HDFS client
+      //log.error("dynDir={} fileImpl={}", hadoopConf.get("hbase.dynamic.jars.dir"), hadoopConf.get("fs.file.impl"));
+      //HadoopConfigurationHelper.print(hadoopConf, "conf4hbase.xml");
     }
     final Connection connection = ConnectionFactory.createConnection(hadoopConf);
     return connection;

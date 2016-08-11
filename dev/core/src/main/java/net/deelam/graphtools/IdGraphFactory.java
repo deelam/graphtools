@@ -5,8 +5,15 @@ package net.deelam.graphtools;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.KeyIndexableGraph;
+import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author deelam
@@ -54,5 +61,23 @@ public interface IdGraphFactory {
 
   default public String asString(GraphUri graphUri){
     return graphUri.origUri;
+  }
+
+  static Logger log=LoggerFactory.getLogger(IdGraphFactory.class);
+  
+  default public void createIndices(IdGraph<?> graph, GraphIndexConstants.PropertyKeys pks){
+    pks.getVertexKeys().forEach((propKey,params)->{
+      if (!graph.getIndexedKeys(Vertex.class).contains(propKey)) {
+        log.info("Creating node key index for {} in graph={}", propKey, graph);
+        graph.createKeyIndex(propKey, Vertex.class, params);
+      }
+    });
+    pks.getEdgeKeys().forEach((propKey,params)->{
+      if (!graph.getIndexedKeys(Edge.class).contains(propKey)) {
+        log.info("Creating edge key index for {} in graph={}", propKey, graph);
+        graph.createKeyIndex(propKey, Edge.class, params);
+      }
+    });
+    graph.commit();
   }
 }

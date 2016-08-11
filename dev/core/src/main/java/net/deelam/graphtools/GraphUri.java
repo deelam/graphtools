@@ -9,6 +9,7 @@ import java.net.URI;
 import java.nio.file.FileAlreadyExistsException;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.configuration.BaseConfiguration;
@@ -21,6 +22,7 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.graphtools.GraphIndexConstants.PropertyKeys;
 
 /**
  * GraphUri examples:
@@ -309,6 +311,10 @@ public class GraphUri {
   
   public boolean isReadOnly() {
     return config.getBoolean(IdGraphFactory.READONLY, false);
+  }
+
+  public void createIndices(PropertyKeys pks) {
+    getFactory().createIndices(graph, pks);
   }
 
 // use GraphUtils.addMetaData() instead

@@ -24,17 +24,14 @@ import com.thinkaurelius.titan.core.schema.TitanManagement;
 import com.thinkaurelius.titan.core.util.TitanCleanup;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.KeyIndexableGraph;
+import com.tinkerpop.blueprints.Parameter;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 import lombok.AllArgsConstructor;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import net.deelam.graphtools.GraphUri;
-import net.deelam.graphtools.GraphUtils;
-import net.deelam.graphtools.IdGraphFactory;
-import net.deelam.graphtools.JsonPropertyMerger;
-import net.deelam.graphtools.PropertyMerger;
+import net.deelam.graphtools.*;
+import net.deelam.graphtools.GraphIndexConstants.PropertyKeys;
 import net.deelam.graphtools.util.IdUtils;
 
 /**
@@ -192,7 +189,48 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
     mgmt.commit();
     return new IdGraph<>(g, true, true);
   }
+  
+  ///
 
+  @Override
+  public void createIndices(IdGraph<?> graph, PropertyKeys pks) {
+    TitanManagement mgmt = ((TitanGraph) graph.getBaseGraph()).getManagementSystem();
+    pks.getVertexKeys().forEach((propKey,params)->{
+      String indexName="v"+propKey;
+      if (mgmt.containsGraphIndex(indexName)) {
+        log.info("Creating node key index for {} in graph={}", propKey, graph);
+        PropertyKey propKeyObj = createPropertyKey(mgmt, propKey, params);
+        mgmt.buildIndex(indexName, Vertex.class).addKey(propKeyObj).buildCompositeIndex(); //buildInternalIndex();
+      }
+    });
+    pks.getEdgeKeys().forEach((propKey,params)->{
+      String indexName="e"+propKey;
+      if (mgmt.containsGraphIndex(indexName)) {
+        log.info("Creating edge key index for {} in graph={}", propKey, graph);
+        PropertyKey propKeyObj = createPropertyKey(mgmt, propKey, params);
+        mgmt.buildIndex(indexName, Edge.class).addKey(propKeyObj).buildCompositeIndex(); //buildInternalIndex();
+      }
+    });
+    mgmt.commit();
+  }
+
+  private PropertyKey createPropertyKey(TitanManagement mgmt, String propKey, Parameter<?,?>[] params) {
+    Map<?,?> paramM = generateParameterMap(params);
+    PropertyKey propKeyObj =mgmt.makePropertyKey(propKey)
+        .dataType((paramM.get(GraphIndexConstants.DATA_CLASS) == null ? Object.class : (Class<?>) paramM.get(GraphIndexConstants.DATA_CLASS)))
+        .cardinality((paramM.get(GraphIndexConstants.CARDINALITY) == null ? Cardinality.SINGLE : (Cardinality) paramM.get(GraphIndexConstants.CARDINALITY)))
+        .make();
+    return propKeyObj;
+  }
+
+  private static Map<?, ?> generateParameterMap(final Parameter<?,?>... indexParameters) {
+    final Map<Object, Object> map = new HashMap<>();
+    for (final Parameter<?,?> parameter : indexParameters) {
+      map.put(parameter.getKey(), parameter.getValue());
+    }
+    return map;
+  }
+  
   ///
 
   private TitanHBaseGraphUriConfig getConfig(GraphUri gUri) {

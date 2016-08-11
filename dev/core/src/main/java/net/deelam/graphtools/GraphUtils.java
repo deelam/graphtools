@@ -270,17 +270,6 @@ public final class GraphUtils {
 
   ///
 
-  public static void createIndex(IdGraph<?> graph, String propKey, Class<? extends Element> clazz, Parameter... params) {
-    try{
-      if (!graph.getIndexedKeys(clazz).contains(propKey)) {
-        graph.createKeyIndex(propKey, clazz, params);
-      }
-    }catch(UnsupportedOperationException uoe){
-      // TODO: create index for TitanGraph
-      log.warn("graph="+graph+" property="+propKey+" for "+clazz, uoe);
-    }
-  }
-
   public static final Direction[] BOTHDIR = {Direction.OUT, Direction.IN};
 
   /**

@@ -23,16 +23,18 @@ public class HadoopTitanConfigs {
     HadoopTitanConfigs copy=new HadoopTitanConfigs(titanPropsFile, hadoopPropsFile);
     copy.titanConfig=(BaseConfiguration) titanConfig.clone();
     copy.hadoopConfig=new org.apache.hadoop.conf.Configuration(hadoopConfig);
+    copy.minHadoopConfig=new org.apache.hadoop.conf.Configuration(minHadoopConfig);
     return copy;
   }
   
   final String titanPropsFile;
   final String hadoopPropsFile;
+  private HadoopConfigurationHelper helper = new HadoopConfigurationHelper();
 
   public void loadConfigs(String titanTablename) throws ConfigurationException, FileNotFoundException, IOException {
     /// load all configs
-    loadHadoopConfig();
-    loadTitanConfig(titanTablename);
+    getHadoopConfig();
+    getTitanConfig(titanTablename);
   }
 
   public static final String STORAGE_HOSTNAME = "storage.hostname";
@@ -42,17 +44,13 @@ public class HadoopTitanConfigs {
 
   private BaseConfiguration titanConfig = null;
   public Configuration getTitanConfig() {
-    if(titanConfig==null){
+    if(titanConfig==null)
       throw new IllegalStateException("Must call getTitanConfig(tablename) or loadConfigs(titanTablename) first");
-    }
     return titanConfig;
-  }
-  public Configuration getTitanConfig(String tablename) throws ConfigurationException, FileNotFoundException, IOException {
-    return loadTitanConfig(tablename);
   }
 
   // create configuration with only Titan-specific entries, otherwise Exceptions are logged
-  private Configuration loadTitanConfig(String tablename)
+  public Configuration getTitanConfig(String tablename)
       throws ConfigurationException, FileNotFoundException, IOException {
     if (titanConfig == null) {
       titanConfig = new BaseConfiguration();
@@ -98,18 +96,21 @@ public class HadoopTitanConfigs {
 
   private org.apache.hadoop.conf.Configuration hadoopConfig = null;
   public org.apache.hadoop.conf.Configuration getHadoopConfig() throws ConfigurationException{
-    return loadHadoopConfig();
-  }
-
-  private org.apache.hadoop.conf.Configuration loadHadoopConfig() throws ConfigurationException {
     if (hadoopConfig == null) {
-      hadoopConfig = new HadoopConfigurationHelper().loadHadoopConfig(hadoopPropsFile);
+      hadoopConfig = helper.loadHadoopConfig(hadoopPropsFile);
     }
     return hadoopConfig;
   }
+  
+  private org.apache.hadoop.conf.Configuration minHadoopConfig = null;
+  public org.apache.hadoop.conf.Configuration getMinimalHadoopConfig() throws ConfigurationException{
+    if (minHadoopConfig == null) {
+      minHadoopConfig = helper.loadMinimalHadoopConfig(hadoopPropsFile);
+    }
+    return minHadoopConfig;
+  }
 
-  HdfsUtils hdfsUtils;
-
+  private HdfsUtils hdfsUtils;
   public HdfsUtils getHdfsUtils() {
     if (hdfsUtils == null) {
       hdfsUtils = new HdfsUtils(hadoopConfig);

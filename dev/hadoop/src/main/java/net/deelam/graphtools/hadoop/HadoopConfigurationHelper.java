@@ -176,7 +176,7 @@ public final class HadoopConfigurationHelper {
    * Disadvantage of this is dependence on an activator class.
    * 
    */
-  static Configuration loadHadoopConfigDirs(Properties props) {
+  private static Configuration loadHadoopConfigDirs(Properties props) {
     Configuration hadoopConf = new Configuration();
     {
       String yarnConfDir = props.getProperty("YARN_CONF_DIR");

@@ -16,7 +16,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 
-import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.util.ClassLoaderContext;
@@ -25,49 +24,61 @@ import net.deelam.graphtools.util.PropertiesUtils;
 @Slf4j
 public final class HadoopConfigurationHelper {
 
-//  @Getter
-  private Configuration hadoopConfig=null;
-  
-  public Configuration loadHadoopConfig(String hadoopPropsFile) throws ConfigurationException {
-    Properties conf = loadHadoopProperties(hadoopPropsFile);
+  Configuration loadHadoopConfig(String hadoopPropsFile) throws ConfigurationException {
+    Properties hadoopProps = loadHadoopProperties(hadoopPropsFile);
+
+    String yarnMgr = hadoopProps.getProperty("yarn.resourcemanager.hostname");
+    if ("localhost".equals(yarnMgr)) {
+      checkYarnApplicationClasspath(hadoopProps);
+    }
+
     //    conf.setProperty("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
     //    conf.setProperty("fs.file.impl", LocalFileSystem.class.getName());
-    hadoopConfig=loadHadoopConfigDirs(conf);
+    Configuration hadoopConfig=loadHadoopConfigDirs(hadoopProps);
     return hadoopConfig;
   }
 
-  private Properties loadHadoopProperties(String hadoopPropsFile)
-      throws ConfigurationException {
+  Configuration loadMinimalHadoopConfig(String hadoopPropsFile) throws ConfigurationException{
+    Properties hadoopProps = loadHadoopProperties(hadoopPropsFile);
+    Configuration hadoopConfig=loadHadoopConfigDirs(hadoopProps);
+    
+    Configuration minConfig=new Configuration();
+    // Set minimal settings from Hadoop config dir
+    String[] minSettings = {
+        "fs.defaultFS", 
+        "hbase.zookeeper.quorum", 
+        "hbase.zookeeper.property.clientPort",
+        "yarn.resourcemanager.hostname",
+        "yarn.application.classpath"};
+    for(String s:minSettings){
+      minConfig.set(s, hadoopConfig.get(s));      
+    }
+    
+    // Override with props
+    hadoopProps.forEach((key,value)->{
+      String confVal = minConfig.get((String) key);
+      if(confVal!=null && !confVal.equals(value)){
+        log.info("Overriding Hadoop's config {}={} with {}", key, confVal, value);
+        minConfig.set((String) key, (String)value);
+      }
+    });
+    return minConfig; 
+  }
 
-    Properties hadoopBaseConfig = new Properties();
-    if (hadoopPropsFile != null) {
+  private Properties loadHadoopProperties(String hadoopPropsFile) throws ConfigurationException {
+    Properties hadoopProps = new Properties();
+    if (hadoopPropsFile == null) {
+      log.info("Hadoop property file not specified; not loading file.");
+    } else {
       try {
-        PropertiesUtils.loadProperties(hadoopPropsFile, hadoopBaseConfig);
+        PropertiesUtils.loadProperties(hadoopPropsFile, hadoopProps);
       } catch (IOException e1) {
         log.error("Error when reading " + hadoopPropsFile, e1);
       }
-    } else {
-      log.info("Hadoop property file not specified; not loading file."); // for Spark jobs
     }
-
-    //    for (Entry<Object, Object> e : hadoopBaseConfig.entrySet()) {
-    //      Object existingV = hadoopBaseConfig.getProperty((String) e.getKey());
-    //      if (existingV != null && !e.getValue().equals(existingV))
-    //        log.warn("Overriding Hadoop config property {}={}  oldValue:" + existingV, e.getKey(), e.getValue());
-    //      hadoopBaseConfig.setProperty((String) e.getKey(), (String) e.getValue());
-    //      log.debug("Hadoop config property {}={}", e.getKey(), e.getValue());
-    //    }
-
-    setHadoopUser(hadoopBaseConfig);
-
-    setYarnJobJar(hadoopBaseConfig);
-
-    String yarnMgr = hadoopBaseConfig.getProperty("yarn.resourcemanager.hostname");
-    if ("localhost".equals(yarnMgr)) {
-      checkYarnApplicationClasspath(hadoopBaseConfig);
-    }
-
-    return hadoopBaseConfig;
+    setHadoopUser(hadoopProps);
+    findAndSetYarnJobJar(hadoopProps);
+    return hadoopProps;
   }
 
   private static void checkYarnApplicationClasspath(Properties hadoopBaseConfig) {
@@ -106,7 +117,7 @@ public final class HadoopConfigurationHelper {
   @Setter
   private Supplier<File> jobJarFinder=null;
   
-  private void setYarnJobJar(Properties conf) {
+  private void findAndSetYarnJobJar(Properties conf) {
     String jobJar = conf.getProperty("mapreduce.job.jar");
     if(jobJarFinder!=null){
       File jobJarF=jobJarFinder.get();
@@ -169,12 +180,10 @@ public final class HadoopConfigurationHelper {
       HadoopConfigurationHelper.print(hbaseConf, "dump-hbase.xml");
 
     log.info("  Adding properties from file to (possibly override) loaded default configuration for Hadoop and HBase");
-    for (Object keyObj : props.keySet()) {
-      String key = (String) keyObj;
-      String value = props.getProperty(key);
+    props.forEach((key,value)->{
       log.debug("    key: {}={}", key, value);
-      hbaseConf.set(key, value);
-    }
+      hbaseConf.set((String) key, (String)value);
+    });
 
     if (debug)
       HadoopConfigurationHelper.print(hbaseConf, "dump-hbaseConf-withProps.xml");

@@ -184,12 +184,17 @@ public final class HadoopConfigurationHelper {
       ServiceLoader<FileSystem> serviceLoader = ServiceLoader.load(FileSystem.class);
       for (FileSystem fs : serviceLoader) {
         final String fsImplKey = "fs." + fs.getScheme() + ".impl";
+        String existing = hbaseConf.get(fsImplKey);
         String propFsClass = props.getProperty(fsImplKey);
         if (propFsClass == null) {
-          log.info("  Setting missing Hadoop config property {}={}", fsImplKey, fs.getClass());
+          if(existing==null)
+            log.info("  Setting missing Hadoop config {}={}", fsImplKey, fs.getClass());
+          else if(!existing.equals(fs.getClass().getName()))
+            log.info("  Overriding Hadoop config {}={} with discovered {}", fsImplKey, existing, fs.getClass());
           hbaseConf.set(fsImplKey, fs.getClass().getName());
         } else {
-          log.info("  Overriding with {}={} from property file", fsImplKey, propFsClass);
+          if(!propFsClass.equals(fs.getClass().getName()))
+            log.info("  Setting {}={} from property file instead of discovered {}", fsImplKey, propFsClass, fs.getClass());
           hbaseConf.set(fsImplKey, propFsClass);
         }
       }

@@ -216,6 +216,7 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
 
   private PropertyKey createPropertyKey(TitanManagement mgmt, String propKey, Parameter<?,?>[] params) {
     Map<?,?> paramM = generateParameterMap(params);
+    // http://s3.thinkaurelius.com/docs/titan/0.5.4/schema.html
     PropertyKey propKeyObj =mgmt.makePropertyKey(propKey)
         .dataType((paramM.get(GraphIndexConstants.DATA_CLASS) == null ? Object.class : (Class<?>) paramM.get(GraphIndexConstants.DATA_CLASS)))
         .cardinality((paramM.get(GraphIndexConstants.CARDINALITY) == null ? Cardinality.SINGLE : (Cardinality) paramM.get(GraphIndexConstants.CARDINALITY)))

@@ -29,6 +29,7 @@ import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.*;
 import net.deelam.graphtools.GraphIndexConstants.PropertyKeys;
@@ -38,6 +39,7 @@ import net.deelam.graphtools.util.IdUtils;
  * @author deelam
  * 
  */
+@RequiredArgsConstructor
 @Slf4j
 public class IdGraphFactoryTitan implements IdGraphFactory {
 
@@ -54,8 +56,14 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
   }
 
   public static void register() {
-    GraphUri.register(new IdGraphFactoryTitan());
+    GraphUri.register(new IdGraphFactoryTitan(null));
   }
+  
+  private final HadoopTitanConfigs factorysHTConfig;
+  public static void register(HadoopTitanConfigs factorysHTConfig) {
+    GraphUri.register(new IdGraphFactoryTitan(factorysHTConfig));
+  }
+
 
   public static void main(String[] args) throws InterruptedException, URISyntaxException {
     final String DEFAULT_GRAPHNAME = "tmp-adidis-sessions-query1-24490-810ns-k-src1-24666-dummy_legacy.csv";
@@ -83,7 +91,7 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
   }
 
   public static String titanPropsFile;
-  public static void setTitanPropsFile(String propFile) throws FileNotFoundException {
+  public static void setDefaultTitanPropsFile(String propFile) throws FileNotFoundException {
     if(new File(propFile).exists()){
       titanPropsFile = propFile;
       log.info("Set default titanPropsFile={}", hadoopPropsFile);
@@ -92,7 +100,7 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
   }
   
   public static String hadoopPropsFile;
-  public static void setHadoopPropsFile(String propFile) throws FileNotFoundException {
+  public static void setDefaultHadoopPropsFile(String propFile) throws FileNotFoundException {
     if(new File(propFile).exists()){
       hadoopPropsFile = propFile;
       log.info("Set default hadoopPropsFile={}", hadoopPropsFile);
@@ -238,7 +246,15 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
     TitanHBaseGraphUriConfig configs = (TitanHBaseGraphUriConfig) gUri.getConfig().getProperty("CONFIGS");
     if (configs == null) {
       try {
-        configs = new TitanHBaseGraphUriConfig(gUri);
+        HadoopTitanConfigs htConfigs = factorysHTConfig;
+        if(htConfigs==null)
+          htConfigs=new HadoopTitanConfigs(
+            gUri.getConfig().getString(TITAN_PROPS_FILE), 
+            gUri.getConfig().getString(HADOOP_PROPS_FILE));
+        else
+          htConfigs=htConfigs.copy();
+
+        configs = new TitanHBaseGraphUriConfig(gUri, htConfigs);
         gUri.getConfig().setProperty("CONFIGS", configs);
       } catch (ConfigurationException | IOException e) {
         throw new RuntimeException(e);
@@ -273,10 +289,8 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
 
     final boolean DEBUG = true;
 
-    public TitanHBaseGraphUriConfig(GraphUri gUri) throws ConfigurationException, FileNotFoundException, IOException {
-      htConfigs=new HadoopTitanConfigs(
-         gUri.getConfig().getString(TITAN_PROPS_FILE), 
-         gUri.getConfig().getString(HADOOP_PROPS_FILE));
+    public TitanHBaseGraphUriConfig(GraphUri gUri, HadoopTitanConfigs htConfigs) throws ConfigurationException, FileNotFoundException, IOException {
+      this.htConfigs=htConfigs;
       
       /// load all configs
       String tablename = gUri.getUriPath();

@@ -21,11 +21,13 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 
 import com.google.common.collect.Lists;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public final class HdfsUtils {
 
+  @Getter
   private Configuration hadoopConf;
 
   public HdfsUtils(Configuration hadoopConf) {
@@ -55,12 +57,12 @@ public final class HdfsUtils {
 
   public Path uploadFile(String srcFile, String target, boolean overwrite) throws IOException {
     File file = new File(srcFile);
-    return uploadFile(hadoopConf, file, new Path(target), overwrite);
+    return uploadFile(file, new Path(target), overwrite);
   }
 
   public Path uploadFile(URI srcFile, String target, boolean overwrite) throws IOException {
     File file = new File(srcFile);
-    return uploadFile(hadoopConf, file, new Path(target), overwrite);
+    return uploadFile(file, new Path(target), overwrite);
   }
 
   // return String instead of hadoop-specific Path
@@ -75,7 +77,7 @@ public final class HdfsUtils {
     }
   }
 
-  public static Path uploadFile(Configuration hadoopConf, File file, Path dest, boolean overwrite) throws IOException {
+  public Path uploadFile(File file, Path dest, boolean overwrite) throws IOException {
     try (FileSystem fs = FileSystem.get(hadoopConf)) {
       if (!fs.exists(dest)) {
         log.info("Creating directory: " + dest + " in workingDir=" + fs.getWorkingDirectory());
@@ -86,20 +88,20 @@ public final class HdfsUtils {
       }
 
       Path src = new Path(file.getAbsolutePath());
-      log.info("Copying " + src + " to hdfs: " + dest);
+      log.debug("Copying {} to {}", src, dest);
       fs.copyFromLocalFile(false, overwrite, src, dest);
       Path dstFile = new Path(dest, file.getName());
       Path qualPath = fs.makeQualified(dstFile);
-      log.debug("   dstFile={}", qualPath);
+      log.info("Copied to {}", qualPath);
       return qualPath;
     }
   }
 
-  public static Iterable<Path> uploadFiles(Configuration hadoopConf, Path dest, File... files)
+  public Iterable<Path> uploadFiles(Path dest, File... files)
       throws IOException {
     List<Path> paths = Lists.newArrayList();
     for (File f : files) {
-      Path qualPath = uploadFile(hadoopConf, f, dest, true);
+      Path qualPath = uploadFile(f, dest, true);
       paths.add(qualPath);
     }
     return paths;

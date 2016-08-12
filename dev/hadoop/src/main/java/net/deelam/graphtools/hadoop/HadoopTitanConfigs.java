@@ -21,9 +21,12 @@ public class HadoopTitanConfigs {
   
   public HadoopTitanConfigs copy(){
     HadoopTitanConfigs copy=new HadoopTitanConfigs(titanPropsFile, hadoopPropsFile);
-    copy.titanConfig=(BaseConfiguration) titanConfig.clone();
-    copy.hadoopConfig=new org.apache.hadoop.conf.Configuration(hadoopConfig);
-    copy.minHadoopConfig=new org.apache.hadoop.conf.Configuration(minHadoopConfig);
+    if(titanConfig!=null)
+      copy.titanConfig=(BaseConfiguration) titanConfig.clone();
+    if(hadoopConfig!=null) 
+      copy.hadoopConfig=new org.apache.hadoop.conf.Configuration(hadoopConfig);
+    if(minHadoopConfig!=null) 
+      copy.minHadoopConfig=new org.apache.hadoop.conf.Configuration(minHadoopConfig);
     return copy;
   }
   
@@ -94,8 +97,16 @@ public class HadoopTitanConfigs {
     return titanConfig;
   }
 
+  public org.apache.hadoop.conf.Configuration getHadoopConfig() {
+    try {
+      return getMinimalHadoopConfig();
+    } catch (ConfigurationException e) {
+      throw new RuntimeException(e);
+    } 
+  }
+  
   private org.apache.hadoop.conf.Configuration hadoopConfig = null;
-  public org.apache.hadoop.conf.Configuration getHadoopConfig() throws ConfigurationException{
+  org.apache.hadoop.conf.Configuration getAllHadoopConfig() throws ConfigurationException{
     if (hadoopConfig == null) {
       hadoopConfig = helper.loadHadoopConfig(hadoopPropsFile);
     }
@@ -103,7 +114,7 @@ public class HadoopTitanConfigs {
   }
   
   private org.apache.hadoop.conf.Configuration minHadoopConfig = null;
-  public org.apache.hadoop.conf.Configuration getMinimalHadoopConfig() throws ConfigurationException{
+  org.apache.hadoop.conf.Configuration getMinimalHadoopConfig() throws ConfigurationException{
     if (minHadoopConfig == null) {
       minHadoopConfig = helper.loadMinimalHadoopConfig(hadoopPropsFile);
     }
@@ -113,7 +124,11 @@ public class HadoopTitanConfigs {
   private HdfsUtils hdfsUtils;
   public HdfsUtils getHdfsUtils() {
     if (hdfsUtils == null) {
-      hdfsUtils = new HdfsUtils(hadoopConfig);
+      try {
+        hdfsUtils = new HdfsUtils(getAllHadoopConfig());
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
     }
     return hdfsUtils;
   }
@@ -133,7 +148,7 @@ public class HadoopTitanConfigs {
   public void setMissingTitanProperties() {
     TITAN_PROPNAME_MAP.forEach((titanProp, hProp) -> {
       if(!titanConfig.containsKey(titanProp)){
-        String hValue=hadoopConfig.get(hProp);
+        String hValue=getHadoopConfig().get(hProp);
         if(hValue!=null)
           titanConfig.setProperty(titanProp, hValue);
       }

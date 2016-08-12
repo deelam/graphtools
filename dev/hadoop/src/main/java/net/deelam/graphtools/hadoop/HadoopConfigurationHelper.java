@@ -35,34 +35,62 @@ public final class HadoopConfigurationHelper {
     //    conf.setProperty("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
     //    conf.setProperty("fs.file.impl", LocalFileSystem.class.getName());
     Configuration hadoopConfig=loadHadoopConfigDirs(hadoopProps);
+    checkForMinimumSettings(hadoopConfig);
     return hadoopConfig;
   }
 
+  private final static String[] minSettings = {
+      "fs.defaultFS", 
+      "hbase.zookeeper.quorum", 
+      "hbase.zookeeper.property.clientPort",
+      "mapreduce.framework.name", // =yarn
+      "yarn.resourcemanager.hostname",
+      "yarn.application.classpath" // without this, MapReduce jobs fail
+      };
+  
+  public static void main(String[] args) {
+    Configuration minConfig=new Configuration(false);
+    minConfig.forEach(e->{
+      System.out.println(e);
+    });
+  }
+  
   Configuration loadMinimalHadoopConfig(String hadoopPropsFile) throws ConfigurationException{
     Properties hadoopProps = loadHadoopProperties(hadoopPropsFile);
     Configuration hadoopConfig=loadHadoopConfigDirs(hadoopProps);
-    
-    Configuration minConfig=new Configuration();
-    // Set minimal settings from Hadoop config dir
-    String[] minSettings = {
-        "fs.defaultFS", 
-        "hbase.zookeeper.quorum", 
-        "hbase.zookeeper.property.clientPort",
-        "yarn.resourcemanager.hostname",
-        "yarn.application.classpath"};
+    if(debug)
+      HadoopConfigurationHelper.print(hadoopConfig, "dump-hadoopConfig-withProps.xml");
+
+    /// Set minimal settings from Hadoop config dir
+    Configuration minConfig=new Configuration(false); // false=don't load defaults
     for(String s:minSettings){
-      minConfig.set(s, hadoopConfig.get(s));      
-    }
-    
+      if(hadoopConfig.get(s)!=null)
+        minConfig.set(s, hadoopConfig.get(s));      
+    };
+
     // Override with props
     hadoopProps.forEach((key,value)->{
       String confVal = minConfig.get((String) key);
       if(confVal!=null && !confVal.equals(value)){
         log.info("Overriding Hadoop's config {}={} with {}", key, confVal, value);
-        minConfig.set((String) key, (String)value);
       }
+      minConfig.set((String) key, (String)value);
     });
+
+    checkForMinimumSettings(minConfig);
+
+    if(debug)
+      HadoopConfigurationHelper.print(minConfig, "dump-minConf-withProps.xml");
     return minConfig; 
+  }
+
+  private void checkForMinimumSettings(Configuration minConfig) {
+    // Check settings
+    for(String s:minSettings){
+      if (minConfig.get(s) == null) {
+        log.warn("No setting for {}", s);
+      }
+    }
   }
 
   private Properties loadHadoopProperties(String hadoopPropsFile) throws ConfigurationException {
@@ -129,7 +157,7 @@ public final class HadoopConfigurationHelper {
     }
   }
 
-  public static final boolean debug = false; // = true;
+  public static final boolean debug = !true;
 
   /**
    * Notes regarding Configuration and OSGi:
@@ -151,7 +179,14 @@ public final class HadoopConfigurationHelper {
   static Configuration loadHadoopConfigDirs(Properties props) {
     Configuration hadoopConf = new Configuration();
     {
-      String yarnConfDir = props.getProperty("YARN_CONF_DIR", "./yarn-conf");
+      String yarnConfDir = props.getProperty("YARN_CONF_DIR");
+      if (yarnConfDir!=null){
+        if(!new File(yarnConfDir).exists()) {
+          log.warn("Specified YARN_CONF_DIR={} does not exist!", yarnConfDir);
+        }
+      } else {
+        yarnConfDir="./yarn-conf";
+      }
       if (new File(yarnConfDir).exists()) {
         log.info("Using YARN_CONF_DIR={}", yarnConfDir);
         importFilesToConfig(yarnConfDir, hadoopConf, "xml");
@@ -162,14 +197,38 @@ public final class HadoopConfigurationHelper {
         }
       }
     }
-
+    
+    // infer "yarn.resourcemanager.hostname"
+    String yarnRmHostname = hadoopConf.get("yarn.resourcemanager.hostname");
+    if(yarnRmHostname==null || "0.0.0.0".equals(yarnRmHostname)){
+      String rmAddr = hadoopConf.get("yarn.resourcemanager.address"); // e.g., "luster5.arlut.utexas.edu:8032"
+      if(rmAddr!=null){
+        log.debug("YARN addr={}", rmAddr);
+        int colon=rmAddr.indexOf(':');
+        if(colon>0){
+          String hostname=rmAddr.substring(0, colon);
+          if(!"0.0.0.0".equals(hostname)){
+            log.info("Inferring yarn.resourcemanager.hostname={} from {}", hostname, rmAddr);
+            hadoopConf.set("yarn.resourcemanager.hostname", hostname);
+          }
+        }
+      }
+    }
+    
     // HBaseConfiguration.create() loads hbase-default.xml found by HBaseConfiguration's classloader and 
     // calls "new Configuration()", 
     // which loads core-default.xml and hadoop-site.xml, as well as resources added by addDefaultResource()
 
     Configuration hbaseConf = HBaseConfiguration.create(hadoopConf);
     {
-      String hbaseConfDir = props.getProperty("HBASE_CONF_DIR", "./hbase-conf");
+      String hbaseConfDir = props.getProperty("HBASE_CONF_DIR");
+      if (hbaseConfDir!=null){
+        if(!new File(hbaseConfDir).exists()) {
+          log.warn("Specified HBASE_CONF_DIR={} does not exist!", hbaseConfDir);
+        }
+      } else {
+        hbaseConfDir="./hbase-conf";
+      }
       if (new File(hbaseConfDir).exists()) {
         log.info("Using HBASE_CONF_DIR={}", hbaseConfDir);
         importFilesToConfig(hbaseConfDir, hbaseConf, "xml");

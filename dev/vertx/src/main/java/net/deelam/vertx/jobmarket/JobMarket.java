@@ -81,7 +81,7 @@ public class JobMarket extends AbstractVerticle {
 
   public enum BUS_ADDR {
     ADD_JOB, REMOVE_JOB, GET_PROGRESS, // for producers 
-    /*REGISTER,*/ UNREGISTER, SET_PROGRESS, DONE, FAIL // for workers
+    /*REGISTER,*/ UNREGISTER, SET_PROGRESS, DONE, PARTLY_DONE, FAIL // for workers
   };
 
   private static final Object OK_REPLY = "ACK";
@@ -201,6 +201,14 @@ public class JobMarket extends AbstractVerticle {
       }
     });
 
+    eb.consumer(addressBase + BUS_ADDR.PARTLY_DONE, (Message<JsonObject> message) -> {
+      // worker completed its part of the job
+      log.debug("Received PARTLY_DONE message: {}", message.body());
+      JobItem ji = workerEndedJob(message, JobState.AVAILABLE);
+
+      //String workerAddr = getWorkerAddress(message);
+      asyncNegotiateJobWithNextIdleWorker();//(workerAddr);
+    });
     eb.consumer(addressBase + BUS_ADDR.DONE, (Message<JsonObject> message) -> {
       log.debug("Received DONE message: {}", message.body());
       JobItem ji = workerEndedJob(message, JobState.DONE);

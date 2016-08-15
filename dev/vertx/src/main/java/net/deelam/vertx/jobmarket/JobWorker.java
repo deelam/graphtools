@@ -59,6 +59,13 @@ public class JobWorker extends AbstractVerticle {
     vertx.eventBus().send(jmPrefix + BUS_ADDR.SET_PROGRESS, pickedJob, deliveryOptions);
   }
 
+  public void jobPartlyDone() {
+    checkNotNull(pickedJob, "No job picked!");
+    JsonObject prevJob = pickedJob;
+    pickedJob = null; // set to null before notifying jobMarket, which will offer more jobs
+    vertx.eventBus().send(jmPrefix + BUS_ADDR.PARTLY_DONE, prevJob, deliveryOptions);
+  }
+
   public void jobDone() {
     checkNotNull(pickedJob, "No job picked!");
     JsonObject prevJob = pickedJob;
@@ -89,6 +96,8 @@ public class JobWorker extends AbstractVerticle {
   
   private ExecutorService threadPool=Executors.newCachedThreadPool();
   
+  public static final String IS_PARTLY_DONE = "isPartlyDone";
+  
   @Setter
   private Handler<Message<JsonArray>> jobListHandler = msg -> {
     try{
@@ -103,10 +112,14 @@ public class JobWorker extends AbstractVerticle {
     if (pickedJob != null){
       threadPool.execute(()->{
         try{
-          if (worker.apply(pickedJob))
-            jobDone(); // creates new conversation
-          else
+          if (worker.apply(pickedJob)){
+            if(pickedJob.getBoolean(IS_PARTLY_DONE, false).booleanValue())
+              jobPartlyDone(); // creates new conversation
+            else
+              jobDone(); // creates new conversation
+          } else {
             jobFailed(); // creates new conversation
+          }
         }catch(Exception|Error e){
           log.error("Worker "+worker+" threw exception; notifying job failed", e);
           jobFailed(); // creates new conversation

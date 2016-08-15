@@ -64,7 +64,11 @@ public class GraphUri {
   }
 
   public GraphUri(String uri) {
-    this(uri, new BaseConfiguration());
+    this(uri, new BaseConfiguration(), true);
+  }
+
+  public GraphUri(String uri, boolean initWithFactory) {
+    this(uri, new BaseConfiguration(), initWithFactory);
   }
 
   String origUri;
@@ -85,7 +89,10 @@ public class GraphUri {
     return origUri.hashCode();
   }
 
-  public GraphUri(String uri, Configuration config) {
+  public GraphUri(String uri, Configuration config){
+    this(uri, new BaseConfiguration(), true);
+  }
+  public GraphUri(String uri, Configuration config, boolean initWithFactory) {
     URI.create(uri);
     Preconditions.checkNotNull(uri, "uri parameter cannot be null");
     origUri=uri;
@@ -97,6 +104,11 @@ public class GraphUri {
     parseUriPath(baseUri);
     parseQuery(baseUri.toString());
     
+    if(initWithFactory)
+      initWithFactory();
+  }
+
+  public void initWithFactory() {
     getFactory().init(this);
   }
 

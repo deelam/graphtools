@@ -43,6 +43,7 @@ import net.deelam.graphtools.util.IdUtils;
 @Slf4j
 public class IdGraphFactoryTitan implements IdGraphFactory {
 
+  public static final String SCHEME = "titan";
   /// GraphUri configuration parameters
   private static final String CLUSTER_BACKEND = "clusterBackend";
   private static final String CLUSTER_HOST = "clusterHost";
@@ -52,7 +53,7 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
 
   @Override
   public String getScheme() {
-    return "titan";
+    return SCHEME;
   }
 
   public static void register() {
@@ -138,8 +139,7 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
   
   @Override
   public String asString(GraphUri graphUri) {
-    TitanHBaseGraphUriConfig config = getConfig(graphUri);
-    Configuration tConf = config.htConfigs.getTitanConfig();
+    Configuration tConf = getConfig(graphUri).htConfigs.getTitanConfig();
     
     StringBuilder sb=new StringBuilder(getScheme());
     sb.append(":").append(graphUri.getUriPath());
@@ -342,12 +342,23 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
 
   @Override
   public void delete(GraphUri gUri) throws IOException {
-    TitanGraph tgraph = (TitanGraph) gUri.getGraph().getBaseGraph();
-    TitanCleanup.clear(tgraph);
-
-    // or delete HBase table
-    //    String tablename = gUri.getUriPath();
-    //    getHdfsUtils().deleteHBaseTable(tablename);
+    String backendType = getConfig(gUri).htConfigs.getTitanConfig().getString(HadoopTitanConfigs.STORAGE_BACKEND);
+    if (backendType.equals(HBASE_BACKEND)) {
+      // delete HBase table
+      String tablename = gUri.getUriPath();
+      log.info("Deleting graph: {}", gUri);
+      getConfig(gUri).htConfigs.getHdfsUtils().deleteHBaseTable(tablename);
+    } else {
+      // clears graph but table still remains
+      if(gUri.getGraph()==null){
+        gUri.openExistingIdGraph();
+      }
+      TitanGraph tgraph = (TitanGraph) gUri.getGraph().getBaseGraph();
+      if(tgraph.isOpen())
+        tgraph.shutdown();
+      log.info("Clearing graph: {}", gUri);
+      TitanCleanup.clear(tgraph);
+    }
   }
 
   @Override
@@ -360,11 +371,10 @@ public class IdGraphFactoryTitan implements IdGraphFactory {
     log.info("backendDescription={}", descrip);
     */
     try {
-      TitanHBaseGraphUriConfig config = getConfig(gUri);
-      String backendType = config.htConfigs.getTitanConfig().getString(HadoopTitanConfigs.STORAGE_BACKEND);
+      String backendType = getConfig(gUri).htConfigs.getTitanConfig().getString(HadoopTitanConfigs.STORAGE_BACKEND);
       if (backendType.equals(HBASE_BACKEND)) {
         String tablename = gUri.getUriPath();
-        return config.htConfigs.getHdfsUtils().hasTable(tablename);
+        return getConfig(gUri).htConfigs.getHdfsUtils().hasTable(tablename);
       } else {
         throw new UnsupportedOperationException("Unimplemented for backend="+backendType);
       }

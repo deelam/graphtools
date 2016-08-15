@@ -32,9 +32,11 @@ import net.deelam.graphtools.PropertyMerger;
 @Slf4j
 public class IdGraphFactoryNeo4j implements IdGraphFactory {
 
+  public static final String SCHEME = "neo4j";
+
   @Override
   public String getScheme() {
-    return "neo4j";
+    return SCHEME;
   }
   
   private static final String CONFIG_PREFIX = "blueprints.neo4j.conf.";

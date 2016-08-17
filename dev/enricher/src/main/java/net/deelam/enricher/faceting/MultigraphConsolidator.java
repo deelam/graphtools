@@ -138,19 +138,7 @@ public class MultigraphConsolidator implements AutoCloseable {
     loadIdMapperFromGraphMetaData();
   }
   
-//  @Deprecated
-//  private static final String SRCGRAPHID_PROPKEY = "_SRCGRAPHID_PROPKEY_";
-//  @Deprecated
-//  @Getter
-//  private String srcGraphIdPropKey;
-//
-  @Deprecated
-  public void setSrcGraphIdPropKey(String srcGraphIdPropKey) {
-//    this.srcGraphIdPropKey = srcGraphIdPropKey;
-//    GraphUtils.setMetaData(graph, SRCGRAPHID_PROPKEY, srcGraphIdPropKey);
-  }
-
-  private static final String ORIGID_PROPKEY = "_ORIGID_PROPKEY_";
+private static final String ORIGID_PROPKEY = "_ORIGID_PROPKEY_";
   public void setOrigIdPropKey(String origIdPropKey) {
     if(origNodeCodec!=null){
       throw new IllegalStateException("OrigIdPropKey already set to "+origNodeCodec.getOrigIdPropKey());

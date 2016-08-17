@@ -43,7 +43,7 @@ public class IdGraphFactoryNeo4jPoolTest {
       
       @Override
       protected void configure() {
-        PondVerticle pond = new PondVerticle(pondId);
+        PondVerticle pond = new PondVerticle(pondId, "target/pond-"+pondId);
 
         PondVerticle.Serializer serializer = SerDeserUtils.createGraphUriSerializer();
         PondVerticle.Deserializer deserializer = SerDeserUtils.createGraphUriDeserializer();

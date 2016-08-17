@@ -117,8 +117,8 @@ public class PondVerticle extends AbstractVerticle {
   @Getter
   private String addressBase;
 
-  public PondVerticle(String serviceType) {
-    this(serviceType, nextAvailablePort());
+  public PondVerticle(String vrtxServiceName, String pondFolder) {
+    this(vrtxServiceName, pondFolder, nextAvailablePort());
   }
 
   private static int nextAvailablePort() {
@@ -130,9 +130,9 @@ public class PondVerticle extends AbstractVerticle {
     }
   }
 
-  public PondVerticle(String serviceType, int restPort) {
-    this.serviceType = serviceType;
-    pondDir = "tmp/pond-" + serviceType;
+  public PondVerticle(String vrtxServiceName, String pondFolder, int restPort) {
+    this.serviceType = vrtxServiceName;
+    pondDir = pondFolder; // "tmp/pond-" + vrtxServiceName;
     File pondDirFile = new File(pondDir);
     if (pondDirFile.exists()) {
       boolean loadPrev=true;
@@ -169,9 +169,10 @@ public class PondVerticle extends AbstractVerticle {
 
   private Map<ResourceId, ResourceLocation> regisTable = new Hashtable<>();
 
+  private static final String POND_STATE_SER_FILENAME = "pondState.ser";
   private void saveState() {
     log.debug("Saving pond state to {}", pondDir);
-    File pondDirFile = new File(pondDir, "pondState.ser");
+    File pondDirFile = new File(pondDir, POND_STATE_SER_FILENAME);
     try(ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(pondDirFile))){
       oos.writeObject(regisTable);
     } catch (IOException e) {
@@ -181,7 +182,7 @@ public class PondVerticle extends AbstractVerticle {
 
   private void loadState() {
     log.info("Loading pond state from {}", pondDir);
-    File pondDirFile = new File(pondDir, "pondState.ser");
+    File pondDirFile = new File(pondDir, POND_STATE_SER_FILENAME);
     try(ObjectInputStream objectinputstream = new ObjectInputStream(new FileInputStream(pondDirFile))){
       regisTable = (Hashtable) objectinputstream.readObject();
       log.info("{}", regisTable);

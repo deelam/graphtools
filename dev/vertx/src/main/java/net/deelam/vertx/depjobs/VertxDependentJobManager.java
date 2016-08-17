@@ -149,7 +149,7 @@ public class VertxDependentJobManager<T> {
         jobV.setOrder(++counter);
         graph.commit();
       } else {
-        throw new IllegalArgumentException("Job with id already exists: " + job);
+        throw new IllegalArgumentException("Job with id already exists: " + jobId);
       }
       addDependentJobs(jobV, inJobIds);
 

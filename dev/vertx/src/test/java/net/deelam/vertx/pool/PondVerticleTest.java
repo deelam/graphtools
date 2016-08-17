@@ -63,9 +63,9 @@ public class PondVerticleTest {
       log.info("Async.complete " + async.count());
     };
 
-    pond1 = new PondVerticle(svcType1, 8001);
+    pond1 = new PondVerticle(svcType1, "target/pond-"+svcType1, 8001);
     vertx.deployVerticle(pond1, deployHandler);
-    pond2 = new PondVerticle(svcType2, 8002);
+    pond2 = new PondVerticle(svcType2, "target/pond-"+svcType1, 8002);
     vertx.deployVerticle(pond2, deployHandler);
     
     pond1.register("string", serializer, deserializer);

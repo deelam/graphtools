@@ -67,9 +67,9 @@ public class PondVerticleNeo4jGraphTest {
       log.info("Async.complete " + async.count());
     };
 
-    pond1 = new PondVerticle(svcType1);
+    pond1 = new PondVerticle(svcType1, "target/pond-"+svcType1);
     vertx.deployVerticle(pond1, deployHandler);
-    pond2 = new PondVerticle(svcType2);
+    pond2 = new PondVerticle(svcType2, "target/pond-"+svcType2);
     vertx.deployVerticle(pond2, deployHandler);
     
     PondVerticle.Serializer serializer = SerDeserUtils.createGraphUriSerializer();

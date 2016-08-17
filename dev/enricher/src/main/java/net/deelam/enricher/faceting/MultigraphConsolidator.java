@@ -93,7 +93,7 @@ public class MultigraphConsolidator implements AutoCloseable {
     this(graphUri, false);
   }
   
-  private OriginalNodeCodec origNodeCodec=null;
+  OriginalNodeCodec origNodeCodec=null;
   
   public static int MAX_SRCGRAPH_CACHE_SIZE=100; 
       

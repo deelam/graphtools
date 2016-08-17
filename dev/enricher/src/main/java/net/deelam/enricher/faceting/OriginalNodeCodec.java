@@ -20,6 +20,7 @@ import net.deelam.graphtools.PropertyMerger;
 public class OriginalNodeCodec {
   @Getter
   private String origIdPropKey;
+  @Getter
   private String graphIdPropKey;
 
   final PropertyMerger pm;
@@ -66,6 +67,11 @@ public class OriginalNodeCodec {
     newV.setProperty(origIdPropKey, origId);
     newV.setProperty(graphIdPropKey, shortGraphId);
   }
+  
+  public void removeOrigNodeProperties(Vertex v) {
+    v.removeProperty(origIdPropKey);
+    v.removeProperty(graphIdPropKey);
+  }
 
   public List<String> getOrigNodeIdList(Vertex v) {
     Object origId = v.getProperty(origIdPropKey);
@@ -90,4 +96,5 @@ public class OriginalNodeCodec {
     }
     return list;
   }
+
 }

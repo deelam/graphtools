@@ -4,6 +4,9 @@
 package net.deelam.vertx.depjobs;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static net.deelam.graphtools.GraphTransaction.begin;
+import static net.deelam.graphtools.GraphTransaction.commit;
+import static net.deelam.graphtools.GraphTransaction.rollback;
 
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -86,18 +89,25 @@ public class VertxDependentJobManager<T> {
   public String toStringRemainingJobs(String... propsToPrint) {
     StringBuilder sb = new StringBuilder("Nodes:\n");
     int nodeCount = 0;
-    for (DependentJobFrame jobV : graph.getVertices(DependentJobFrame.TYPE_KEY, DependentJobFrame.TYPE_VALUE, DependentJobFrame.class)) {
-      if (jobV.getState()!=STATE.DONE) {
-        ++nodeCount;
-        Vertex n = jobV.asVertex();
-        sb.append("  ").append(n.getId()).append(": ");
-        sb.append(n.getPropertyKeys()).append("\n");
-        if (propsToPrint != null && propsToPrint.length > 0) {
-          String propValuesStr = toString(n, "\n    ", propsToPrint);
-          if (propValuesStr.length() > 0)
-            sb.append("    ").append(propValuesStr).append("\n");
+    int tx = begin(graph);
+    try {
+      for (DependentJobFrame jobV : graph.getVertices(DependentJobFrame.TYPE_KEY, DependentJobFrame.TYPE_VALUE, DependentJobFrame.class)) {
+        if (jobV.getState()!=STATE.DONE) {
+          ++nodeCount;
+          Vertex n = jobV.asVertex();
+          sb.append("  ").append(n.getId()).append(": ");
+          sb.append(n.getPropertyKeys()).append("\n");
+          if (propsToPrint != null && propsToPrint.length > 0) {
+            String propValuesStr = toString(n, "\n    ", propsToPrint);
+            if (propValuesStr.length() > 0)
+              sb.append("    ").append(propValuesStr).append("\n");
+          }
         }
       }
+      commit(tx);
+    } catch (Exception re) {
+      rollback(tx);
+      throw re;
     }
     sb.append(" (").append(nodeCount).append(" remaining jobs)");
     return (sb.toString());
@@ -130,21 +140,29 @@ public class VertxDependentJobManager<T> {
   }
   public synchronized void addJob(boolean addToQueue, String jobId, T job, String... inJobIds) {
     // add to graph
-    DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
-    if (jobV == null) {
-      jobV = graph.addVertex(jobId, DependentJobFrame.class);
-      //        jobV.setJobType(job.getJobType());
-      jobV.setOrder(++counter);
-      graph.commit();
-    } else {
-      throw new IllegalArgumentException("Job with id already exists: " + job);
-    }
-    addDependentJobs(jobV, inJobIds);
+    int tx = begin(graph);
+    try {
+      DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
+      if (jobV == null) {
+        jobV = graph.addVertex(jobId, DependentJobFrame.class);
+        //        jobV.setJobType(job.getJobType());
+        jobV.setOrder(++counter);
+        graph.commit();
+      } else {
+        throw new IllegalArgumentException("Job with id already exists: " + job);
+      }
+      addDependentJobs(jobV, inJobIds);
 
-    if(addToQueue)
-      addToQueue(job, jobV);
-    else
-      unsubmittedJobs.put(jobId, job);
+      if(addToQueue)
+        addToQueue(job, jobV);
+      else
+        unsubmittedJobs.put(jobId, job);
+      
+      commit(tx);
+    } catch (Exception re) {
+      rollback(tx);
+      throw re;
+    }
   }
   
   private void addToQueue(T job, DependentJobFrame jobV) {
@@ -161,14 +179,21 @@ public class VertxDependentJobManager<T> {
 
   public synchronized Collection<String> listJobs(DependentJobFrame.STATE state){
     Collection<String> col=new ArrayList<>();
-    if(state==null){
-      for(Vertex v:graph.getVertices()){
-        col.add((String) v.getId());
+    int tx = begin(graph);
+    try {
+      if(state==null){
+        for(Vertex v:graph.getVertices()){
+          col.add((String) v.getId());
+        }
+      }else{
+        for(Vertex v:graph.getVertices(DependentJobFrame.STATE_PROPKEY, state.name())){
+          col.add((String) v.getId());
+        }
       }
-    }else{
-      for(Vertex v:graph.getVertices(DependentJobFrame.STATE_PROPKEY, state.name())){
-        col.add((String) v.getId());
-      }
+      commit(tx);
+    } catch (Exception re) {
+      rollback(tx);
+      throw re;
     }
     return col;
   }
@@ -179,57 +204,73 @@ public class VertxDependentJobManager<T> {
    * @param jobId
    */
   public synchronized void reAddJob(String jobId) {
-    // add to graph
-    DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
-    if (jobV == null) {
-      throw new IllegalArgumentException("Job doesn't exist: " + jobId);
+    int tx = begin(graph);
+    try {
+      // add to graph
+      DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
+      if (jobV == null) {
+        throw new IllegalArgumentException("Job doesn't exist: " + jobId);
+      }
+      
+      T job;
+      if(jobV.getState()==null)
+        job=unsubmittedJobs.get(jobId);
+      else
+        switch(jobV.getState()){
+          case CANCELLED:
+          case DONE:
+          case FAILED:
+          case NEEDS_UPDATE:
+            log.info("re-add job: {}", jobId);
+            job=submittedJobs.get(jobId);
+            break;
+          case WAITING:
+            jobV.setOrder(++counter);
+            log.info("re-add job: {} is currently waiting; adjusting order to {}", jobId, counter);
+            return;
+          case SUBMITTED:
+          case PROCESSING:
+          default:
+            throw new IllegalStateException("Cannot re-add job "+jobId+" with state="+jobV.getState());
+      }
+  
+      addToQueue(job, jobV);
+      
+      commit(tx);
+    } catch (Exception re) {
+      rollback(tx);
+      throw re;
     }
-    
-    T job;
-    if(jobV.getState()==null)
-      job=unsubmittedJobs.get(jobId);
-    else
-      switch(jobV.getState()){
-        case CANCELLED:
-        case DONE:
-        case FAILED:
-        case NEEDS_UPDATE:
-          log.info("re-add job: {}", jobId);
-          job=submittedJobs.get(jobId);
-          break;
-        case WAITING:
-          jobV.setOrder(++counter);
-          log.info("re-add job: {} is currently waiting; adjusting order to {}", jobId, counter);
-          return;
-        case SUBMITTED:
-        case PROCESSING:
-        default:
-          throw new IllegalStateException("Cannot re-add job "+jobId+" with state="+jobV.getState());
-    }
-
-    addToQueue(job, jobV);
   }
   
   public synchronized void addDependentJobs(String jobId, String... inJobIds) {
     synchronized (graph) {
-      DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
-      if (jobV == null) {
-        throw new IllegalArgumentException("Job with id does not exist: " + jobId);
-      } else {
-        if(jobV.getState()!=null)
-          switch(jobV.getState()){
-            case CANCELLED:
-            case DONE:
-            case FAILED:
-            case SUBMITTED:
-            case PROCESSING:
-              log.warn("Job={} in state={}; adding dependent jobs at this point may be ineffectual: {}", jobV, jobV.getState(), inJobIds);
-              break;
-            default:
-              // okay
-          }
-        //log.info("addInputJobs " + jobId);
-        addDependentJobs(jobV, inJobIds);
+      int tx = begin(graph);
+      try {
+        DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
+        if (jobV == null) {
+          throw new IllegalArgumentException("Job with id does not exist: " + jobId);
+        } else {
+          if(jobV.getState()!=null)
+            switch(jobV.getState()){
+              case CANCELLED:
+              case DONE:
+              case FAILED:
+              case SUBMITTED:
+              case PROCESSING:
+                log.warn("Job={} in state={}; adding dependent jobs at this point may be ineffectual: {}", jobV, jobV.getState(), inJobIds);
+                break;
+              default:
+                // okay
+            }
+          //log.info("addInputJobs " + jobId);
+          addDependentJobs(jobV, inJobIds);
+        }
+        
+        commit(tx);
+      } catch (Exception re) {
+        rollback(tx);
+        throw re;
       }
     }
   }
@@ -248,38 +289,45 @@ public class VertxDependentJobManager<T> {
   }
 
   public synchronized boolean cancelJob(String jobId) {
-    DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
-    if(jobV==null)
-      throw new IllegalArgumentException("Unknown jobId="+jobId);
-    if(jobV.getState()==null){
-      unsubmittedJobs.remove(jobId);
-      setJobCancelled(jobV);
-    } else {
-      switch (jobV.getState()) {
-        case CANCELLED:
-        case FAILED:
-        case NEEDS_UPDATE:
-        case DONE:
-          log.info("Not cancelling {}. Job's current state={}", jobId, jobV.getState());
-          break;
-        case PROCESSING:
-          log.info("Not cancelling {}. Job's current state={}.  Ask jobProcessor to cancel job.", jobId, jobV.getState());
-          break;
-        case WAITING:
-          waitingJobs.remove(jobV.getNodeId());
-          setJobCancelled(jobV);
-          break;
-        case SUBMITTED:
-          jobProd.removeJob(jobId, null); // may fail
-          submittedJobs.remove(jobId);
-          setJobCancelled(jobV);
-          break;
+    int tx = begin(graph);
+    try {
+      DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
+      if(jobV==null)
+        throw new IllegalArgumentException("Unknown jobId="+jobId);
+      if(jobV.getState()==null){
+        unsubmittedJobs.remove(jobId);
+        setJobCancelled(jobV);
+      } else {
+        switch (jobV.getState()) {
+          case CANCELLED:
+          case FAILED:
+          case NEEDS_UPDATE:
+          case DONE:
+            log.info("Not cancelling {}. Job's current state={}", jobId, jobV.getState());
+            break;
+          case PROCESSING:
+            log.info("Not cancelling {}. Job's current state={}.  Ask jobProcessor to cancel job.", jobId, jobV.getState());
+            break;
+          case WAITING:
+            waitingJobs.remove(jobV.getNodeId());
+            setJobCancelled(jobV);
+            break;
+          case SUBMITTED:
+            jobProd.removeJob(jobId, null); // may fail
+            submittedJobs.remove(jobId);
+            setJobCancelled(jobV);
+            break;
+        }
       }
+      commit(tx);
+      return true;
+    } catch (Exception re) {
+      rollback(tx);
+      throw re;
     }
-    return true;
   }
 
-  void setJobCancelled(DependentJobFrame jobV) {
+  private void setJobCancelled(DependentJobFrame jobV) {
     synchronized (graph) {
       jobV.setState(STATE.CANCELLED);
       log.info("Cancelled job={}", jobV);
@@ -288,12 +336,19 @@ public class VertxDependentJobManager<T> {
   }
   
   public void cancelJobsDependentOn(String jobId, List<String> canceledJobs){
-    DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
-    boolean cancelled = cancelJob(jobId);
-    if(canceledJobs!=null && cancelled)
-      canceledJobs.add(jobId);
-    for(DependentJobFrame outJ:jobV.getOutputJobs()){
-      cancelJobsDependentOn(outJ.getNodeId(), canceledJobs);
+    int tx = begin(graph);
+    try {
+      DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
+      boolean cancelled = cancelJob(jobId);
+      if(canceledJobs!=null && cancelled)
+        canceledJobs.add(jobId);
+      for(DependentJobFrame outJ:jobV.getOutputJobs()){
+        cancelJobsDependentOn(outJ.getNodeId(), canceledJobs);
+      }
+      commit(tx);
+    } catch (Exception re) {
+      rollback(tx);
+      throw re;
     }
   }
   
@@ -314,44 +369,59 @@ public class VertxDependentJobManager<T> {
   }
   
   public STATE getJobStatus(String jobId){
-    DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
-    checkNotNull(jobV, "Cannot find "+jobId);
-    return jobV.getState();
+    int tx = begin(graph);
+    try {
+      DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
+      checkNotNull(jobV, "Cannot find "+jobId);
+      commit(tx);
+      return jobV.getState();
+    } catch (Exception re) {
+      rollback(tx);
+      throw re;
+    }
   }
   
   private ExecutorService threadPool = Executors.newCachedThreadPool();
   
   public Map<String, Object> queryJobStats(String jobId) {
-    DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
-    checkNotNull(jobV, "Cannot find "+jobId);
-    
-    Map<String,Object> map=new HashMap<>();
-    if(jobV.getState() == STATE.PROCESSING){
-      threadPool.execute(()->{
-        jobProd.getProgress(jobId, reply -> {
-          synchronized (map) {
-            JsonObject bodyJO=(JsonObject) reply.result().body();
-            //job = Json.decodeValue(bodyJO.toString(), DependentJob.class);
-            map.putAll(bodyJO.getMap());
-            map.notify();
-          }
-        });
-      });
+    int tx = begin(graph);
+    try {
+      DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
+      checkNotNull(jobV, "Cannot find "+jobId);
       
-      // wait for reply
-      synchronized (map) {
-        while(map.size()==0) 
-          try {
-            map.wait();
-          } catch (InterruptedException e) {
-            e.printStackTrace();
-          }
+      Map<String,Object> map=new HashMap<>();
+      if(jobV.getState() == STATE.PROCESSING){
+        threadPool.execute(()->{
+          jobProd.getProgress(jobId, reply -> {
+            synchronized (map) {
+              JsonObject bodyJO=(JsonObject) reply.result().body();
+              //job = Json.decodeValue(bodyJO.toString(), DependentJob.class);
+              map.putAll(bodyJO.getMap());
+              map.notify();
+            }
+          });
+        });
+        
+        // wait for reply
+        synchronized (map) {
+          while(map.size()==0) 
+            try {
+              map.wait();
+            } catch (InterruptedException e) {
+              e.printStackTrace();
+            }
+          commit(tx);
+          return map;
+        }
+      } else {
+        map.put("_jobState", jobV.getState());
+        //map.put("_jobProgress", jobV.getProgress());
+        commit(tx);
         return map;
       }
-    } else {
-      map.put("_jobState", jobV.getState());
-      //map.put("_jobProgress", jobV.getProgress());
-      return map;
+    } catch (Exception re) {
+      rollback(tx);
+      throw re;
     }
   }
 

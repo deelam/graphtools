@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -23,9 +24,11 @@ import com.google.common.collect.Lists;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.graphtools.api.hadoop.HdfsService;
+import net.deelam.graphtools.util.ClassLoaderContext;
 
 @Slf4j
-public final class HdfsUtils {
+public final class HdfsUtils implements HdfsService {
 
   @Getter
   private Configuration hadoopConf;
@@ -70,10 +73,24 @@ public final class HdfsUtils {
     return uploadFile(srcFile, target, overwrite).toString();
   }
 
-  public File downloadFile(String src, String dst) throws IOException {
-    try (FileSystem fs = FileSystem.get(hadoopConf)) {
-      fs.copyToLocalFile(false, new Path(src), new Path(dst), true);
-      return new File(dst);
+  @Override
+  public CompletableFuture<String> downloadFile(String src, String dst) throws IOException {
+    Path srcPath = new Path(src);
+    log.debug("Copying file: {} -> {}", srcPath, new Path(dst));
+    try(ClassLoaderContext clc=new ClassLoaderContext(FileSystem.class)){
+      try (FileSystem fs = FileSystem.get(hadoopConf)) {
+        {
+          File dstFile = new File(dst);
+          if(dstFile.exists() && dstFile.isDirectory())
+            dst=new File(dst, srcPath.getName()).getAbsolutePath();
+        }
+        fs.copyToLocalFile(false, srcPath, new Path(dst), true);
+        log.info("Copied file to: {}", dst);
+        return CompletableFuture.completedFuture(dst);
+      } catch (Exception e){ // exceptions are not obvious on RPC client so print them here
+        e.printStackTrace();
+        throw e;
+      }
     }
   }
 

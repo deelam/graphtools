@@ -1,7 +1,7 @@
 /**
  * 
  */
-package net.deelam.vertx.hadoop;
+package net.deelam.vertx.rpc;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,8 +14,8 @@ import io.vertx.core.Handler;
  * @author dnlam
  *
  */
-public interface Hdfs {
+public interface HdfsInterface {
   CompletableFuture<File> downloadFile(String src, String dst) throws IOException;
 
-  void downloadFile(String src, String dst, Handler<AsyncResult<Hdfs>> handler) throws IOException;
+  void downloadFile(String src, String dst, Handler<AsyncResult<HdfsInterface>> handler) throws IOException;
 }

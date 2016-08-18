@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -23,9 +24,10 @@ import com.google.common.collect.Lists;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.graphtools.api.hadoop.Hdfs;
 
 @Slf4j
-public final class HdfsUtils {
+public final class HdfsUtils implements Hdfs {
 
   @Getter
   private Configuration hadoopConf;
@@ -70,10 +72,13 @@ public final class HdfsUtils {
     return uploadFile(srcFile, target, overwrite).toString();
   }
 
-  public File downloadFile(String src, String dst) throws IOException {
+  @Override
+  public CompletableFuture<File> downloadFile(String src, String dst) throws IOException {
     try (FileSystem fs = FileSystem.get(hadoopConf)) {
       fs.copyToLocalFile(false, new Path(src), new Path(dst), true);
-      return new File(dst);
+      CompletableFuture<File> future=new CompletableFuture<>();
+      future.complete(new File(dst));
+      return future;
     }
   }
 

@@ -1,4 +1,4 @@
-package net.deelam.vertx.hadoop;
+package net.deelam.vertx.rpc;
 
 
 
@@ -12,9 +12,9 @@ import io.vertx.core.Handler;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class HdfsSvc implements Hdfs {
+public class HdfsSvc implements HdfsInterface {
   
-  public void downloadFile(String src, String dst, Handler<AsyncResult<Hdfs>> handler) throws IOException {
+  public void downloadFile(String src, String dst, Handler<AsyncResult<HdfsInterface>> handler) throws IOException {
     try {
       log.info("Working ..");
       Thread.sleep(500);

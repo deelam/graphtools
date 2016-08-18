@@ -1,4 +1,4 @@
-package net.deelam.vertx.hadoop;
+package net.deelam.vertx.rpc;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,9 +24,9 @@ public class VertxRpc {
     RPCServer rpcServer = new VertxRPCServer(serverOption);
 
 
-    RPCClientOptions<Hdfs> rpcClientOptions = new RPCClientOptions<Hdfs>(vertx).setBusAddress("Address")
-        .setServiceClass(Hdfs.class);
-    Hdfs hdfs = new VertxRPCClient<>(rpcClientOptions).bindService();
+    RPCClientOptions<HdfsInterface> rpcClientOptions = new RPCClientOptions<HdfsInterface>(vertx).setBusAddress("Address")
+        .setServiceClass(HdfsInterface.class);
+    HdfsInterface hdfs = new VertxRPCClient<>(rpcClientOptions).bindService();
 
     if(true){
       try {
@@ -38,7 +38,7 @@ public class VertxRpc {
     } else {
       //invoking service async
       try {
-        Handler<AsyncResult<Hdfs>> handler = asyncResult -> {
+        Handler<AsyncResult<HdfsInterface>> handler = asyncResult -> {
           if (asyncResult.succeeded()) {
             System.out.println("result: "+asyncResult.result().getClass()+" "+asyncResult.result());
             System.out.println((hdfsSvc==asyncResult.result())+" "+hdfsSvc);

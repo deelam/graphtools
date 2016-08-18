@@ -58,13 +58,13 @@ public class VertxRpcHelper<T> {
   }
 
   public VertxRpcHelper<T> clientOptions(Consumer<RPCClientOptions<T>> c) {
-    c.accept(clientOptions);
+    c.accept(getClientOptions());
     return this;
   }
 
   public T getClient(Class<T> serviceClass) {
     T hdfs = new VertxRPCClient<>(getClientOptions().setServiceClass(serviceClass)).bindService();
-    log.info("Created RPC client: {}", hdfs.getClass() /*new Throwable("Who uses this?")*/);
+    log.info("Created RPC client: {} for {}", hdfs.getClass(), serviceClass);
     return hdfs;
   }
 

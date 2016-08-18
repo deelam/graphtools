@@ -13,6 +13,8 @@ import as.leap.vertx.rpc.impl.VertxRPCServer;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import net.deelam.graphtools.api.hadoop.HdfsService;
+import net.deelam.vertx.inject.VertxRpcHelper;
 
 public class VertxRpc {
 
@@ -24,10 +26,14 @@ public class VertxRpc {
     RPCServer rpcServer = new VertxRPCServer(serverOption);
 
 
-    RPCClientOptions<HdfsInterface> rpcClientOptions = new RPCClientOptions<HdfsInterface>(vertx).setBusAddress("Address")
-        .setServiceClass(HdfsInterface.class);
-    HdfsInterface hdfs = new VertxRPCClient<>(rpcClientOptions).bindService();
+//    RPCClientOptions<HdfsInterface> rpcClientOptions = new RPCClientOptions<HdfsInterface>(vertx).setBusAddress("Address")
+//        .setServiceClass(HdfsInterface.class);
+//    HdfsInterface hdfs = new VertxRPCClient<>(rpcClientOptions).bindService();
 
+    HdfsInterface hdfs = new VertxRpcHelper<HdfsInterface>(vertx, "Address")
+    .clientOptions(c->c.setTimeout(10_000L))
+    .getClient(HdfsInterface.class);
+    
     if(true){
       try {
         CompletableFuture<File> ffile = hdfs.downloadFile("src", "dst");

@@ -185,7 +185,7 @@ public class PondVerticle extends AbstractVerticle {
     File pondDirFile = new File(pondDir, POND_STATE_SER_FILENAME);
     try(ObjectInputStream objectinputstream = new ObjectInputStream(new FileInputStream(pondDirFile))){
       regisTable = (Hashtable) objectinputstream.readObject();
-      log.info("{}", regisTable.keySet());
+      log.info("Loaded {} pond resources", regisTable.size());
     } catch (IOException | ClassNotFoundException e) {
       log.error("", e);
     }

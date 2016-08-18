@@ -62,12 +62,20 @@ public final class HadoopConfigurationHelper {
       HadoopConfigurationHelper.print(hadoopConfig, "dump-hadoopConfig-withProps.xml");
 
     /// Set minimal settings from Hadoop config dir
-    Configuration minConfig=new Configuration(false); // false=don't load defaults
-    for(String s:minSettings){
-      if(hadoopConfig.get(s)!=null)
-        minConfig.set(s, hadoopConfig.get(s));      
+    // try(ClassLoaderContext cl = new ClassLoaderContext(FileSystem.class)) { // Calling 'new Configuration' sets the current classloader as its field
+    Configuration minConfig = new Configuration(false); // false=don't load defaults
+    minConfig.setClassLoader(FileSystem.class.getClassLoader()); // so that FileSystem uses the right classloader
+
+    for (String s : minSettings) {
+      if (hadoopConfig.get(s) != null)
+        minConfig.set(s, hadoopConfig.get(s));
     };
 
+    hadoopConfig.getValByRegex("fs..*.impl").forEach((key, value) -> {
+      log.debug("Setting Hadoop's minConfig: {}={}", key, value);
+      minConfig.set(key, value);
+    });
+    
     // Override with props
     hadoopProps.forEach((key,value)->{
       String confVal = minConfig.get((String) key);
@@ -81,6 +89,16 @@ public final class HadoopConfigurationHelper {
 
     if(debug)
       HadoopConfigurationHelper.print(minConfig, "dump-minConf-withProps.xml");
+    
+    if(debug)
+      try{
+        log.error("ccl="+Thread.currentThread().getContextClassLoader());
+        FileSystem.getFileSystemClass("hdfs", hadoopConfig); // check that classes can be loaded
+        FileSystem.getFileSystemClass("hdfs", minConfig); // check that classes can be loaded
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+
     return minConfig; 
   }
 
@@ -256,7 +274,7 @@ public final class HadoopConfigurationHelper {
         String propFsClass = props.getProperty(fsImplKey);
         if (propFsClass == null) {
           if(existing==null)
-            log.info("  Setting missing Hadoop config {}={}", fsImplKey, fs.getClass());
+            log.info("  Setting dynamically discovered Hadoop config {}={}", fsImplKey, fs.getClass());
           else if(!existing.equals(fs.getClass().getName()))
             log.info("  Overriding Hadoop config {}={} with discovered {}", fsImplKey, existing, fs.getClass());
           hbaseConf.set(fsImplKey, fs.getClass().getName());

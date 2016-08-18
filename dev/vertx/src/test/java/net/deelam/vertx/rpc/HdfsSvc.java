@@ -43,9 +43,7 @@ public class HdfsSvc implements HdfsInterface {
     if (!true)
       throw new IOException("test Exception");
     
-    CompletableFuture<File> future = new CompletableFuture<>();
-    future.complete(new File(".")); 
-    return future;
+    return CompletableFuture.completedFuture(new File(src));
   }
 
 }

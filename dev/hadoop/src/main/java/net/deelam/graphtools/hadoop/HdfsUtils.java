@@ -3,6 +3,7 @@ package net.deelam.graphtools.hadoop;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -136,6 +137,8 @@ public final class HdfsUtils {
     //hdfs.uploadFile(new File("titan1.props"), "M", false); // copies file
     //hdfs.uploadFile(new File("titan1.props"), "M/mytitan.props", false); // copies file as new name
     
+//    hdfs.uploadFile(new File("META-INF"), "M/N/O/P/Q", false); 
+    
 //    hdfs.deleteFile("titan1.props");
 //    hdfs.deleteFile("titan.props");
 //    hdfs.deleteFile("titan.propsDir");
@@ -160,8 +163,10 @@ public final class HdfsUtils {
   }
 
   public Path uploadFile(File srcFile, Path dest, boolean overwrite) throws IOException {
+    if(!srcFile.exists())
+      throw new FileNotFoundException("source file="+srcFile);
     try (FileSystem fs = FileSystem.get(hadoopConf)) {
-      Path src = new Path(srcFile.getAbsolutePath());
+      Path src = new Path(srcFile.toURI());
       log.info("Copying {} to {}", src, dest);
 
       if(srcFile.isDirectory()){

@@ -39,9 +39,9 @@ public class HdfsServiceImpl implements HdfsService {
   }
 
   @Override
-  public CompletableFuture<String> uploadFile(File localFile, String destPath, boolean overwrite) throws IllegalArgumentException, IOException {
+  public CompletableFuture<String> uploadFile(String localFile, String destPath, boolean overwrite) throws IllegalArgumentException, IOException {
     try{
-      hdfs.uploadFile(localFile, new Path(destPath), overwrite);
+      hdfs.uploadFile(new File(localFile), new Path(destPath), overwrite);
       return CompletableFuture.completedFuture(destPath);
     } catch (Throwable e){ // exceptions are not obvious on RPC client so print them here
       e.printStackTrace();

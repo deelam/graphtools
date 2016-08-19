@@ -6,12 +6,15 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -24,11 +27,9 @@ import com.google.common.collect.Lists;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.deelam.graphtools.api.hadoop.HdfsService;
-import net.deelam.graphtools.util.ClassLoaderContext;
 
 @Slf4j
-public final class HdfsUtils implements HdfsService {
+public final class HdfsUtils {
 
   @Getter
   private Configuration hadoopConf;
@@ -51,67 +52,166 @@ public final class HdfsUtils implements HdfsService {
     URI hdfsUri = sourceUri;
     // copy data to HDFS
     if (sourceUri.getScheme() == null || sourceUri.getScheme().equals("file")) {
-      hdfsUri = uploadFile(sourceUri, destDir, true).toUri();
+      hdfsUri = uploadFile(new File(sourceUri), new Path(destDir), true).toUri();
     }
     if (!hdfsUri.getScheme().equals("hdfs"))
       log.error("Expecting 'hdfs' URI scheme but got {} for {}", hdfsUri.getScheme(), hdfsUri);
     return hdfsUri;
   }
 
-  public Path uploadFile(String srcFile, String target, boolean overwrite) throws IOException {
-    File file = new File(srcFile);
-    return uploadFile(file, new Path(target), overwrite);
-  }
-
-  public Path uploadFile(URI srcFile, String target, boolean overwrite) throws IOException {
-    File file = new File(srcFile);
-    return uploadFile(file, new Path(target), overwrite);
-  }
-
-  // return String instead of hadoop-specific Path
-  public String uploadFile2(String srcFile, String target, boolean overwrite) throws IOException {
-    return uploadFile(srcFile, target, overwrite).toString();
-  }
-
-  @Override
-  public CompletableFuture<String> downloadFile(String src, String dst) throws IOException {
+  public String downloadFile(String src, String dst) throws IOException {
     Path srcPath = new Path(src);
     log.debug("Copying file: {} -> {}", srcPath, new Path(dst));
-    try(ClassLoaderContext clc=new ClassLoaderContext(FileSystem.class)){
-      try (FileSystem fs = FileSystem.get(hadoopConf)) {
-        {
-          File dstFile = new File(dst);
-          if(dstFile.exists() && dstFile.isDirectory())
-            dst=new File(dst, srcPath.getName()).getAbsolutePath();
+    try (FileSystem fs = FileSystem.get(hadoopConf)) {
+      {
+        File dstFile = new File(dst);
+        if(dstFile.exists() && dstFile.isDirectory())
+          dst=new File(dst, srcPath.getName()).getAbsolutePath();
+      }
+      fs.copyToLocalFile(false, srcPath, new Path(dst), true);
+      log.info("Copied file to: {}", dst);
+      return dst;
+    }
+  }
+  
+  public List<String> listDir(String path, boolean recursive) throws IOException {
+    try (FileSystem fs = FileSystem.get(hadoopConf)) {
+      List<String> files=new ArrayList<>();
+      if (recursive) {
+        // listFiles() only list files, not directories
+        RemoteIterator<LocatedFileStatus> itr = fs.listFiles(new Path(path), recursive);
+        while (itr.hasNext()) {
+          LocatedFileStatus s = itr.next();
+          files.add(s.getPath().toString());
         }
-        fs.copyToLocalFile(false, srcPath, new Path(dst), true);
-        log.info("Copied file to: {}", dst);
-        return CompletableFuture.completedFuture(dst);
-      } catch (Exception e){ // exceptions are not obvious on RPC client so print them here
-        e.printStackTrace();
-        throw e;
+      } else {
+        FileStatus[] status = fs.listStatus(new Path(path));
+        for (int i = 0; i < status.length; i++) {
+          files.add(status[i].getPath().toString());
+//          if (recursive && status[i].isDir()) {
+//            files.addAll(listDir(status[i].getPath().toString(), recursive).get());
+//          }
+        }
+      }
+      return files;
+    } catch (Throwable e){ // exceptions are not obvious on RPC client so print them here
+      e.printStackTrace();
+      throw e;
+    }
+  }
+
+  public String uploadFile(File localFile, String destPath, boolean overwrite) throws IllegalArgumentException, IOException {
+    try{
+      uploadFile(localFile, new Path(destPath), overwrite);
+      return destPath;
+    } catch (Throwable e){ // exceptions are not obvious on RPC client so print them here
+      e.printStackTrace();
+      throw e;
+    }
+  }
+
+  public static void main(String[] args) throws Exception {
+    System.setProperty("HADOOP_USER_NAME", "hdfs");
+    HadoopTitanConfigs htConfigs = new HadoopTitanConfigs(null, null);
+    HdfsUtils hdfs = htConfigs.getHdfsUtils();
+    //hdfs.downloadFile("job_1440104812249_0584-csvRecordReaderErrfile-main-.txt", "errfile.txt"); // renames file
+    //hdfs.downloadFile("adidis-demo", "hdfs-adidis-demo");  // renames dir if dest dir doesn't already exist; otherwise saves in existing dest dir
+    
+    //hdfs.uploadFile(new File("titan1.props"), ".", false); // copies file if doesn't exist
+    //hdfs.uploadFile(new File("titan1.props"), ".", false); // throws Exception if exists
+    //hdfs.uploadFile(new File("titan1.props"), ".", true);  // overwrites if exists
+    
+    //hdfs.uploadFile(new File("titan1.props"), "titan.props", false); // copies file as new name
+    //hdfs.uploadFile(new File("titan1.props"), "titan.props", false); // throws Exception if exists
+    //hdfs.uploadFile(new File("titan1.props"), "titan.props", true); // overwrites if exists
+    
+    //hdfs.uploadFile(new File("META-INF"), ".", false); // copies as subdir
+    //hdfs.uploadFile(new File("META-INF"), ".", false); // throws Exception if exists
+    //hdfs.uploadFile(new File("META-INF"), "M", false); // copies as new name
+    //hdfs.uploadFile(new File("META-INF"), "M", false);  // copies as subdir if exists
+    //hdfs.uploadFile(new File("META-INF"), "M", true);  // still copies as subdir if exists
+    //hdfs.uploadFile(new File("META-INF"), "titan.props", true); // throws Exception if exists
+    //hdfs.uploadFile(new File("META-INF"), "titan.propsDir", false); // copies as subdir
+    
+    //hdfs.uploadFile(new File("titan1.props"), "M", false); // copies file
+    //hdfs.uploadFile(new File("titan1.props"), "M/mytitan.props", false); // copies file as new name
+    
+//    hdfs.deleteFile("titan1.props");
+//    hdfs.deleteFile("titan.props");
+//    hdfs.deleteFile("titan.propsDir");
+//    hdfs.deleteFile("M");
+//    hdfs.deleteFile("META-INF");
+    
+    hdfs.listDir(".", false).stream().forEach(f->{
+      System.out.println(f);
+//      if(f.startsWith("job_144"))
+//        try {
+//          hdfs.deleteFile(f);
+//        } catch (Exception e) {
+//          e.printStackTrace();
+//        }
+    });
+  }
+  
+  public boolean exists(String path) throws IOException{
+    try (FileSystem fs = FileSystem.get(hadoopConf)) {
+      return fs.exists(new Path(path));
+    }
+  }
+
+  public Path uploadFile(File srcFile, Path dest, boolean overwrite) throws IOException {
+    try (FileSystem fs = FileSystem.get(hadoopConf)) {
+      Path src = new Path(srcFile.getAbsolutePath());
+      log.info("Copying {} to {}", src, dest);
+
+      if(srcFile.isDirectory()){
+        if(fs.exists(dest)){
+          if(fs.isDirectory(dest)){
+            // even if overwrite=true, fs.copyFromLocalFile() still copies source directory as subdirectory
+            log.info("Destination directory exists; copying source directory as subdirectory: {}", fs.makeQualified(dest)+"/"+srcFile.getName());
+            return copyIntoDirectory(fs, src, dest, overwrite);  // tested
+          } else { // dest is a file
+            // even if overwrite=true, fs.copyFromLocalFile() throws FileAlreadyExistsException
+            throw new IOException("Destination file exists: "+dest); // tested
+          }
+        } else {
+          log.info("Copying source directory to new directory: {}", dest);
+          return copy(fs, src, dest, overwrite); // tested
+        }
+      } else { // source is a file
+        if(fs.exists(dest)){
+          if(fs.isDirectory(dest)){
+            log.info("Destination directory exists; copying source file within existing directory: {}", dest.toUri()+"/"+srcFile.getName());
+            return copyIntoDirectory(fs, src, dest, overwrite); // tested
+          } else { // dest is a file
+            if(overwrite){
+              log.info("Destination file exists; deleting existing file and copying source file: {}", dest);
+              return copy(fs, src, dest, overwrite); // tested
+            }else{
+              throw new IOException("Destination file exists: "+dest); // tested
+            }
+          }
+        } else {
+          log.info("Copying source file to new file: {}", dest);
+          return copy(fs, src, dest, overwrite); // tested
+        }
       }
     }
   }
 
-  public Path uploadFile(File file, Path dest, boolean overwrite) throws IOException {
-    try (FileSystem fs = FileSystem.get(hadoopConf)) {
-      if (!fs.exists(dest)) {
-        log.info("Creating directory: " + dest + " in workingDir=" + fs.getWorkingDirectory());
-        if (!fs.mkdirs(dest)) {
-          log.error("Could not create directory: " + dest + ".");
-          throw new RuntimeException("Could not create directory: " + dest);
-        }
-      }
+  private Path copy(FileSystem fs, Path src, Path dest, boolean overwrite) throws IOException {
+    fs.copyFromLocalFile(false, overwrite, src, dest);
+    log.info("Copied to {}", dest);
+    return dest;
+  }
 
-      Path src = new Path(file.getAbsolutePath());
-      log.debug("Copying {} to {}", src, dest);
-      fs.copyFromLocalFile(false, overwrite, src, dest);
-      Path dstFile = new Path(dest, file.getName());
-      Path qualPath = fs.makeQualified(dstFile);
-      log.info("Copied to {}", qualPath);
-      return qualPath;
-    }
+  private Path copyIntoDirectory(FileSystem fs, Path src, Path destDir, boolean overwrite)
+      throws IOException {
+    fs.copyFromLocalFile(false, overwrite, src, destDir);
+    Path dstFile = new Path(destDir, src.getName());
+    Path qualPath = fs.makeQualified(dstFile);
+    log.info("Copied to {}", qualPath);
+    return qualPath;
   }
 
   public Iterable<Path> uploadFiles(Path dest, File... files)

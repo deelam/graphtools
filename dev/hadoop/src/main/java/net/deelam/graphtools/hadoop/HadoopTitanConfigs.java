@@ -125,7 +125,7 @@ public class HadoopTitanConfigs {
   public HdfsUtils getHdfsUtils() {
     if (hdfsUtils == null) {
       try {
-        hdfsUtils = new HdfsUtils(getAllHadoopConfig());
+        hdfsUtils = new HdfsUtils(getMinimalHadoopConfig());
       } catch (Exception e) {
         e.printStackTrace();
       }

@@ -265,6 +265,7 @@ public final class HadoopConfigurationHelper {
     if (debug)
       HadoopConfigurationHelper.print(hbaseConf, "dump-hbaseConf-withProps.xml");
 
+    //log.error("Who?", new Throwable("Who calls this?"));
     // need to be in the titan.jar so that ServiceLoader.load() can load all FileSystem impls provided in the jar
     try (ClassLoaderContext cl = new ClassLoaderContext(FileSystem.class)) {
       ServiceLoader<FileSystem> serviceLoader = ServiceLoader.load(FileSystem.class);

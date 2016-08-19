@@ -187,7 +187,7 @@ public class PondVerticle extends AbstractVerticle {
       regisTable = (Hashtable) objectinputstream.readObject();
       log.info("Loaded {} pond resources", regisTable.size());
     } catch (IOException | ClassNotFoundException e) {
-      log.error("", e);
+      log.error("Resetting pond resource registry", e);
     }
   }
   

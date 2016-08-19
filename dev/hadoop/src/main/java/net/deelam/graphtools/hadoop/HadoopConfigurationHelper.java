@@ -106,7 +106,13 @@ public final class HadoopConfigurationHelper {
     // Check settings
     for(String s:minSettings){
       if (minConfig.get(s) == null) {
-        log.warn("No setting for {}", s);
+        switch(s){
+          case "yarn.application.classpath":
+            log.warn("No setting for {}; it's needed when submitting MapReduce jobs", s);
+            break;
+          default:
+            log.warn("No setting for {}", s);
+        }
       }
     }
   }

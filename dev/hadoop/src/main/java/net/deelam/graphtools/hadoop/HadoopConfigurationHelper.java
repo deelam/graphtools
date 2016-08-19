@@ -99,6 +99,7 @@ public final class HadoopConfigurationHelper {
         e.printStackTrace();
       }
 
+    log.info("Using fs.defaultFS={}", minConfig.get("fs.defaultFS"));
     return minConfig; 
   }
 
@@ -154,15 +155,19 @@ public final class HadoopConfigurationHelper {
 
   private static void setHadoopUser(Properties conf) {
     String hadoopUserName = conf.getProperty("env.HADOOP_USER_NAME");
-    if (hadoopUserName != null) {
+    String sysHadoopUsername = System.getProperty("HADOOP_USER_NAME");
+    if (hadoopUserName == null) {
+      if(sysHadoopUsername==null)
+        log.warn("HADOOP_USER_NAME not set; Hadoop will use current user.name={}", System.getProperty("user.name"));
+    } else {
       /// config settings to access hadoop remotely (e.g., my desktop)
       // use hadoopUserName for connecting to the remote Hadoop cluster
-      log.info("Setting environment variable HADOOP_USER_NAME={}", hadoopUserName);
+      if(sysHadoopUsername!=null && !sysHadoopUsername.equals(hadoopUserName))
+        log.warn("Overriding existing System variable={}", sysHadoopUsername);
+      log.info("Setting System variable HADOOP_USER_NAME={}", hadoopUserName);
       System.setProperty("HADOOP_USER_NAME", hadoopUserName);
       //checkState(hadoopUserName.equals(System.getenv().get("HADOOP_USER_NAME")));
       //log.info("env: "+System.getenv());
-    } else {
-      log.warn("HADOOP_USER_NAME not set; Hadoop will use current user.name={}", System.getProperty("user.name"));
     }
   }
 
@@ -177,7 +182,7 @@ public final class HadoopConfigurationHelper {
       conf.setProperty("mapreduce.job.jar", jobJarF.getAbsolutePath());
     }
     if (jobJar == null) {
-      log.info("mapreduce.job.jar is not set");
+      log.info("mapreduce.job.jar is not set; needed if submitting MapReduce jobs");
     }
   }
 

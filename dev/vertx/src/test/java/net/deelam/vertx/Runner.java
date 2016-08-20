@@ -1,16 +1,14 @@
 package net.deelam.vertx;
 
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
-import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.function.Consumer;
 
-import com.hazelcast.config.Config;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
+
+//import com.hazelcast.config.Config;
 
 /*
  * @author <a href="http://tfox.org">Tim Fox</a>

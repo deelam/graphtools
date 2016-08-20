@@ -1,16 +1,14 @@
 package net.deelam.vertx;
-import java.io.Serializable;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.base.Stopwatch;
 import com.hazelcast.core.Hazelcast;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,6 +25,8 @@ public class Sender extends AbstractVerticle {
     Date date=new Date();
   }
   
+  static Stopwatch sw=Stopwatch.createStarted();
+  
   // Convenience method so you can run it in your IDE
   public static void main(String[] args) throws InterruptedException {
     String jsonStr = Json.encode(myPojo);
@@ -37,11 +37,12 @@ public class Sender extends AbstractVerticle {
       Thread.sleep(3000);
       vertx.deployVerticle(Sender.class.getName());
     }else
-      Runner.runClusteredExample(Sender.class, "172.17.0.1");
+      Runner.runClusteredExample(Sender.class, "172.17.0.2");
   }
 
   @Override
   public void start() throws Exception {
+    System.out.println("Elapsed time: "+sw);// if(true) return;
     EventBus eb = vertx.eventBus();
     
 //    eb.addInterceptor(sc->{
@@ -81,7 +82,8 @@ public class Sender extends AbstractVerticle {
     }else{
       Thread thread = new Thread(()->{
         System.out.println("calling vertx.close()");
-        if(false)vertx.close(c->{
+        if(false)
+          vertx.close(c->{
           // this executes only if I hit Ctrl-C (perhaps because Vertx already has a shutdownHook!)
           log.info("callback to vertx.close() "+c);
           System.out.println("vertx closed");
@@ -95,7 +97,7 @@ public class Sender extends AbstractVerticle {
         });
         
         try {
-          int sec=6;
+          int sec=0;
           log.info("Sleeping {} seconds to allow Vertx's shutdown hook to finish completely...", sec);
           Thread.sleep(sec*1000);
           System.out.println("Waking");

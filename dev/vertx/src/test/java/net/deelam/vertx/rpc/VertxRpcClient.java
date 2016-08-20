@@ -5,17 +5,11 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import as.leap.vertx.rpc.RPCServer;
-import as.leap.vertx.rpc.impl.RPCClientOptions;
-import as.leap.vertx.rpc.impl.RPCServerOptions;
-import as.leap.vertx.rpc.impl.VertxRPCClient;
-import as.leap.vertx.rpc.impl.VertxRPCServer;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import lombok.extern.slf4j.Slf4j;
-import net.deelam.graphtools.api.hadoop.HdfsService;
 import net.deelam.vertx.StartVertx;
 import net.deelam.vertx.inject.VertxRpcHelper;
 
@@ -33,7 +27,7 @@ public class VertxRpcClient {
     });
 
     try {
-      Thread.sleep(12000);
+      Thread.sleep(3000);
     } catch (Exception e) {
       e.printStackTrace();
     }

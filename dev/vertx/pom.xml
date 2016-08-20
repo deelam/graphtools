@@ -13,6 +13,9 @@
 	<properties>
 		<bundle.import_package>
 			javassist.util.proxy, <!-- needed by frames; must manually import -->
+			io.vertx.spi.cluster.*;resolution:=optional,
+			com.hazelcast.*;resolution:=optional,
+			org.apache.ignite.*;resolution:=optional,
 			*
 		</bundle.import_package>
 		<vertx.version>3.2.1</vertx.version>
@@ -48,8 +51,15 @@
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
+      <artifactId>vertx-ignite</artifactId>
+      <version>3.3.2</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
       <artifactId>vertx-hazelcast</artifactId>
       <version>${vertx.version}</version>
+      <scope>provided</scope>
     </dependency>
 		<dependency>
 			<groupId>com.google.guava</groupId>

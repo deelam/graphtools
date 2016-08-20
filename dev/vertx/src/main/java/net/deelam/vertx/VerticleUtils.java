@@ -29,7 +29,7 @@ vertx.close();
 @Slf4j
 public final class VerticleUtils {
 
-  public static Vertx initVertx(VertxOptions options, Consumer<Vertx> deployer) {
+  private static Vertx initVertx(VertxOptions options, Consumer<Vertx> deployer) {
     if (options.isClustered()) {
       Config hazelcastConfig = new Config();
       // Now set some stuff on the config (omitted)

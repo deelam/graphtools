@@ -46,5 +46,18 @@ public class HdfsSvc implements HdfsInterface {
     return CompletableFuture.completedFuture(new File(src));
   }
 
+
+  @Override
+  public CompletableFuture<Boolean> exists(String src) throws IOException {
+    return CompletableFuture.completedFuture(Boolean.valueOf(true));
+  }
+
+
+  @Override
+  public CompletableFuture<String> uploadFile(String localFile, String destPath, boolean overwrite)
+      throws IllegalArgumentException, IOException {
+    return CompletableFuture.completedFuture(localFile);
+  }
+
 }
 

@@ -17,5 +17,9 @@ import io.vertx.core.Handler;
 public interface HdfsInterface {
   CompletableFuture<File> downloadFile(String src, String dst) throws IOException;
 
+  CompletableFuture<Boolean> exists(String src) throws IOException;
+  
+  CompletableFuture<String> uploadFile(String localFile, String destPath, boolean overwrite) throws IllegalArgumentException, IOException;
+
   void downloadFile(String src, String dst, Handler<AsyncResult<HdfsInterface>> handler) throws IOException;
 }

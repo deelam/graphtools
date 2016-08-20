@@ -44,6 +44,7 @@ public class StandaloneWebapp {
 
       config.put("org.osgi.framework.system.packages.extra",
           "sun.misc," // sun.misc.Unsafe is required when running Hadoop
+			 + "sun.reflect," // required by io.protostuff (to enable sun.misc.Unsafe) to get implicit no-args constructor for vertx-rpc's WrapperType
               + "com.sun.jdi,com.sun.jdi.connect,com.sun.jdi.event,com.sun.jdi.request,"
               + "com.sun.xml.internal.stream,"
               + "sun.nio,sun.nio.ch");

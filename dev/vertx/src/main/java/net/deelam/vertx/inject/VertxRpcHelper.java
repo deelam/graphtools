@@ -1,5 +1,6 @@
 package net.deelam.vertx.inject;
 
+import java.lang.reflect.Constructor;
 import java.util.function.Consumer;
 
 import as.leap.vertx.rpc.impl.RPCClientOptions;
@@ -9,10 +10,19 @@ import as.leap.vertx.rpc.impl.VertxRPCServer;
 import io.vertx.core.Vertx;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import io.protostuff.runtime.RuntimeEnv;
 
 @RequiredArgsConstructor
 @Slf4j
 public class VertxRpcHelper<T> {
+
+  static{
+   log.info(""+RuntimeEnv.ALWAYS_USE_SUN_REFLECTION_FACTORY+" "+RuntimeEnv.USE_SUN_MISC_UNSAFE);
+	if(RuntimeEnv.USE_SUN_MISC_UNSAFE==false){
+		throw new RuntimeException("Make sure sun.reflect is available in OSGi so that RuntimeEnv can access Vertx-RPC's implicit no-args WrapperType constructor");
+	}
+  }
+
 
   private final Vertx vertx;
   private final String busAddr;

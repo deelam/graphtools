@@ -26,11 +26,9 @@ public class HdfsServiceImpl implements HdfsService {
 
   @Override
   public CompletableFuture<String> downloadFile(String src, String dst) throws IOException {
-    Path srcPath = new Path(src);
-    log.debug("Copying file: {} -> {}", srcPath, new Path(dst));
+    log.info("RPC: downloadFile({}, {})", src, dst);
     try {
       String localFile=hdfs.downloadFile(src, dst);
-      log.info("Copied file to: {}", localFile);
       return CompletableFuture.completedFuture(localFile);
     } catch (Throwable e){ // exceptions are not obvious on RPC client so print them here
       e.printStackTrace();
@@ -40,6 +38,7 @@ public class HdfsServiceImpl implements HdfsService {
 
   @Override
   public CompletableFuture<String> uploadFile(String localFile, String destPath, boolean overwrite) throws IllegalArgumentException, IOException {
+    log.info("RPC: uploadFile({}, {}, {})", localFile, destPath, overwrite);
     try{
       hdfs.uploadFile(new File(localFile), new Path(destPath), overwrite);
       return CompletableFuture.completedFuture(destPath);
@@ -51,6 +50,7 @@ public class HdfsServiceImpl implements HdfsService {
   
   @Override
   public CompletableFuture<List<String>> listDir(String path, boolean recursive) throws IOException {
+    log.info("RPC: listDir({}, {})", path, recursive);
     try{
       List<String> files=hdfs.listDir(path,recursive);
       return CompletableFuture.completedFuture(files);
@@ -62,6 +62,7 @@ public class HdfsServiceImpl implements HdfsService {
   
   @Override
   public CompletableFuture<Boolean> exists(String path) throws IOException {
+    log.info("RPC: exists({})", path);
     try{
       boolean exists=hdfs.exists(path);
       return CompletableFuture.completedFuture(Boolean.valueOf(exists));

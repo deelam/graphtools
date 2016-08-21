@@ -37,7 +37,7 @@ public class Sender extends AbstractVerticle {
       Thread.sleep(3000);
       vertx.deployVerticle(Sender.class.getName());
     }else
-      Runner.runClusteredExample(Sender.class, "172.17.0.2");
+      Runner.runClusteredExample(Sender.class/*, "172.17.0.2"*/);
   }
 
   @Override

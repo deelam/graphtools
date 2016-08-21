@@ -16,7 +16,7 @@ public class Receiver extends AbstractVerticle {
   public static void main(String[] args) throws UnknownHostException {
     InetAddress lh = Inet4Address.getLocalHost();
     System.out.println();
-    Runner.runClusteredExample(Receiver.class, "172.17.0.1");
+    Runner.runClusteredExample(Receiver.class/*, "172.17.0.2"*/);
     //Runner.runClusteredExample(EmptyVerticle.class, "172.17.0.1");
   }
   

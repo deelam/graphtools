@@ -36,14 +36,14 @@ public class IdGraphFactoryNeo4jPool extends IdGraphFactoryNeo4j {
     }
   }
 
-  @Override
-  public void backup(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException {
-    if(isReadOnly(srcGraphUri)){
-      log.error("Not backing up since this is a read-only copy of the original graph: {}", srcGraphUri);
-    } else {
-      super.backup(srcGraphUri, dstGraphUri);
-    }
-  }
+//  @Override
+//  public void backup(GraphUri srcGraphUri, GraphUri dstGraphUri) throws IOException {
+//    if(isReadOnly(srcGraphUri)){
+//      log.error("Not backing up since this is a read-only copy of the original graph: {}", srcGraphUri);
+//    } else {
+//      super.backup(srcGraphUri, dstGraphUri);
+//    }
+//  }
   
   @Override
   public boolean exists(GraphUri gUri) {

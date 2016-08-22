@@ -10,7 +10,7 @@ public class VertxRpcServer {
   
   public static void main(String[] args) {
     VertxOptions options=new VertxOptions().setClustered(true);
-    StartVertx.create(options, true, null, 12345, vertx -> {
+    StartVertx.create(options, true, vertx -> {
       log.info("Vert.x service registered");
       
       HdfsSvc hdfsSvc = new HdfsSvc();

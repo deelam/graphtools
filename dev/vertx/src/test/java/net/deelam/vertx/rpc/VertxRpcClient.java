@@ -21,7 +21,7 @@ public class VertxRpcClient {
   public static void main(String[] args) throws InterruptedException, ExecutionException {
     
     VertxOptions options=new VertxOptions().setClustered(true);
-    StartVertx.create(options, false, null, 12345, vertX -> {
+    StartVertx.create(options, false, vertX -> {
       log.info("Vert.x service registered");
       vertx=vertX;
     });

@@ -1,16 +1,15 @@
 package net.deelam.vertx.inject;
 
-import java.lang.reflect.Constructor;
 import java.util.function.Consumer;
 
 import as.leap.vertx.rpc.impl.RPCClientOptions;
 import as.leap.vertx.rpc.impl.RPCServerOptions;
 import as.leap.vertx.rpc.impl.VertxRPCClient;
 import as.leap.vertx.rpc.impl.VertxRPCServer;
+import io.protostuff.runtime.RuntimeEnv;
 import io.vertx.core.Vertx;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import io.protostuff.runtime.RuntimeEnv;
 
 @RequiredArgsConstructor
 @Slf4j

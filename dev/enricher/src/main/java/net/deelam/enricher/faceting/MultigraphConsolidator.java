@@ -317,6 +317,8 @@ private static final String ORIGID_PROPKEY = "_ORIGID_PROPKEY_";
   private void addEdgeFromSrcMetaDataNode(String shortSrcGraphId) {
     Vertex mdV = GraphUtils.getMetaDataNode(graph);
     Vertex srcGraphMdV=GraphUtils.getMetaDataNode(getGraph(shortSrcGraphId));
+    if(srcGraphMdV==null)
+      log.error("Cannot get MetaDataNode from graph id={} {}", shortSrcGraphId, graphIdMapper.longId(shortSrcGraphId));
     String srcGraphUri = srcGraphMdV.getProperty(GraphUtils.GRAPHURI_PROP);
     Vertex importedSrcGraphMdV = importVertexWithId(srcGraphMdV, shortSrcGraphId, srcGraphUri);
     

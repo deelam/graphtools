@@ -25,6 +25,7 @@ public class TarGzipUtils {
     log.info("compressDirectory {} {} relativeDir={}", dirPath, tarGzPath, relativeDir);
     try (TarArchiveOutputStream tOut = new TarArchiveOutputStream(
         new GzipCompressorOutputStream(new BufferedOutputStream(new FileOutputStream(file))))) {
+      tOut.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX); // allow long filenames
       addFileToTarGz(tOut, new File(dirPath), "", relativeDir);
       tOut.finish();
     }
@@ -85,7 +86,7 @@ public class TarGzipUtils {
             log.error("Could not create dir={}", parent);
         }
         if(!overwrite && curfile.exists())
-          throw new IllegalArgumentException("Destination directory already exists: "+curfile.getAbsolutePath());
+          throw new IllegalArgumentException("Destination already exists: "+curfile.getAbsolutePath());
         try (OutputStream out = new FileOutputStream(curfile)) {
           IOUtils.copy(tIn, out);
         }

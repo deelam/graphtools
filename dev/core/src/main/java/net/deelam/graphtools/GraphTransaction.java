@@ -139,6 +139,7 @@ public class GraphTransaction {
    *     rollback is delayed until the top-level transaction is committed or rolledback.
    */
   public static boolean rollback(int tx) {
+    log.info("Rolling graph transaction back from: {}", tx);
     decrementNestingDepth(tx);
 
     if (!rollbackCalled.get().get()) {
@@ -164,7 +165,7 @@ public class GraphTransaction {
       MutableInt nestingDepth = nestingCounter.get();
       if (nestingDepth.intValue() == 0)
         log.warn(
-            "Not decrementing transaction depth since it's already 0.  Might want to investigate the reason for this:",
+            "Not decrementing transaction depth since it's already 0.  Should investigate stacktrace for the reason:",
             new Throwable());
       else
         nestingDepth.decrement();

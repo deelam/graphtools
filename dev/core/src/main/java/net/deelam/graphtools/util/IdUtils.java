@@ -25,7 +25,7 @@ public class IdUtils {
           )
         sb.append(c);
       else if(sb.length()>0) // don't use '-' as a first character
-        sb.append('-');
+        sb.append('_');
     }
     return sb.toString();
   }

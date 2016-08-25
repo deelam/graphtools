@@ -64,13 +64,17 @@ public final class HdfsUtils {
     Path srcPath = new Path(src);
     log.debug("Copying file: {} -> {}", srcPath, new Path(dst));
     try (FileSystem fs = FileSystem.get(hadoopConf)) {
-      {
-        File dstFile = new File(dst);
-        if(dstFile.exists() && dstFile.isDirectory())
-          dst=new File(dst, srcPath.getName()).getAbsolutePath();
+      File dstFile = new File(dst);
+      if(dst.endsWith("/")){
+        if(!dstFile.exists()){
+          log.info("Creating destination directory: {}", dstFile);
+          dstFile.mkdirs();
+        }
       }
+      if(dstFile.exists() && dstFile.isDirectory())
+        dst=new File(dst, srcPath.getName()).getAbsolutePath();
       fs.copyToLocalFile(false, srcPath, new Path(dst), true);
-      log.info("Copied file to: {}", dst);
+      log.info("Copied file to: {}", dstFile);
       return dst;
     }
   }
@@ -139,21 +143,35 @@ public final class HdfsUtils {
     
 //    hdfs.uploadFile(new File("META-INF"), "M/N/O/P/Q", false); 
     
-//    hdfs.deleteFile("titan1.props");
-//    hdfs.deleteFile("titan.props");
-//    hdfs.deleteFile("titan.propsDir");
-//    hdfs.deleteFile("M");
-//    hdfs.deleteFile("META-INF");
+//    hdfs.delete("titan1.props");
+//    hdfs.delete("titan.props");
+//    hdfs.delete("titan.propsDir");
+//    hdfs.delete("M");
+//    hdfs.delete("META-INF");
     
-    hdfs.listDir(".", false).stream().forEach(f->{
+/*    hdfs.listDir(".", false).stream().forEach(f->{
       System.out.println(f);
 //      if(f.startsWith("job_144"))
 //        try {
-//          hdfs.deleteFile(f);
+//          hdfs.delete(f);
 //        } catch (Exception e) {
 //          e.printStackTrace();
 //        }
-    });
+    });*/
+    
+    try (FileSystem fs = FileSystem.get(hdfs.hadoopConf)) {
+      File srcFile=new File("target");
+      Path src = new Path(srcFile.getAbsolutePath());
+      System.out.println(srcFile.toURI());
+      Path destDir=fs.makeQualified(new Path("."));
+      System.out.println(src+" "+src.getParent());
+      if(srcFile.isDirectory())
+        src=src.getParent();
+      Path dstFile = new Path(destDir, src.getName());
+      System.out.println(dstFile);
+      System.out.println(destDir);
+      //hdfs.uploadFile(new File("META-INF"),".", false);
+    }
   }
   
   public boolean exists(String path) throws IOException{
@@ -166,14 +184,17 @@ public final class HdfsUtils {
     if(!srcFile.exists())
       throw new FileNotFoundException("source file="+srcFile);
     try (FileSystem fs = FileSystem.get(hadoopConf)) {
-      Path src = new Path(srcFile.toURI());
+      // WARNING: do not use file.toURI() as it will append a '/' if file is an existing directory,
+      // which causes 'new Path(file.toURI()).getName()' to return empty string rather than the desired directory name
+      Path src = new Path(srcFile.getAbsolutePath()); 
+      dest=fs.makeQualified(dest);
       log.info("Copying {} to {}", src, dest);
 
       if(srcFile.isDirectory()){
         if(fs.exists(dest)){
           if(fs.isDirectory(dest)){
             // even if overwrite=true, fs.copyFromLocalFile() still copies source directory as subdirectory
-            log.info("Destination directory exists; copying source directory as subdirectory: {}", fs.makeQualified(dest)+"/"+srcFile.getName());
+            log.info("Destination directory exists; copying source directory as subdirectory: {}", dest+"/"+srcFile.getName());
             return copyIntoDirectory(fs, src, dest, overwrite);  // tested
           } else { // dest is a file
             // even if overwrite=true, fs.copyFromLocalFile() throws FileAlreadyExistsException
@@ -186,7 +207,7 @@ public final class HdfsUtils {
       } else { // source is a file
         if(fs.exists(dest)){
           if(fs.isDirectory(dest)){
-            log.info("Destination directory exists; copying source file within existing directory: {}", dest.toUri()+"/"+srcFile.getName());
+            log.info("Destination directory exists; copying source file within existing directory: {}", dest+"/"+srcFile.getName());
             return copyIntoDirectory(fs, src, dest, overwrite); // tested
           } else { // dest is a file
             if(overwrite){
@@ -212,6 +233,9 @@ public final class HdfsUtils {
 
   private Path copyIntoDirectory(FileSystem fs, Path src, Path destDir, boolean overwrite)
       throws IOException {
+    // must check in case destDir is an existing file and may be overridden 
+    if(!fs.isDirectory(destDir))
+      throw new IllegalArgumentException("Directory does not exist: "+destDir);
     fs.copyFromLocalFile(false, overwrite, src, destDir);
     Path dstFile = new Path(destDir, src.getName());
     Path qualPath = fs.makeQualified(dstFile);
@@ -219,17 +243,27 @@ public final class HdfsUtils {
     return qualPath;
   }
 
-  public Iterable<Path> uploadFiles(Path dest, File... files)
+  private Path mkdirs(String dir) throws IOException {
+    try (FileSystem fs = FileSystem.get(hadoopConf)) {
+      Path dirPath = new Path(dir);
+      fs.mkdirs(dirPath);
+      log.info("Making dir: {}", dir);
+      return dirPath;
+    }
+  }
+  
+  public Iterable<Path> uploadFiles(String dest, File... files)
       throws IOException {
     List<Path> paths = Lists.newArrayList();
+    Path destPath = mkdirs(dest);
     for (File f : files) {
-      Path qualPath = uploadFile(f, dest, true);
+      Path qualPath = uploadFile(f, destPath, true);
       paths.add(qualPath);
     }
     return paths;
   }
 
-  public boolean deleteFile(String hdfsTarget) throws IOException {
+  public boolean delete(String hdfsTarget) throws IOException {
     Path target = new Path(hdfsTarget);
     try (FileSystem fs = FileSystem.get(hadoopConf)) {
       if (fs.exists(target) || hdfsTarget.contains("*") || hdfsTarget.contains("?")) {

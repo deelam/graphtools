@@ -275,6 +275,19 @@ public class VertxDependentJobManager<T> {
     }
   }
 
+  public boolean hasJob(String jobId){
+    int tx = begin(graph);
+    try {
+      Vertex inputJobV = graph.getVertex(jobId);
+      boolean exists = (inputJobV != null);
+      commit(tx);
+      return exists;
+    } catch (Exception re) {
+      rollback(tx);
+      throw re;
+    }
+  }
+  
   private void addDependentJobs(DependentJobFrame jobV, String... inJobIds) {
     if (inJobIds != null){
       for (String inputJobId : inJobIds) {

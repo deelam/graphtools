@@ -326,12 +326,13 @@ public class PondVerticle extends AbstractVerticle {
       }
     });
     vertx.createHttpServer().requestHandler((HttpServerRequest req) -> {
-      String webroot = "./";
-      if (new File(webroot + req.path()).exists()) {
+      String webroot = pondDir;
+      File fileRequested = new File(pondDir, req.path());
+      if (fileRequested.exists()) {
         log.debug("Sending response, file={}", Paths.get(webroot, req.path()).normalize().toAbsolutePath());
-        req.response().sendFile(webroot + req.path());
+        req.response().sendFile(fileRequested.getAbsolutePath());
       } else {
-        log.warn("File doesn't exist: {}", webroot + req.path());
+        log.warn("File doesn't exist: {}", fileRequested.getAbsolutePath());
         req.response().close();
       }
     }).listen(port);

@@ -20,7 +20,7 @@ git archive ${1:-master} | tar -x -C $CD
 
 cd $CD
 echo "Build code so that it is ready to run on delivery"
-mvn clean install
+mvn clean install -Dmaven.test.skip
 
 pushd dev
 mvn clean

@@ -31,16 +31,24 @@ public class PropertiesUtils {
       }
       String includedFiles=properties.getProperty("include");
       if (includedFiles != null){
-        log.info("  Also loading includedFiles={}", includedFiles);
+        log.info("  Also loading included files: {}", includedFiles);
         for (String includedFile : includedFiles.split(",")) {
-          Properties props = new Properties();
-          loadProperties(includedFile.trim(), props);
-          for (String key : props.stringPropertyNames())
-            if (properties.containsKey(key))
-              log.info("Ignoring included "+key+"="+props.getProperty(key)+
-                  ", using value '"+properties.getProperty(key)+"' instead");
-            else
-              properties.put(key, props.getProperty(key));
+          Properties includedProps = new Properties();
+          loadProperties(includedFile.trim(), includedProps);
+          // TODO: add an option to not override the 'include' property
+          for (String key : includedProps.stringPropertyNames()){
+            String includedProp=includedProps.getProperty(key);
+            if (includedProp!=null){
+              if(properties.getProperty(key)==null){
+                properties.put(key, includedProp);
+              } else if(includedProp.equals(properties.getProperty(key)))
+                log.info("Included "+key+"="+includedProp+
+                    " is same as '"+properties.getProperty(key)+"'");
+              else
+                log.info("Ignoring included "+key+"="+includedProp+
+                    ", using value '"+properties.getProperty(key)+"' instead");
+            }
+          }
         }
       }
     } else {

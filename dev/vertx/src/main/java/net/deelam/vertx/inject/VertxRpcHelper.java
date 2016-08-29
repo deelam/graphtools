@@ -16,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 public class VertxRpcHelper<T> {
 
   static{
-   log.info(""+RuntimeEnv.ALWAYS_USE_SUN_REFLECTION_FACTORY+" "+RuntimeEnv.USE_SUN_MISC_UNSAFE);
+   log.info("RuntimeEnv: USE_SUN_MISC_UNSAFE="+RuntimeEnv.USE_SUN_MISC_UNSAFE);
 	if(RuntimeEnv.USE_SUN_MISC_UNSAFE==false){
 		throw new RuntimeException("Make sure sun.reflect is available in OSGi so that RuntimeEnv can access Vertx-RPC's implicit no-args WrapperType constructor");
 	}

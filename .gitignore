@@ -1,4 +1,6 @@
 target/
+lib/
+META-INF
 build
 .settings
 .project

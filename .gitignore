@@ -1,4 +1,9 @@
 target/
+build
+.settings
+.project
+.classpath
+.gradle
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup

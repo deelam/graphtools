@@ -1,15 +1,1 @@
-lib/
-META-INF/
-OSGI-INF/
-target/
-pom.xml.tag
-pom.xml.releaseBackup
-pom.xml.versionsBackup
-pom.xml.next
-release.properties
-dependency-reduced-pom.xml
-buildNumber.properties
-.classpath
-.project
-.settings
 runTests

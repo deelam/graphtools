@@ -4,6 +4,7 @@
 package net.deelam.graphtools.importer;
 
 import java.io.IOException;
+import java.util.Map;
 
 import net.deelam.graphtools.GraphUri;
 
@@ -13,6 +14,6 @@ import net.deelam.graphtools.GraphUri;
  */
 public interface Importer<R> {
 
-  void importFile(SourceData<R> sourceData, GraphUri graphUri) throws IOException;
+  void importFile(SourceData<R> sourceData, GraphUri graphUri, Map<String, Number> metrics) throws IOException;
 
 }

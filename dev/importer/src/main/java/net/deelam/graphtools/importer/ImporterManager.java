@@ -57,8 +57,13 @@ public class ImporterManager {
     return sData.getPercentProcessed();
   }
   
+  // for testing
+  void importFile(String ingesterId, File file, GraphUri graphUri) throws IOException{
+    importFile(ingesterId, file, graphUri, new HashMap<>());
+  }
+  
   @SuppressWarnings({"unchecked"})
-  public void importFile(String ingesterId, File file, GraphUri graphUri) throws IOException {
+  public void importFile(String ingesterId, File file, GraphUri graphUri, Map<String, Number> metrics) throws IOException {
     // get ingester
     Factories factories = registry.get(ingesterId);
     Preconditions.checkNotNull(factories, "importerFactory not registered: " + ingesterId);
@@ -71,13 +76,13 @@ public class ImporterManager {
     Importer importer=importerF.create(sData);
     
 //    log.info("{}  {}", sData.toString(), importer);
-    importData(sData, importer, graphUri);
+    importData(sData, importer, graphUri, metrics);
     sData=null;
     openSourceDatas.put(file, COMPLETED_SD);
   }
 
   @SuppressWarnings({"unchecked"})
-  public void importReadable(String ingesterId, Readable readable, GraphUri graphUri) throws IOException {
+  public void importReadable(String ingesterId, Readable readable, GraphUri graphUri, Map<String, Number> metrics) throws IOException {
     // get ingester
     Factories factories = registry.get(ingesterId);
     Preconditions.checkNotNull(factories, "importerFactory not registered: " + ingesterId);
@@ -85,15 +90,15 @@ public class ImporterManager {
     SourceData sData = factories.sourceDataFactory.createFrom(readable);
     final ImporterFactory importerF = factories.importerFactory;
     
-    importData(sData, importerF.create(sData), graphUri);
+    importData(sData, importerF.create(sData), graphUri, metrics);
     sData=null;
   }
   
-  public <B> void importData(SourceData<B> sData, final Importer<B> importer, GraphUri graphUri)
+  public <B> void importData(SourceData<B> sData, final Importer<B> importer, GraphUri graphUri, Map<String, Number> metrics)
       throws IOException {
     Preconditions.checkNotNull(graphUri);
 
     // apply ingester on graph
-    importer.importFile(sData, graphUri);
+    importer.importFile(sData, graphUri, metrics);
   }
 }

@@ -64,12 +64,12 @@ public class NodeIndexer implements AutoCloseable {
   private Map<String, Number> metrics=new HashMap<>();
   private AtomicLong indexCount = new AtomicLong();
   private AtomicLong skipCount = new AtomicLong();
-  { // TODO: 1: add metrics for other jobs
+  {
     metrics.put("INDEXED", indexCount);
     metrics.put("SKIPPED", skipCount);
   }
   
-  public void indexGraph(Graph graph, String inputGraphname) throws IOException {
+  public int indexGraph(Graph graph, String inputGraphname) throws IOException {
     //    The same analyzer should be used for indexing and searching
     PerFieldAnalyzerWrapper analyzers =
         new PerFieldAnalyzerWrapper(new StandardAnalyzer(), analyzerMap);
@@ -92,6 +92,7 @@ public class NodeIndexer implements AutoCloseable {
       writer.commit();
     }
     log.info("Indexed " + count + " relevant nodes.");
+    return count;
   }
 
   List<EntityIndexer> eIndexers = new ArrayList<>();

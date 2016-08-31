@@ -191,7 +191,7 @@ public class GraphTransaction {
   public static boolean commitIfFull(int tx) {
     operationsCounter.get().increment();
     if (operationsCounter.get().intValue() >= commitThreshold.get().intValue()) {
-      log.debug("Threshold {} reached; committing transaction on graph: {}", operationsCounter.get(), graphHolder.get());
+      log.info("Threshold {} reached; committing transaction on graph: {}", operationsCounter.get(), graphHolder.get());
       graphHolder.get().commit();
       operationsCounter.get().setValue(0);
       return true;

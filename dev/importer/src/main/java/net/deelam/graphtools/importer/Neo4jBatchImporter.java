@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -45,9 +46,18 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
   }
 
   @Override
-  public void importFile(SourceData<B> sourceData, GraphUri graphUri) throws IOException {
+  public void importFile(SourceData<B> sourceData, GraphUri graphUri, Map<String, Number> metrics) throws IOException {
     encoder.reinit(sourceData);
     populator.reinit(graphUri, sourceData);
+    AtomicLong recordCounter = new AtomicLong();
+    AtomicLong recordMergeCounter = new AtomicLong();
+    AtomicLong createdCounter = new AtomicLong();
+    {
+      metrics.put("RECORDS", recordCounter);
+      metrics.put("RECORDS_MERGED", recordMergeCounter);
+      metrics.put("ELEMENTS_CREATED", createdCounter);
+    }
+
     int gRecCounter = 0;
     long recordNum=0;
     try {
@@ -60,12 +70,15 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
           if(inRecord == null)
             break;
           log.debug("{}: record={}", recordNum, inRecord);
+          recordCounter.incrementAndGet();
           Collection<GraphRecord> gRecords = grBuilder.build(inRecord);
           //log.debug(gRecords.toString());
-          gRecCounter += gRecords.size();
-
+          int grSize = gRecords.size();
+          gRecCounter += grSize;
+          createdCounter.addAndGet(grSize);
+          
           // merge records before adding to graph
-          mergeRecords(gRecordsBuffered, gRecords);
+          mergeRecords(gRecordsBuffered, gRecords, recordMergeCounter);
 
           if (gRecCounter > bufferThreshold) {
             log.debug("Incremental graph populate and transaction commit: {}", recordNum);
@@ -95,7 +108,7 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
     gRecordsBuffered.clear();
   }
 
-  private void mergeRecords(Map<String, GraphRecord> gRecordsBuffered, Collection<GraphRecord> gRecords) {
+  private void mergeRecords(Map<String, GraphRecord> gRecordsBuffered, Collection<GraphRecord> gRecords, AtomicLong recordMergeCounter) {
     for(GraphRecord gr:gRecords){
       // merges/consolidate root record
       GraphRecord existingGR = gRecordsBuffered.get(gr.getStringId());
@@ -103,6 +116,7 @@ public class Neo4jBatchImporter<B> implements Importer<B> {
         gRecordsBuffered.put(gr.getStringId(),gr);
       } else {
         populator.getGraphRecordMerger().merge(gr, existingGR);
+        recordMergeCounter.incrementAndGet();
       }
     }
   }

@@ -521,11 +521,12 @@ private static final String ORIGID_PROPKEY = "_ORIGID_PROPKEY_";
 
   ///
 
-  public void importGraph(String srcGraphId, int commitFreq) {
+  public long importGraph(String srcGraphId, int commitFreq) {
     IdGraph<?> fromGraph = getGraph(srcGraphId);
     String shortGraphId = getShortGraphId(srcGraphId);
 
     int tx = GraphTransaction.begin(graph, commitFreq);
+    long count=0L;
     try {
       for (final Vertex fromVertex : fromGraph.getVertices()) {
         // skip METADATA nodes from source graphs, which can make graph dirty
@@ -534,6 +535,7 @@ private static final String ORIGID_PROPKEY = "_ORIGID_PROPKEY_";
               importVertexUsingShortId(fromVertex, shortGraphId);
           //log.info("Importing node: {}", newV);
           GraphTransaction.commitIfFull(tx);
+          ++count;
         }else{
           log.debug("Skipping metadata node: {}", fromVertex);
         }
@@ -543,12 +545,14 @@ private static final String ORIGID_PROPKEY = "_ORIGID_PROPKEY_";
         if(fromEdge.getProperty(GraphUtils.GRAPH_METADATA_PROP)==null){
           importEdgeUsingShortId(fromEdge, shortGraphId, null, null);
           GraphTransaction.commitIfFull(tx);
+          ++count;
         }else{
           log.debug("Skipping metadata edge: {}", fromEdge);
         }
       }
 
       GraphTransaction.commit(tx);
+      return count;
     } catch (RuntimeException re) {
       GraphTransaction.rollback(tx);
       throw re;

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.inject.Inject;
 
@@ -45,9 +46,17 @@ public class ConsolidatingImporter<B> implements Importer<B> {
   }
 
   @Override
-  public void importFile(SourceData<B> sourceData, GraphUri graphUri) throws IOException {
+  public void importFile(SourceData<B> sourceData, GraphUri graphUri, Map<String, Number> metrics) throws IOException {
     encoder.reinit(sourceData);
     populator.reinit(graphUri, sourceData);
+    
+    AtomicLong recordCounter = new AtomicLong();
+    AtomicLong createdCounter = new AtomicLong();
+    {
+      metrics.put("RECORDS", recordCounter);
+      metrics.put("ELEMENTS_CREATED", createdCounter);
+
+    }
 //    graphUri.createNewIdGraph(true);
     int tx = GraphTransaction.begin(graphUri.getGraph());
     try {
@@ -56,12 +65,15 @@ public class ConsolidatingImporter<B> implements Importer<B> {
       B inRecord;
       long recordNum=0;
       while ((inRecord = sourceData.getNextRecord()) != null) {
+        recordCounter.incrementAndGet();
         ++recordNum;
         log.debug("{}: record={}", recordNum, inRecord);
         try{
           Collection<GraphRecord> gRecords = grBuilder.build(inRecord);
           //log.debug(gRecords.toString());
-          gRecCounter += gRecords.size();
+          int grSize = gRecords.size();
+          gRecCounter += grSize;
+          createdCounter.addAndGet(grSize);
 
           // merge records before adding to graph
           mergeRecords(gRecordsBuffered, gRecords);

@@ -6,6 +6,7 @@ package net.deelam.graphtools.importer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -40,7 +41,7 @@ public class BufferedImporter<B> implements Importer<B> {
   }
 
   @Override
-  public void importFile(SourceData<B> sourceData, GraphUri graphUri) throws IOException {
+  public void importFile(SourceData<B> sourceData, GraphUri graphUri, Map<String, Number> metrics) throws IOException {
     encoder.reinit(sourceData);
     populator.reinit(graphUri, sourceData);
 //    graphUri.createNewIdGraph(true);

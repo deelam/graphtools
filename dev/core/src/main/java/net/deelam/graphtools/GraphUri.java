@@ -20,6 +20,7 @@ import com.tinkerpop.blueprints.KeyIndexableGraph;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -89,6 +90,27 @@ public class GraphUri {
     return origUri.hashCode();
   }
 
+  @RequiredArgsConstructor
+  public static class Builder{
+    final String uri;
+    
+    Configuration config=new BaseConfiguration();
+    boolean initWithFactory=true;
+
+    public Builder set(String prop, Object val){
+      config.setProperty(prop, val);
+      return this;
+    }
+    
+    public GraphUri build(){
+      return new GraphUri(uri, config, initWithFactory);
+    }
+  }
+  
+  public static Builder builder(String uri){
+    return new Builder(uri);
+  }
+  
   public GraphUri(String uri, Configuration config){
     this(uri, new BaseConfiguration(), true);
   }

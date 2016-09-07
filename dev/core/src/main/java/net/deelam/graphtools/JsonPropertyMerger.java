@@ -292,9 +292,33 @@ public class JsonPropertyMerger implements PropertyMerger {
   
   
   ///========================================
+
+  public static void main(String[] args) throws ClassNotFoundException {
+    GraphRecord gr=new GraphRecordImpl("1");
+    gr.setProperty("recordId", "1");
+    
+    GraphRecord gr2=new GraphRecordImpl("2");
+    gr2.setProperty("recordId", "2");
+    
+    JsonPropertyMerger m = new JsonPropertyMerger();
+    m.mergeProperties(gr, gr2);
+    System.out.println(GraphUtils.toString(gr2));
+    
+    gr.setProperty("recordId", "3");
+    m.mergeProperties(gr, gr2);
+    System.out.println(GraphUtils.toString(gr2));
+
+    m.mergeProperties(gr2, gr);
+    System.out.println(GraphUtils.toString(gr2));
+    System.out.println(GraphUtils.toString(gr));
+    
+    m.mergeProperties(gr2, gr);
+    System.out.println(GraphUtils.toString(gr));
+
+  }
   
   @SuppressWarnings({"rawtypes","unchecked"})
-  public static void main(String[] args) throws ClassNotFoundException {
+  public static void main1(String[] args) throws ClassNotFoundException {
     System.out.println(Integer.class.isPrimitive());
     System.out.println(int.class.isPrimitive());
     

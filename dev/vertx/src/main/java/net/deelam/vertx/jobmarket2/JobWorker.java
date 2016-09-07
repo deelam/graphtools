@@ -32,29 +32,30 @@ public class JobWorker extends AbstractVerticle {
   private final String jobType;
   private DeliveryOptions deliveryOptions;
 
-  private String jmPrefix=null;
+  private String jmPrefix = null;
+
   @Override
   public void start() throws Exception {
     String myAddr = deploymentID();
-    log.info("JobWorker ready: myAddr={}: {}",  myAddr, this.getClass());
+    log.info("JobWorker ready: myAddr={}: {}", myAddr, this.getClass());
     deliveryOptions = JobMarket.createWorkerHeader(myAddr, jobType);
 
     vertx.eventBus().consumer(myAddr, jobListHandler);
-    
-    VerticleUtils.announceClientType(vertx, serviceType, msg->{
-      jmPrefix=msg.body();
+
+    VerticleUtils.announceClientType(vertx, serviceType, msg -> {
+      jmPrefix = msg.body();
       log.debug("Sending client registration to {} from {}", jmPrefix, myAddr);
       vertx.eventBus().send(jmPrefix, null, deliveryOptions);
     });
   }
 
-//  @Deprecated
-//  public void register() {
-//    vertx.eventBus().send(jmPrefix + BUS_ADDR.REGISTER, null, deliveryOptions);
-//  }
+  //  @Deprecated
+  //  public void register() {
+  //    vertx.eventBus().send(jmPrefix + BUS_ADDR.REGISTER, null, deliveryOptions);
+  //  }
 
-  private JobDTO pickedJob=null;
-  
+  private JobDTO pickedJob = null;
+
   public void sendJobProgress() {
     checkNotNull(pickedJob, "No job picked!");
     vertx.eventBus().send(jmPrefix + BUS_ADDR.SET_PROGRESS, pickedJob, deliveryOptions);
@@ -87,21 +88,21 @@ public class JobWorker extends AbstractVerticle {
   }
 
   @Setter
-  private Function<JobDTO,Boolean> worker=new Function<JobDTO, Boolean>() {
+  private Function<JobDTO, Boolean> worker = new Function<JobDTO, Boolean>() {
     @Override
     public Boolean apply(JobDTO job) {
       log.info("TODO: Do work on: {}", job);
       return true;
     }
   };
-  
-  private ExecutorService threadPool=Executors.newCachedThreadPool();
-  
+
+  private ExecutorService threadPool = Executors.newCachedThreadPool();
+
   public static final String IS_PARTLY_DONE = "isPartlyDone";
-  
+
   @Setter
   private Handler<Message<JobListDTO>> jobListHandler = msg -> {
-    try{
+    try {
       checkState(pickedJob == null, "Job in progress! " + pickedJob);
       JobListDTO jobs = msg.body();
       pickedJob = pickJob(jobs);
@@ -110,19 +111,19 @@ public class JobWorker extends AbstractVerticle {
       msg.reply(pickedJob, deliveryOptions); // must reply even if picked==null
     }
 
-    if (pickedJob != null){
-      threadPool.execute(()->{
-        try{
-          if (worker.apply(pickedJob)){
-            if(pickedJob.getParams().getBoolean(IS_PARTLY_DONE, false).booleanValue())
+    if (pickedJob != null) {
+      threadPool.execute(() -> {
+        try {
+          if (worker.apply(pickedJob)) {
+            if (pickedJob.getParams().getBoolean(IS_PARTLY_DONE, false).booleanValue())
               jobPartlyDone(); // creates new conversation
             else
               jobDone(); // creates new conversation
           } else {
             jobFailed(); // creates new conversation
           }
-        }catch(Exception|Error e){
-          log.error("Worker "+worker+" threw exception; notifying job failed", e);
+        } catch (Exception | Error e) {
+          log.error("Worker " + worker + " threw exception; notifying job failed", e);
           jobFailed(); // creates new conversation
         }
       });
@@ -135,8 +136,9 @@ public class JobWorker extends AbstractVerticle {
     if (jobList.getJobs().size() > 0) {
       picked = jobList.jobs.get(0);
     }
-    StringBuilder jobsSb=new StringBuilder();
-    jobList.jobs.forEach( j -> jobsSb.append(" "+j.getId()) );
+
+    StringBuilder jobsSb = jobList.jobs.stream().map(j -> j.getId() + " ")
+        .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append);
     log.info("pickedJob={} from jobs={}", picked, jobsSb);
     return picked;
   }

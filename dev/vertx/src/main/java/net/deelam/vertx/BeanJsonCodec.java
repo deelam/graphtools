@@ -1,4 +1,4 @@
-package net.deelam.vertx.jobmarket2;
+package net.deelam.vertx;
 
 import java.util.function.Function;
 

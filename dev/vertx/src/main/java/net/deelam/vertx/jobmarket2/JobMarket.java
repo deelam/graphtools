@@ -17,6 +17,7 @@ import io.vertx.core.json.JsonObject;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.vertx.BeanJsonCodec;
 import net.deelam.vertx.VerticleUtils;
 import net.deelam.vertx.jobmarket2.JobMarket.JobItem.JobState;
 
@@ -129,7 +130,7 @@ public class JobMarket extends AbstractVerticle {
       else if (!idleWorkers.add(workerAddr))
         log.error("Could not add {} to idleWorkers={}", workerAddr, idleWorkers);
 
-      asyncNegotiateJobWithNextIdleWorker();
+      asyncNegotiateJobWith(workerAddr);
     });
     
     eb.consumer(addressBase + BUS_ADDR.UNREGISTER, message -> {
@@ -167,7 +168,7 @@ public class JobMarket extends AbstractVerticle {
 
         jobAdded = true; // in case in the middle of negotiating
 
-        log.debug("Moving pickyWorkers {} to idleWorkers: {}", pickyWorkers, idleWorkers);
+        log.debug("Moving all pickyWorkers {} to idleWorkers: {}", pickyWorkers, idleWorkers);
         for (Iterator<String> itr = pickyWorkers.iterator(); itr.hasNext();) {
           idleWorkers.add(itr.next());
           itr.remove();
@@ -221,15 +222,15 @@ public class JobMarket extends AbstractVerticle {
       JobItem ji = workerEndedJob(message, JobState.AVAILABLE);
       log.debug("Partly done: {}", ji.jobJO);
 
-      //String workerAddr = getWorkerAddress(message);
-      asyncNegotiateJobWithNextIdleWorker();//(workerAddr);
+      String workerAddr = getWorkerAddress(message);
+      asyncNegotiateJobWith(workerAddr);
     });
     eb.consumer(addressBase + BUS_ADDR.DONE, (Message<JobDTO> message) -> {
       log.debug("Received DONE message: {}", message.body());
       JobItem ji = workerEndedJob(message, JobState.DONE);
 
-      //String workerAddr = getWorkerAddress(message);
-      asyncNegotiateJobWithNextIdleWorker();//(workerAddr);
+      String workerAddr = getWorkerAddress(message);
+      asyncNegotiateJobWith(workerAddr);
 
       if (ji.completionAddr != null) {
         log.debug("Notifying {} that job is done: {}", ji.completionAddr, ji.jobJO);
@@ -250,8 +251,8 @@ public class JobMarket extends AbstractVerticle {
       }
       JobItem ji = workerEndedJob(message, endState);
 
-      //String workerAddr = getWorkerAddress(message);
-      asyncNegotiateJobWithNextIdleWorker(); //(workerAddr);
+      String workerAddr = getWorkerAddress(message);
+      asyncNegotiateJobWith(workerAddr);
 
       if (endState == JobState.FAILED && ji.failureAddr != null) {
         log.debug("Notifying {} that job failed: {}", ji.failureAddr, ji.jobJO);
@@ -285,15 +286,17 @@ public class JobMarket extends AbstractVerticle {
   private boolean isNegotiating = false;
 
   private void asyncNegotiateJobWithNextIdleWorker() {
+    String idleWorker = Iterables.getFirst(idleWorkers, null);
+    if (idleWorker == null) { // no workers available
+      return;
+    }
+    asyncNegotiateJobWith(idleWorker);
+  }
+  
+  private void asyncNegotiateJobWith(String idleWorker) {
     if (!isNegotiating) {
-      String idleWorker = Iterables.getFirst(idleWorkers, null);
-      if (idleWorker == null) { // no workers available
-        return;
-      }
-
-      final JobListDTO jobList = getAvailableJobs(idleWorker);
+      final JobListDTO jobList = getAvailableJobsFor(idleWorker);
       if (jobList.jobs.size() == 0) { // no jobs available
-        log.info("No jobs for {}", idleWorker);
         return;
       }
       
@@ -328,7 +331,8 @@ public class JobMarket extends AbstractVerticle {
             // jobItems may have changed by the time this reply is received
             if (jobAdded) {
               log.info("jobList has since changed; sending updated jobList to {}", workerAddr);
-              asyncSendJobsTo(workerAddr, getAvailableJobs(workerAddr));
+              JobListDTO availableJobs = getAvailableJobsFor(workerAddr);
+              asyncSendJobsTo(workerAddr, availableJobs);
               negotiateWithNextIdle = false; // still negotiating with current idleWorker
             } else {
               log.debug("Moving idleWorker to pickyWorkers queue: {}", workerAddr);
@@ -358,7 +362,7 @@ public class JobMarket extends AbstractVerticle {
     return sb.toString();
   }
 
-  private JobListDTO getAvailableJobs(String workerAddr) {
+  private JobListDTO getAvailableJobsFor(String workerAddr) {
     final String jobType=knownWorkers.get(workerAddr).type;
     List<JobDTO> jobListL = jobItems.entrySet().stream().filter(e->{
       if (e.getValue().state != JobState.AVAILABLE)
@@ -370,6 +374,9 @@ public class JobMarket extends AbstractVerticle {
       return dto;
     }).collect(Collectors.toList());
 
+    if(jobListL.size()==0)
+      log.info("No '{}' jobs for: {}", jobType, workerAddr);
+    
     JobListDTO jobList = new JobListDTO(jobListL);
     return jobList;
   }

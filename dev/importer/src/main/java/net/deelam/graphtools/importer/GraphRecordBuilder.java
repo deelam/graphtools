@@ -141,9 +141,8 @@ public class GraphRecordBuilder<B> {
     }
   }
 
-  Collection<String> keys=new ArrayList<>();
-  private void convertProperties(Element elem) {
-    keys.clear();
+  public static void convertProperties(Element elem) {
+    Collection<String> keys=new ArrayList<>();
     for(String key:elem.getPropertyKeys()){
       Object val = elem.getProperty(key);
       if(val!=null && !validPropertyClasses.contains(val.getClass())){

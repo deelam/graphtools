@@ -62,6 +62,8 @@ public class VertxProgressMonitor implements ProgressMonitor {
           new TimerTask() {
             public void run() {
               doUpdate();
+              if(isClosed)
+                log.warn("Progress monitor has closed but progressMaker is not complete! {}", progressMaker);
             }
           },
           10, //initial delay
@@ -69,6 +71,7 @@ public class VertxProgressMonitor implements ProgressMonitor {
     }
   }
 
+  private boolean isClosed=false;
   @Override
   public void close() throws Exception {
     if (progressMaker == null) {
@@ -76,8 +79,14 @@ public class VertxProgressMonitor implements ProgressMonitor {
         log.warn("Assuming progressMaker is done, sending 100%: {}", this);
         update(new ProgressState(100, "Assuming done: " + jobId));
       }
-    } else if (!isStopped)
+    } else if (!isStopped){
       doUpdate(); // will call stop() if done or failed; otherwise, timer will continue to monitor progressMaker
+      isClosed=true;
+      
+      if (!isStopped){
+        log.warn("Progress monitor has closed but progressMaker is not complete! {}", progressMaker);
+      }
+    }
   }
 
   boolean isStopped = false;

@@ -183,12 +183,13 @@ public class PondVerticle extends AbstractVerticle {
   private void loadState() {
     log.info("Loading pond state from {}", pondDir);
     File pondDirFile = new File(pondDir, POND_STATE_SER_FILENAME);
-    try(ObjectInputStream objectinputstream = new ObjectInputStream(new FileInputStream(pondDirFile))){
-      regisTable = (Hashtable) objectinputstream.readObject();
-      log.info("Loaded {} pond resources", regisTable.size());
-    } catch (IOException | ClassNotFoundException e) {
-      log.error("Resetting pond resource registry", e);
-    }
+    if(pondDirFile.exists()) 
+      try(ObjectInputStream objectinputstream = new ObjectInputStream(new FileInputStream(pondDirFile))){
+        regisTable = (Hashtable) objectinputstream.readObject();
+        log.info("Loaded {} pond resources", regisTable.size());
+      } catch (IOException | ClassNotFoundException e) {
+        log.error("Resetting pond resource registry", e);
+      }
   }
   
   @Override

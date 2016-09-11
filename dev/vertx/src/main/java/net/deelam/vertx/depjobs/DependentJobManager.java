@@ -8,7 +8,14 @@ import static net.deelam.graphtools.GraphTransaction.begin;
 import static net.deelam.graphtools.GraphTransaction.commit;
 import static net.deelam.graphtools.GraphTransaction.rollback;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -17,12 +24,12 @@ import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.TransactionalGraph;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
-import com.tinkerpop.frames.FramedGraphFactory;
 import com.tinkerpop.frames.FramedTransactionalGraph;
-import com.tinkerpop.frames.modules.javahandler.JavaHandlerModule;
 
 import io.vertx.core.eventbus.Message;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.graphtools.FramedGraphProvider;
+import net.deelam.graphtools.GraphUtils;
 import net.deelam.vertx.depjobs.DependentJobFrame.STATE;
 import net.deelam.vertx.jobmarket2.JobDTO;
 import net.deelam.vertx.jobmarket2.JobProducer;
@@ -39,8 +46,9 @@ public class DependentJobManager {
   private final JobProducer jobProd;
 
   public DependentJobManager(IdGraph<?> dependencyGraph, JobProducer vertxJobProducer) {
-    FramedGraphFactory factory = new FramedGraphFactory(new JavaHandlerModule());
-    graph = factory.create(dependencyGraph);
+    Class<?>[] typedClasses = {DependentJobFrame.class};
+    FramedGraphProvider provider = new FramedGraphProvider(typedClasses);
+    graph = provider.get(dependencyGraph);
     
     jobProd=vertxJobProducer;
     jobProd.addJobCompletionHandler( (Message<JobDTO> msg) -> {
@@ -49,8 +57,8 @@ public class DependentJobManager {
       if(false)
         jobProd.removeJob(jobId, null);
       DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
-      log.debug("all jobs: "+this);
-      log.info("Done jobId={} \n {}", jobId, toStringRemainingJobs("state", "jobType"));
+      log.debug("all jobs: {}", this);
+      log.info("Done jobId={} \n {}", jobId, toStringRemainingJobs(DependentJobFrame.STATE_PROPKEY));
       jobDone(jobV);
     });
     jobProd.addJobFailureHandler( (Message<JobDTO> msg) -> {
@@ -59,8 +67,8 @@ public class DependentJobManager {
       if(false)
         jobProd.removeJob(jobId, null);
       DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
-      log.debug("all jobs: "+this);
-      log.info("Failed jobId={} \n {}", jobId, toStringRemainingJobs("state", "jobType"));
+      log.debug("all jobs: {}", this);
+      log.info("Failed jobId={} \n {}", jobId, toStringRemainingJobs(DependentJobFrame.STATE_PROPKEY));
       jobFailed(jobV);
     });
   }
@@ -85,10 +93,11 @@ public class DependentJobManager {
   }
   
   public String toStringRemainingJobs(String... propsToPrint) {
-    StringBuilder sb = new StringBuilder("Nodes:\n");
+    StringBuilder sb = new StringBuilder("Jobs remaining:\n");
     int nodeCount = 0;
     int tx = begin(graph);
     try {
+      //log.info(GraphUtils.toString(graph, 100, "state", "order"));
       for (DependentJobFrame jobV : graph.getVertices(DependentJobFrame.TYPE_KEY, DependentJobFrame.TYPE_VALUE, DependentJobFrame.class)) {
         if (jobV.getState()!=STATE.DONE) {
           ++nodeCount;

@@ -27,6 +27,7 @@ import net.deelam.vertx.jobmarket.JobMarket.BUS_ADDR;
 @Slf4j
 @RequiredArgsConstructor
 @ToString
+@Deprecated
 public class JobWorker extends AbstractVerticle {
   private final String serviceType;
   private DeliveryOptions deliveryOptions;

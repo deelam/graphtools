@@ -33,6 +33,7 @@ import net.deelam.vertx.jobmarket.JobProducer;
  * 
  * @author dlam
  */
+@Deprecated
 @Slf4j
 public class VertxDependentJobManager<T> {
 

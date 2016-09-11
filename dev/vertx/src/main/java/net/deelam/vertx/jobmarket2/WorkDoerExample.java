@@ -12,8 +12,10 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.api.HasProgress.ProgressState;
@@ -40,12 +42,12 @@ public class WorkDoerExample {
     }    
 
     ///---------  JobConsumer
-    ReportingWorker rw;
     {
       // create Doer 
       Doer workDoer = new Doer();
       // connect with ReportingWorker; called by JobConsumer's thread pool
-      rw = new ReportingWorker(workDoer, () -> workDoer.state).createProgressMonitor(new VertxProgressMonitor.Factory(vertx));
+      ReportingWorker rw = new ReportingWorker(workDoer, () -> workDoer.state)
+          .setProgressMonitorFactory(new VertxProgressMonitor.Factory(vertx));
       
       JobConsumer jConsumer = new JobConsumer(svcType, JOB_TYPE, rw);
       vertx.deployVerticle(jConsumer, deployHandler);
@@ -82,7 +84,13 @@ public class WorkDoerExample {
 
   /// ==== Job submitter
   private static final String JOB_TYPE = "MY_JOB_TYPE";
-  
+
+  @Accessors(chain=true)
+  @Data
+  static class Request {
+    String id;
+  }
+
   @RequiredArgsConstructor
   static class JobSubmitter {
 //    final 
@@ -90,9 +98,13 @@ public class WorkDoerExample {
     final DependentJobManager depJobMgr;
     final String jobListenerAddr="listenerAddr";
     
+    
     void submit(){
-      JobDTO job = new JobDTO("jsonJobId", JOB_TYPE).setRequesterAddr(jobListenerAddr).setProgressPollInterval(1);
-      JobDTO job2 = new JobDTO("jsonJobId2", JOB_TYPE).setRequesterAddr(jobListenerAddr);
+      JobDTO job = new JobDTO("jsonJobId", JOB_TYPE).setRequesterAddr(jobListenerAddr)
+          .setProgressPollInterval(1)
+          .encodeParams(new Request().setId("reqId1"));
+      JobDTO job2 = new JobDTO("jsonJobId2", JOB_TYPE).setRequesterAddr(jobListenerAddr)
+          .encodeParams(new Request().setId("reqId2"));
       if(jobProducer==null){
         depJobMgr.addJob(job);
         depJobMgr.addJob(job2, job.getId());
@@ -141,9 +153,9 @@ public class WorkDoerExample {
     public void accept(JobDTO job) {
       state.setPercent(0).setMessage("Start job "+job.getId()).getMetrics().clear();
       try {
-        Thread.sleep(3000);
+        Thread.sleep(2000);
         state.setPercent(50).setMessage("At 50%").getMetrics().put("A", 49);
-        Thread.sleep(3000);
+        Thread.sleep(1000);
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }

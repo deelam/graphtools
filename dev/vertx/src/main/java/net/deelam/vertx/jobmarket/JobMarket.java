@@ -51,6 +51,7 @@ import net.deelam.vertx.jobmarket.JobMarket.JobItem.JobState;
  * @author dd
  */
 @Slf4j
+@Deprecated
 public class JobMarket extends AbstractVerticle {
   private final String serviceType;
 

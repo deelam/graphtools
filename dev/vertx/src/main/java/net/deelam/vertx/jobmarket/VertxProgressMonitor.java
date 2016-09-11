@@ -24,6 +24,7 @@ import net.deelam.graphtools.api.ProgressMonitor;
 @RequiredArgsConstructor
 @Slf4j
 @ToString
+@Deprecated
 public class VertxProgressMonitor implements ProgressMonitor {
 
   @RequiredArgsConstructor(onConstructor = @__(@Inject) )

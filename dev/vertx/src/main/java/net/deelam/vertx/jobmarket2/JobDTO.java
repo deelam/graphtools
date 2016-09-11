@@ -43,7 +43,7 @@ public class JobDTO {
     return params;
   }
   
-  public void encodeParams(Object obj){
+  public JobDTO encodeParams(Object obj){
     if(params!=null)
       throw new IllegalStateException("Params already set! "+params);
     if(obj instanceof JsonObject)
@@ -52,6 +52,7 @@ public class JobDTO {
       paramsClassname=obj.getClass().getName();
       params=new JsonObject(Json.encode(obj));
     }
+    return this;
   }
 
   @SuppressWarnings("unchecked")

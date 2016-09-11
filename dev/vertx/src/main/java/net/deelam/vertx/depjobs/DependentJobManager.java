@@ -29,7 +29,6 @@ import com.tinkerpop.frames.FramedTransactionalGraph;
 import io.vertx.core.eventbus.Message;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.FramedGraphProvider;
-import net.deelam.graphtools.GraphUtils;
 import net.deelam.vertx.depjobs.DependentJobFrame.STATE;
 import net.deelam.vertx.jobmarket2.JobDTO;
 import net.deelam.vertx.jobmarket2.JobProducer;

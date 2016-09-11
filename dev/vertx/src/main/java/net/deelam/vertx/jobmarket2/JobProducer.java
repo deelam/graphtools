@@ -56,8 +56,19 @@ public class JobProducer extends AbstractVerticle {
   }
 
   public void addJob(JobDTO job) {
+    waitUntilReady();
     DeliveryOptions deliveryOpts = JobMarket.createProducerHeader(jobCompletionAddress, jobFailureAddress, 0);
     vertx.eventBus().send(jmPrefix + BUS_ADDR.ADD_JOB, job, deliveryOpts, addJobReplyHandler);
+  }
+
+  private void waitUntilReady() {
+    while (!isReady())
+      try {
+        log.info("Waiting for jobProducer to find jobMarket");
+        Thread.sleep(1000); // wait until connected to jobMarket
+      } catch (InterruptedException e) {
+        log.warn("Interrupted while waiting",e);
+      }
   }
 
   public void removeJob(String jobId, Handler<AsyncResult<Message<JobDTO>>> removeJobReplyHandler) {

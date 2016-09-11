@@ -11,6 +11,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -25,21 +26,21 @@ import net.deelam.vertx.depjobs.DependentJobManager;
 @Slf4j
 public class WorkDoerExample {
 
-  public static void main(String[] args) throws InterruptedException {    
+  public static void main(String[] args) throws InterruptedException {
     Vertx vertx = Vertx.vertx();
-    
-    final CountDownLatch deployLatch = new CountDownLatch(4); // market, producer, consumer, listener
-    Handler<AsyncResult<String>> deployHandler= res -> {
-      System.out.println(deployLatch+" ----- " + res.succeeded());
-      deployLatch.countDown();
+
+//    final CountDownLatch deployLatch = new CountDownLatch(4); // market, producer, consumer, listener
+    Handler<AsyncResult<String>> deployHandler = res -> {
+//      System.out.println(deployLatch + " ----- " + res.succeeded());
+//      deployLatch.countDown();
     };
 
     ///---------  JobMarket
-    final String svcType="myJobMarket"; // connects JobConsumer and JobProducer to JobMarket
+    final String svcType = "myJobMarket"; // connects JobConsumer and JobProducer to JobMarket
     {
       JobMarket jMarket = new JobMarket(svcType);
       vertx.deployVerticle(jMarket, deployHandler);
-    }    
+    }
 
     ///---------  JobConsumer
     {
@@ -48,31 +49,31 @@ public class WorkDoerExample {
       // connect with ReportingWorker; called by JobConsumer's thread pool
       ReportingWorker rw = new ReportingWorker(workDoer, () -> workDoer.state)
           .setProgressMonitorFactory(new VertxProgressMonitor.Factory(vertx));
-      
+
       JobConsumer jConsumer = new JobConsumer(svcType, JOB_TYPE, rw);
       vertx.deployVerticle(jConsumer, deployHandler);
     }
-    
+
     ////---------  Do this during runtime
     /// create and submit a job
     {
       JobProducer jProducer = new JobProducer(svcType);
-      vertx.deployVerticle(jProducer, deployHandler);      
-      
+      vertx.deployVerticle(jProducer, deployHandler);
+
       IdGraphFactoryTinker.register();
-      GraphUri guri=new GraphUri("tinker:///");
-      IdGraph<?> dependencyGraph=guri.openIdGraph();
-      DependentJobManager depJobMgr=new DependentJobManager(dependencyGraph, jProducer);
-      
+      GraphUri guri = new GraphUri("tinker:///");
+      IdGraph<?> dependencyGraph = guri.openIdGraph();
+      DependentJobManager depJobMgr = new DependentJobManager(dependencyGraph, jProducer);
+
       JobSubmitter submitter = new JobSubmitter(depJobMgr);
-      
+
       /// create listener for job progress
       //JobProgressListener listener = new JobProgressListener(PROGRESS_LISTENER_ADDR);
       vertx.deployVerticle(submitter.listener, deployHandler);
 
-      deployLatch.await();
+//      deployLatch.await();
       submitter.submit();
-      
+
       /// wait for job to finish
       System.out.println("Waiting");
       submitter.listener.jobDoneLatch.await();
@@ -85,7 +86,7 @@ public class WorkDoerExample {
   /// ==== Job submitter
   private static final String JOB_TYPE = "MY_JOB_TYPE";
 
-  @Accessors(chain=true)
+  @Accessors(chain = true)
   @Data
   static class Request {
     String id;
@@ -93,42 +94,35 @@ public class WorkDoerExample {
 
   @RequiredArgsConstructor
   static class JobSubmitter {
-//    final 
+    //    final 
     JobProducer jobProducer;
     final DependentJobManager depJobMgr;
-    final String jobListenerAddr="listenerAddr";
-    
-    
-    void submit(){
+    final String jobListenerAddr = "listenerAddr";
+
+
+    void submit() {
       JobDTO job = new JobDTO("jsonJobId", JOB_TYPE).setRequesterAddr(jobListenerAddr)
           .setProgressPollInterval(1)
           .encodeParams(new Request().setId("reqId1"));
       JobDTO job2 = new JobDTO("jsonJobId2", JOB_TYPE).setRequesterAddr(jobListenerAddr)
           .encodeParams(new Request().setId("reqId2"));
-      if(jobProducer==null){
+      if (jobProducer == null) {
         depJobMgr.addJob(job);
         depJobMgr.addJob(job2, job.getId());
-      }else {
-        while(!jobProducer.isReady())
-          try {
-            log.info("Waiting for jobProducer to find jobMarket");
-            Thread.sleep(500); // wait for jobMarket clients to connect to jobMarket
-          } catch (InterruptedException e) {
-            e.printStackTrace();
-          } 
-  
+      } else {
         jobProducer.addJob(job);
         jobProducer.addJob(job2);
       }
     }
-  
+
     /// ==== Job progress listener verticle (Job submitter)
-  
+
     JobProgressListener listener = new JobProgressListener();
+
     @RequiredArgsConstructor
     class JobProgressListener extends AbstractVerticle {
       CountDownLatch jobDoneLatch = new CountDownLatch(2);
-  
+
       @Override
       public void start() throws Exception {
         super.start();
@@ -151,15 +145,18 @@ public class WorkDoerExample {
 
     @Override
     public void accept(JobDTO job) {
-      state.setPercent(0).setMessage("Start job "+job.getId()).getMetrics().clear();
       try {
+        Request req = job.decodeParams(Request.class.getClassLoader());
+        log.info("Params objects={}", req);
+
+        state.setPercent(0).setMessage("Start job " + job.getId()).getMetrics().clear();
         Thread.sleep(2000);
         state.setPercent(50).setMessage("At 50%").getMetrics().put("A", 49);
         Thread.sleep(1000);
-      } catch (InterruptedException e) {
+        state.setPercent(100).setMessage("Done 100%!").getMetrics().put("B", 99);
+      } catch (DecodeException | ClassNotFoundException | InterruptedException e) {
         throw new RuntimeException(e);
       }
-      state.setPercent(100).setMessage("Done 100%!").getMetrics().put("B", 99);
     }
   }
 

@@ -1,7 +1,5 @@
 package net.deelam.vertx.jobmarket2;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -56,11 +54,14 @@ public class JobDTO {
   }
 
   @SuppressWarnings("unchecked")
-  public <C> C reifyParams() throws DecodeException, ClassNotFoundException {
+  public <C> C decodeParams(ClassLoader cl) throws DecodeException, ClassNotFoundException {
     if (params == null)
       return null;
-    checkNotNull(paramsClassname);
-    return (C) Json.decodeValue(params.encode(), Class.forName(paramsClassname));
+    if(paramsClassname==null){
+      return (C) params;
+    } else {
+      return (C) Json.decodeValue(params.encode(), cl.loadClass(paramsClassname));
+    }
   }
 
 

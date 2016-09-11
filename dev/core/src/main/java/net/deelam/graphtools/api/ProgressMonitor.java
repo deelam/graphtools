@@ -14,4 +14,8 @@ public interface ProgressMonitor extends AutoCloseable {
 	void stop();
 
     void addTargetVertxAddr(String vertxAddrPrefix);
+    
+    public interface Factory {
+      ProgressMonitor create(String jobId, int pollIntervalInSeconds, String busAddr);
+    }
 }

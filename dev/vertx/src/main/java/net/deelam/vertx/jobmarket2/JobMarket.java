@@ -118,7 +118,10 @@ public class JobMarket extends AbstractVerticle {
       String workerAddr = getWorkerAddress(message);
       String workerType = getWorkerJobType(message);
       log.debug("Received initial message from {}", workerAddr);
-      
+      if(workerType==null){
+        log.error("Cannot register worker with null type: {}", workerAddr);
+        return;
+      }
       
       if (knownWorkers.containsKey(workerAddr))
         log.debug("Worker already registered: {}", workerAddr);
@@ -461,7 +464,7 @@ public class JobMarket extends AbstractVerticle {
 
     public void mergeIn(JobDTO job) {
       if(job.params!=null)
-        jobJO.params.mergeIn(job.params);
+        jobJO.getParams().mergeIn(job.params);
     }
 
   }

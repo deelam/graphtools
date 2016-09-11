@@ -49,12 +49,12 @@ public class JobMarket2Test {
     JobMarket jm = new JobMarket(svcType);
     prod = new JobProducer(svcType);
 
-    JobWorker consA;
-    consA = new JobWorker(svcType, jobTypeA);
+    JobConsumer consA;
+    consA = new JobConsumer(svcType, jobTypeA);
     consA.setWorker(createWorkFunction(consA, "id-A"));
     
-    JobWorker consB;
-    consB = new JobWorker(svcType, jobTypeB);
+    JobConsumer consB;
+    consB = new JobConsumer(svcType, jobTypeB);
     consB.setWorker(createWorkFunction(consB, "id-B"));
 
     vertx.deployVerticle(jm, deployHandler);
@@ -73,7 +73,7 @@ public class JobMarket2Test {
     vertx.close(context.asyncAssertSuccess());
   }
   
-  Function<JobDTO, Boolean> createWorkFunction(final JobWorker cons, String jobId){
+  Function<JobDTO, Boolean> createWorkFunction(final JobConsumer cons, String jobId){
     return new Function<JobDTO, Boolean>() {
     int count=0;
     @Override
@@ -121,14 +121,14 @@ public class JobMarket2Test {
     });
 
     {
-      JobDTO job = JobDTO.builder().id("id-A").type(jobTypeA).build();
+      JobDTO job = new JobDTO("id-A",jobTypeA);
       job.getParams().put("a", "aaaa");
       log.info("Adding job {}", job);
       prod.addJob(job);
     }
 
     {
-      JobDTO jobB = JobDTO.builder().id("id-B").type(jobTypeB).build();
+      JobDTO jobB = new JobDTO("id-B",jobTypeB);
       jobB.getParams().put("b", "bbbb");
       log.info("Adding job {}", jobB);
       prod.addJob(jobB);

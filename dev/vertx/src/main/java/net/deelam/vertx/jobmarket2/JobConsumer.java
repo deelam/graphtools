@@ -11,8 +11,6 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
@@ -27,7 +25,7 @@ import net.deelam.vertx.jobmarket2.JobMarket.BUS_ADDR;
 @Slf4j
 @RequiredArgsConstructor
 @ToString
-public class JobWorker extends AbstractVerticle {
+public class JobConsumer extends AbstractVerticle {
   private final String serviceType;
   private final String jobType;
   private DeliveryOptions deliveryOptions;
@@ -37,7 +35,7 @@ public class JobWorker extends AbstractVerticle {
   @Override
   public void start() throws Exception {
     String myAddr = deploymentID();
-    log.info("JobWorker ready: myAddr={}: {}", myAddr, this.getClass());
+    log.info("JobConsumer ready: myAddr={}: {}", myAddr, this.getClass());
     deliveryOptions = JobMarket.createWorkerHeader(myAddr, jobType);
 
     vertx.eventBus().consumer(myAddr, jobListHandler);
@@ -48,11 +46,10 @@ public class JobWorker extends AbstractVerticle {
       vertx.eventBus().send(jmPrefix, null, deliveryOptions);
     });
   }
-
-  //  @Deprecated
-  //  public void register() {
-  //    vertx.eventBus().send(jmPrefix + BUS_ADDR.REGISTER, null, deliveryOptions);
-  //  }
+  
+  public boolean isReady(){
+    return jmPrefix!=null;
+  }
 
   private JobDTO pickedJob = null;
 
@@ -82,7 +79,7 @@ public class JobWorker extends AbstractVerticle {
     vertx.eventBus().send(jmPrefix + BUS_ADDR.FAIL, prevJob, deliveryOptions);
   }
 
-  public JobWorker(String svcType, String jobType, Function<JobDTO, Boolean> worker) {
+  public JobConsumer(String svcType, String jobType, Function<JobDTO, Boolean> worker) {
     this(svcType, jobType);
     setWorker(worker);
   }
@@ -95,8 +92,28 @@ public class JobWorker extends AbstractVerticle {
       return true;
     }
   };
+  
+  @Setter
+  private Function<JobListDTO,JobDTO> jobPicker= dto -> {
+    log.debug("jobs={}", dto);
+    JobDTO picked=null;
+    if (dto.jobs.size() > 0) {
+      picked = dto.jobs.get(0);
+    }
+    StringBuilder jobsSb=new StringBuilder();
+    dto.jobs.forEach( j -> jobsSb.append(" "+j.getId()));
+    log.info("pickedJob={} from jobs={}", picked, jobsSb);
+    return picked;
+  };
+
 
   private ExecutorService threadPool = Executors.newCachedThreadPool();
+  @Override
+  public void stop() throws Exception {
+    threadPool.shutdown(); // threads are not daemon threads, so will not die until timeout or shutdown()
+    super.stop();
+  }
+  
 
   public static final String IS_PARTLY_DONE = "isPartlyDone";
 
@@ -105,7 +122,7 @@ public class JobWorker extends AbstractVerticle {
     try {
       checkState(pickedJob == null, "Job in progress! " + pickedJob);
       JobListDTO jobs = msg.body();
-      pickedJob = pickJob(jobs);
+      pickedJob = jobPicker.apply(jobs);
     } finally {
       // reply immediately so conversation doesn't timeout
       msg.reply(pickedJob, deliveryOptions); // must reply even if picked==null
@@ -129,18 +146,5 @@ public class JobWorker extends AbstractVerticle {
       });
     }
   };
-
-  protected JobDTO pickJob(JobListDTO jobList) {
-    log.debug("jobs={}", jobList);
-    JobDTO picked = null;
-    if (jobList.getJobs().size() > 0) {
-      picked = jobList.jobs.get(0);
-    }
-
-    StringBuilder jobsSb = jobList.jobs.stream().map(j -> j.getId() + " ")
-        .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append);
-    log.info("pickedJob={} from jobs={}", picked, jobsSb);
-    return picked;
-  }
 
 }

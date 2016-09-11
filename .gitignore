@@ -1,6 +1,7 @@
 target/
 lib/
 META-INF
+OSGI-INF
 build
 .settings
 .project

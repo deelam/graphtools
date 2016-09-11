@@ -6,15 +6,17 @@ import java.util.Map;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 public interface HasProgress {
 
   ProgressState getProgress();
 
+  @NoArgsConstructor
   @AllArgsConstructor
   @Data
-  @Accessors(fluent = true)
+  @Accessors(chain = true) // Vertx's eventbus doesn't work with fluents
   public static class ProgressState {
     int percent = 0;
     String message;

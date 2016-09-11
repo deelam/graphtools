@@ -1,4 +1,4 @@
-package net.deelam.vertx.jobmarket;
+package net.deelam.vertx.jobmarket2;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +30,7 @@ public class VertxProgressMonitor implements ProgressMonitor {
   public static class Factory implements ProgressMonitor.Factory {
     private final Vertx vertx;
 
-    public VertxProgressMonitor create(String jobId, int pollIntervalInSeconds, String busAddr) {
+    public ProgressMonitor create(String jobId, int pollIntervalInSeconds, String busAddr) {
       return new VertxProgressMonitor(vertx, jobId, pollIntervalInSeconds, busAddr);
     }
   }
@@ -62,7 +62,7 @@ public class VertxProgressMonitor implements ProgressMonitor {
           new TimerTask() {
             public void run() {
               doUpdate();
-              if(isClosed)
+              if(isClosed && !isStopped)
                 log.warn("Progress monitor has closed but progressMaker is not complete! {}", progressMaker);
             }
           },
@@ -73,7 +73,7 @@ public class VertxProgressMonitor implements ProgressMonitor {
 
   private boolean isClosed=false;
   @Override
-  public void close() throws Exception {
+  public void close() {
     if (progressMaker == null) {
       if (!isStopped) { // then not DONE or FAILED
         log.warn("Assuming progressMaker is done, sending 100%: {}", this);
@@ -114,7 +114,7 @@ public class VertxProgressMonitor implements ProgressMonitor {
       //manually done via update(ProgressState): update(new ProgressState(MIN_PROGRESS, "Activity initialized but has not made progress: " + requestId));
     } else {
       ProgressState p = progressMaker.getProgress();
-      log.info("Progress of " + jobId + " by {}: {}", progressMaker, p);
+      log.debug("Progress of {} by {}: {}", jobId, progressMaker, p);
 
       // accumulate metrics in props
       p.getMetrics().entrySet().stream().forEach(e -> props.put(e.getKey(), e.getValue()));

@@ -133,10 +133,11 @@ public class DependentJobManager {
 
   public int counter=0;
   
-  public synchronized void addJob(String jobId, JobDTO job, String... inJobIds) {
-    addJob(true, jobId, job, inJobIds);
+  public synchronized void addJob(JobDTO job, String... inJobIds) {
+    addJob(true, job, inJobIds);
   }
-  public synchronized void addJob(boolean addToQueue, String jobId, JobDTO job, String... inJobIds) {
+  public synchronized void addJob(boolean addToQueue, JobDTO job, String... inJobIds) {
+    String jobId=job.getId();
     // add to graph
     int tx = begin(graph);
     try {
@@ -169,7 +170,7 @@ public class DependentJobManager {
         log.debug("Submitting jobId={}", jobV.getNodeId());
         submitJob(jobV, job);
       } else {
-        log.info("Input to job={} is not ready; setting state=WAITING.  {}", job);
+        log.info("Input to job={} is not ready; setting state=WAITING.", job.getId());
         putJobInWaitingArea(jobV, job);
       }
     }

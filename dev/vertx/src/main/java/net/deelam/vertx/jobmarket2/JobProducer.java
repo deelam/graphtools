@@ -38,6 +38,10 @@ public class JobProducer extends AbstractVerticle {
       checkNotNull(jmPrefix);
     });
   }
+  
+  public boolean isReady(){
+    return jmPrefix!=null;
+  }
 
   public <T> void addJobCompletionHandler(Handler<Message<JobDTO>> jobCompletionHandler) {
     jobCompletionAddress=deploymentID()+JOBCOMPLETE_ADDRESS_SUFFIX;

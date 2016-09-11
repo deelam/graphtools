@@ -5,27 +5,31 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import lombok.Builder;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 
-@Builder
+@Accessors(chain=true)
+@RequiredArgsConstructor
 @Data
 public class JobDTO {
-  String id;
-  String type;
+  final String id;
+  final String type;
+  
   String inputPath, outputPath;
   
   String requesterAddr; // Vertx eventbus address; job worker can register itself to this address
+  int progressPollInterval;
 
   String paramsClassname;
   JsonObject params; // job-specific parameters
 
   public JobDTO copy() {
-    JobDTO dto = builder().id(id).type(type)
-        .inputPath(inputPath).outputPath(outputPath)
-        .requesterAddr(requesterAddr)
-        .paramsClassname(paramsClassname)
-        .build();
+    JobDTO dto = new JobDTO(id,type)
+        .setInputPath(inputPath).setOutputPath(outputPath)
+        .setRequesterAddr(requesterAddr)
+        .setProgressPollInterval(progressPollInterval)
+        .setParamsClassname(paramsClassname);
 
     if (params != null)
       dto.params = params.copy();

@@ -65,5 +65,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <version>1.0.0</version>
       <!-- <version>1.0.0-cdh5.4.4</version> --> <!-- for testing -->
     </dependency>
+
+	<dependency>
+		<groupId>net.deelam</groupId>
+		<artifactId>graphtools-vertx</artifactId>
+		<version>${project.version}</version>
+		<scope>test</scope>
+	</dependency>
   </dependencies>
 </project>

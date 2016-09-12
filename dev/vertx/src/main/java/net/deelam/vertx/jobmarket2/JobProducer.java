@@ -1,16 +1,17 @@
-package net.deelam.vertx.jobmarket;
+package net.deelam.vertx.jobmarket2;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.vertx.VerticleUtils;
-import net.deelam.vertx.jobmarket.JobMarket.BUS_ADDR;
+import net.deelam.vertx.jobmarket2.JobMarket.BUS_ADDR;
 
 /**
  * 
@@ -18,7 +19,6 @@ import net.deelam.vertx.jobmarket.JobMarket.BUS_ADDR;
  */
 @RequiredArgsConstructor
 @Slf4j
-@Deprecated
 public class JobProducer extends AbstractVerticle {
   private final String serviceType;
   
@@ -35,39 +35,54 @@ public class JobProducer extends AbstractVerticle {
     
     VerticleUtils.announceClientType(vertx, serviceType, msg->{
       jmPrefix=msg.body();
+      checkNotNull(jmPrefix);
     });
   }
+  
+  public boolean isReady(){
+    return jmPrefix!=null;
+  }
 
-  public <T> void addJobCompletionHandler(Handler<Message<T>> jobCompletionHandler) {
+  public <T> void addJobCompletionHandler(Handler<Message<JobDTO>> jobCompletionHandler) {
     jobCompletionAddress=deploymentID()+JOBCOMPLETE_ADDRESS_SUFFIX;
     log.info("add jobCompletionHandler to address={}", jobCompletionAddress);
     vertx.eventBus().consumer(jobCompletionAddress, jobCompletionHandler);
   }
 
-  public <T> void addJobFailureHandler(Handler<Message<T>> jobFailureHandler) {
+  public <T> void addJobFailureHandler(Handler<Message<JobDTO>> jobFailureHandler) {
     jobFailureAddress=deploymentID()+JOBFAILED_ADDRESS_SUFFIX;
     log.info("add jobFailureHandler to address={}", jobFailureAddress);
     vertx.eventBus().consumer(jobFailureAddress, jobFailureHandler);
   }
 
-  public void addJob(String jobId, JsonObject job) {
-    DeliveryOptions deliveryOpts = JobMarket.createProducerHeader(jobId, jobCompletionAddress, jobFailureAddress, 0);
+  public void addJob(JobDTO job) {
+    waitUntilReady();
+    DeliveryOptions deliveryOpts = JobMarket.createProducerHeader(jobCompletionAddress, jobFailureAddress, 0);
     vertx.eventBus().send(jmPrefix + BUS_ADDR.ADD_JOB, job, deliveryOpts, addJobReplyHandler);
   }
 
-  public void removeJob(String jobId, Handler<AsyncResult<Message<JsonObject>>> removeJobReplyHandler) {
-    DeliveryOptions deliveryOpts = JobMarket.createProducerHeader(jobId, null);
-    vertx.eventBus().send(jmPrefix + BUS_ADDR.REMOVE_JOB, null, deliveryOpts, 
+  private void waitUntilReady() {
+    while (!isReady())
+      try {
+        log.info("Waiting for jobProducer to find jobMarket");
+        Thread.sleep(1000); // wait until connected to jobMarket
+      } catch (InterruptedException e) {
+        log.warn("Interrupted while waiting",e);
+      }
+  }
+
+  public void removeJob(String jobId, Handler<AsyncResult<Message<JobDTO>>> removeJobReplyHandler) {
+    vertx.eventBus().send(jmPrefix + BUS_ADDR.REMOVE_JOB, jobId, 
         (removeJobReplyHandler == null) ? this.removeJobReplyHandler : removeJobReplyHandler);
   }
 
-  public <T> void getProgress(String jobId, Handler<AsyncResult<Message<T>>> handler) {
-    DeliveryOptions deliveryOpts = JobMarket.createProducerHeader(jobId, null);
-    vertx.eventBus().send(jmPrefix + BUS_ADDR.GET_PROGRESS, null, deliveryOpts, handler);
+  public void getProgress(String jobId, Handler<AsyncResult<Message<JobDTO>>> handler) {
+    vertx.eventBus().send(jmPrefix + BUS_ADDR.GET_PROGRESS, jobId, 
+        (handler == null) ? this.progressReplyHandler : handler);
   }
 
   @Setter
-  private Handler<AsyncResult<Message<JsonObject>>> addJobReplyHandler = (reply) -> {
+  private Handler<AsyncResult<Message<JobDTO>>> addJobReplyHandler = (reply) -> {
     if (reply.succeeded()) {
       log.debug("Job added: {}", reply.result().body());
     } else if (reply.failed()) {
@@ -78,13 +93,24 @@ public class JobProducer extends AbstractVerticle {
   };
   
   @Setter
-  private Handler<AsyncResult<Message<JsonObject>>> removeJobReplyHandler = (reply) -> {
+  private Handler<AsyncResult<Message<JobDTO>>> removeJobReplyHandler = (reply) -> {
     if (reply.succeeded()) {
       log.debug("Job removed: {}", reply.result().body());
     } else if (reply.failed()) {
       log.error("removeJob failed: ", reply.cause());
     } else {
       log.warn("removeJob unknown reply: {}", reply);
+    }
+  };
+  
+  @Setter
+  private Handler<AsyncResult<Message<JobDTO>>> progressReplyHandler = (reply) -> {
+    if (reply.succeeded()) {
+      log.debug("Job progress: {}", reply.result().body());
+    } else if (reply.failed()) {
+      log.error("jobProgress failed: ", reply.cause());
+    } else {
+      log.warn("jobProgress unknown reply: {}", reply);
     }
   };
 }

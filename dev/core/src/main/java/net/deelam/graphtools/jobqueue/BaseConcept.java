@@ -6,6 +6,7 @@ import com.tinkerpop.frames.VertexFrame;
 import com.tinkerpop.frames.modules.javahandler.JavaHandler;
 import com.tinkerpop.frames.modules.typedgraph.TypeField;
 
+@Deprecated
 @TypeField(BaseConcept.TYPE_KEY)
 public interface BaseConcept extends VertexFrame {
 

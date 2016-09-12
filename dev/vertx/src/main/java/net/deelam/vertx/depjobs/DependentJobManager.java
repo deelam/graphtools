@@ -8,7 +8,14 @@ import static net.deelam.graphtools.GraphTransaction.begin;
 import static net.deelam.graphtools.GraphTransaction.commit;
 import static net.deelam.graphtools.GraphTransaction.rollback;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -17,53 +24,50 @@ import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.TransactionalGraph;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
-import com.tinkerpop.frames.FramedGraphFactory;
 import com.tinkerpop.frames.FramedTransactionalGraph;
-import com.tinkerpop.frames.modules.javahandler.JavaHandlerModule;
 
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.graphtools.FramedGraphProvider;
 import net.deelam.vertx.depjobs.DependentJobFrame.STATE;
-import net.deelam.vertx.jobmarket.JobMarket;
-import net.deelam.vertx.jobmarket.JobProducer;
+import net.deelam.vertx.jobmarket2.JobDTO;
+import net.deelam.vertx.jobmarket2.JobProducer;
 
 /**
  * 
  * @author dlam
  */
-@Deprecated
 @Slf4j
-public class VertxDependentJobManager<T> {
+public class DependentJobManager {
 
   private final FramedTransactionalGraph<TransactionalGraph> graph;
   
   private final JobProducer jobProd;
 
-  public VertxDependentJobManager(IdGraph<?> dependencyGraph, JobProducer vertxJobProducer) {
-    FramedGraphFactory factory = new FramedGraphFactory(new JavaHandlerModule());
-    graph = factory.create(dependencyGraph);
+  public DependentJobManager(IdGraph<?> dependencyGraph, JobProducer vertxJobProducer) {
+    Class<?>[] typedClasses = {DependentJobFrame.class};
+    FramedGraphProvider provider = new FramedGraphProvider(typedClasses);
+    graph = provider.get(dependencyGraph);
     
     jobProd=vertxJobProducer;
-    jobProd.addJobCompletionHandler( (Message<JsonObject> msg) -> {
+    jobProd.addJobCompletionHandler( (Message<JobDTO> msg) -> {
       log.info("==========> Job complete: {}", msg.body());
-      String jobId = msg.body().getString(JobMarket.JOBID);
+      String jobId = msg.body().getId();
       if(false)
         jobProd.removeJob(jobId, null);
       DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
-      log.debug("all jobs: "+this);
-      log.info("Done jobId={} \n {}", jobId, toStringRemainingJobs("state", "jobType"));
+      log.debug("all jobs: {}", this);
+      log.info("Done jobId={} \n {}", jobId, toStringRemainingJobs(DependentJobFrame.STATE_PROPKEY));
       jobDone(jobV);
     });
-    jobProd.addJobFailureHandler( (Message<JsonObject> msg) -> {
+    jobProd.addJobFailureHandler( (Message<JobDTO> msg) -> {
       log.info("==========> Job failed: {}", msg.body());
-      String jobId = msg.body().getString(JobMarket.JOBID);
+      String jobId = msg.body().getId();
       if(false)
         jobProd.removeJob(jobId, null);
       DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
-      log.debug("all jobs: "+this);
-      log.info("Failed jobId={} \n {}", jobId, toStringRemainingJobs("state", "jobType"));
+      log.debug("all jobs: {}", this);
+      log.info("Failed jobId={} \n {}", jobId, toStringRemainingJobs(DependentJobFrame.STATE_PROPKEY));
       jobFailed(jobV);
     });
   }
@@ -75,9 +79,9 @@ public class VertxDependentJobManager<T> {
     }
   }
 
-  private Map<String, T> waitingJobs = Collections.synchronizedMap(new HashMap<>());
-  private Map<String, T> submittedJobs = Collections.synchronizedMap(new HashMap<>());
-  private Map<String, T> unsubmittedJobs = Collections.synchronizedMap(new HashMap<>());
+  private Map<String, JobDTO> waitingJobs = Collections.synchronizedMap(new HashMap<>());
+  private Map<String, JobDTO> submittedJobs = Collections.synchronizedMap(new HashMap<>());
+  private Map<String, JobDTO> unsubmittedJobs = Collections.synchronizedMap(new HashMap<>());
 
 
   public String toString() {
@@ -88,10 +92,11 @@ public class VertxDependentJobManager<T> {
   }
   
   public String toStringRemainingJobs(String... propsToPrint) {
-    StringBuilder sb = new StringBuilder("Nodes:\n");
+    StringBuilder sb = new StringBuilder("Jobs remaining:\n");
     int nodeCount = 0;
     int tx = begin(graph);
     try {
+      //log.info(GraphUtils.toString(graph, 100, "state", "order"));
       for (DependentJobFrame jobV : graph.getVertices(DependentJobFrame.TYPE_KEY, DependentJobFrame.TYPE_VALUE, DependentJobFrame.class)) {
         if (jobV.getState()!=STATE.DONE) {
           ++nodeCount;
@@ -136,10 +141,11 @@ public class VertxDependentJobManager<T> {
 
   public int counter=0;
   
-  public synchronized void addJob(String jobId, T job, String... inJobIds) {
-    addJob(true, jobId, job, inJobIds);
+  public synchronized void addJob(JobDTO job, String... inJobIds) {
+    addJob(true, job, inJobIds);
   }
-  public synchronized void addJob(boolean addToQueue, String jobId, T job, String... inJobIds) {
+  public synchronized void addJob(boolean addToQueue, JobDTO job, String... inJobIds) {
+    String jobId=job.getId();
     // add to graph
     int tx = begin(graph);
     try {
@@ -166,13 +172,13 @@ public class VertxDependentJobManager<T> {
     }
   }
   
-  private void addToQueue(T job, DependentJobFrame jobV) {
+  private void addToQueue(JobDTO job, DependentJobFrame jobV) {
     synchronized (graph) {
       if (isJobReady(jobV)) {
         log.debug("Submitting jobId={}", jobV.getNodeId());
         submitJob(jobV, job);
       } else {
-        log.info("Input to job={} is not ready; setting state=WAITING.  {}", job);
+        log.info("Input to job={} is not ready; setting state=WAITING.", job.getId());
         putJobInWaitingArea(jobV, job);
       }
     }
@@ -213,7 +219,7 @@ public class VertxDependentJobManager<T> {
         throw new IllegalArgumentException("Job doesn't exist: " + jobId);
       }
       
-      T job;
+      JobDTO job;
       if(jobV.getState()==null)
         job=unsubmittedJobs.get(jobId);
       else
@@ -366,7 +372,7 @@ public class VertxDependentJobManager<T> {
     }
   }
   
-  private void submitJob(DependentJobFrame jobV, T job) {
+  private void submitJob(DependentJobFrame jobV, JobDTO job) {
     synchronized (graph) {
       log.debug("submitJob: {}", jobV);
       jobV.setState(STATE.SUBMITTED);
@@ -378,8 +384,7 @@ public class VertxDependentJobManager<T> {
       jobProd.removeJob(jobV.getNodeId(), null);
     }
     submittedJobs.put(jobV.getNodeId(), job);
-    JsonObject jobJO=new JsonObject(Json.encode(job));
-    jobProd.addJob(jobV.getNodeId(), jobJO);
+    jobProd.addJob(job);
   }
   
   public STATE getJobStatus(String jobId){
@@ -408,9 +413,9 @@ public class VertxDependentJobManager<T> {
         threadPool.execute(()->{
           jobProd.getProgress(jobId, reply -> {
             synchronized (map) {
-              JsonObject bodyJO=(JsonObject) reply.result().body();
+              JobDTO bodyJO=reply.result().body();
               //job = Json.decodeValue(bodyJO.toString(), DependentJob.class);
-              map.putAll(bodyJO.getMap());
+              bodyJO.getParams().forEach(e->map.put(e.getKey(), e.getValue()));
               map.notify();
             }
           });
@@ -439,7 +444,7 @@ public class VertxDependentJobManager<T> {
     }
   }
 
-  private void putJobInWaitingArea(DependentJobFrame jobV, T job) {
+  private void putJobInWaitingArea(DependentJobFrame jobV, JobDTO job) {
     synchronized (graph) {
       jobV.setState(STATE.WAITING);
       graph.commit();
@@ -516,7 +521,7 @@ public class VertxDependentJobManager<T> {
         }
         for (DependentJobFrame readyV : readyJobs) { // submit in order
           log.info("Waiting job is now ready; submitting: {}", readyV.getNodeId());
-          T job = waitingJobs.remove(readyV.getNodeId());
+          JobDTO job = waitingJobs.remove(readyV.getNodeId());
           submitJob(readyV, job);
         }
         log.debug("Waiting jobs: {}", waitingJobs.keySet());

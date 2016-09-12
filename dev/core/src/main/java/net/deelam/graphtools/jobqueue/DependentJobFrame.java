@@ -5,6 +5,7 @@ import com.tinkerpop.frames.Adjacency;
 import com.tinkerpop.frames.Property;
 import com.tinkerpop.frames.modules.typedgraph.TypeValue;
 
+@Deprecated
 @TypeValue(DependentJobFrame.TYPE_VALUE)
 public interface DependentJobFrame extends BaseConcept {
   static final String TYPE_VALUE="DependentJob";

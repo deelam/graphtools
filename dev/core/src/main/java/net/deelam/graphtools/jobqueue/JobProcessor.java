@@ -7,6 +7,7 @@ package net.deelam.graphtools.jobqueue;
  * @author dlam
  *
  */
+@Deprecated
 public interface JobProcessor<J extends DependentJob> {
 
   String getJobType();

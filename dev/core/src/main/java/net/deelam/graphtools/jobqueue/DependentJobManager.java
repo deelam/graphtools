@@ -30,6 +30,7 @@ import net.deelam.graphtools.jobqueue.DependentJobFrame.STATE;
  * 
  * @author dlam
  */
+@Deprecated
 @Slf4j
 public class DependentJobManager {
 

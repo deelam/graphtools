@@ -1,8 +1,9 @@
-package net.deelam.vertx.jobmarket;
+package net.deelam.vertx.jobmarket2;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.Iterables;
 
@@ -12,13 +13,13 @@ import io.vertx.core.Handler;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.vertx.BeanJsonCodec;
 import net.deelam.vertx.VerticleUtils;
-import net.deelam.vertx.jobmarket.JobMarket.JobItem.JobState;
+import net.deelam.vertx.jobmarket2.JobMarket.JobItem.JobState;
 
 /**
  * JobProducer calls:
@@ -51,7 +52,6 @@ import net.deelam.vertx.jobmarket.JobMarket.JobItem.JobState;
  * @author dd
  */
 @Slf4j
-@Deprecated
 public class JobMarket extends AbstractVerticle {
   private final String serviceType;
 
@@ -90,9 +90,11 @@ public class JobMarket extends AbstractVerticle {
   // jobId -> JobItem
   private Map<String, JobItem> jobItems = new LinkedHashMap<>();
 
+  private HashMap<String,Worker> knownWorkers = new HashMap<>();
   private LinkedHashSet<String> idleWorkers = new LinkedHashSet<>();
   private LinkedHashSet<String> pickyWorkers = new LinkedHashSet<>();
 
+  @SuppressWarnings("unused")
   private Handler<AsyncResult<Message<JsonObject>>> debugReplyHandler = (reply) -> {
     if (reply.succeeded()) {
       log.debug("reply={}", reply);
@@ -108,17 +110,30 @@ public class JobMarket extends AbstractVerticle {
     initAddressPrefix();
 
     EventBus eb = vertx.eventBus();
+    
+    BeanJsonCodec.register(eb, JobDTO.class);
+    BeanJsonCodec.register(eb, JobListDTO.class);
 
     eb.consumer(addressBase/* + BUS_ADDR.REGISTER*/, message -> {
       String workerAddr = getWorkerAddress(message);
+      String workerType = getWorkerJobType(message);
       log.debug("Received initial message from {}", workerAddr);
+      if(workerType==null){
+        log.error("Cannot register worker with null type: {}", workerAddr);
+        return;
+      }
+      
+      if (knownWorkers.containsKey(workerAddr))
+        log.debug("Worker already registered: {}", workerAddr);
+      else 
+        knownWorkers.put(workerAddr, new Worker(workerAddr, workerType));
+      
       if (idleWorkers.contains(workerAddr))
         log.debug("Worker already registered and is idle: {}", workerAddr);
-      else
-        if (!idleWorkers.add(workerAddr))
+      else if (!idleWorkers.add(workerAddr))
         log.error("Could not add {} to idleWorkers={}", workerAddr, idleWorkers);
 
-      asyncNegotiateJobWithNextIdleWorker();
+      asyncNegotiateJobWith(workerAddr);
     });
     
     eb.consumer(addressBase + BUS_ADDR.UNREGISTER, message -> {
@@ -128,35 +143,35 @@ public class JobMarket extends AbstractVerticle {
         log.error("Could not remove {} from idleWorkers={}", workerAddr, idleWorkers);
     });
 
-    eb.consumer(addressBase + BUS_ADDR.ADD_JOB, message -> {
+    eb.consumer(addressBase + BUS_ADDR.ADD_JOB, (Message<JobDTO> message) -> {
       log.debug("Received ADD_JOB message: {}", message.body());
       JobItem ji = new JobItem(message);
       ji.state = JobState.AVAILABLE;
-      JobItem existingJI = jobItems.get(ji.jobId);
+      JobItem existingJI = jobItems.get(ji.getId());
       boolean addJob = true;
       if (existingJI != null) {
         switch (existingJI.state) {
           case AVAILABLE:
           case DONE:
           case FAILED:
-            log.info("Job with id=" + ji.jobId + " already exists but has state=" + existingJI.state
+            log.info("Job with id=" + ji.getId() + " already exists but has state=" + existingJI.state
                 + ".  Adding job again.");
             addJob = true;
             break;
           case STARTED:
           case PROGRESSING:
-            message.fail(-11, "Job with id=" + ji.jobId + " already exists and has started!");
+            message.fail(-11, "Job with id=" + ji.getId() + " already exists and has started!");
             addJob = false;
             break;
         }
       }
       if (addJob) {
         message.reply(OK_REPLY);
-        jobItems.put(ji.jobId, ji);
+        jobItems.put(ji.getId(), ji);
 
         jobAdded = true; // in case in the middle of negotiating
 
-        log.debug("Moving pickyWorkers {} to idleWorkers: {}", pickyWorkers, idleWorkers);
+        log.debug("Moving all pickyWorkers {} to idleWorkers: {}", pickyWorkers, idleWorkers);
         for (Iterator<String> itr = pickyWorkers.iterator(); itr.hasNext();) {
           idleWorkers.add(itr.next());
           itr.remove();
@@ -185,7 +200,7 @@ public class JobMarket extends AbstractVerticle {
       }
     });
 
-    eb.consumer(addressBase + BUS_ADDR.SET_PROGRESS, (Message<JsonObject> message) -> {
+    eb.consumer(addressBase + BUS_ADDR.SET_PROGRESS, (Message<JobDTO> message) -> {
       log.debug("Received SET_PROGRESS message: {}", message.body());
       JobItem job = getJobItem(message.body());
       job.mergeIn(message.body());
@@ -198,33 +213,36 @@ public class JobMarket extends AbstractVerticle {
       if (job == null) {
         message.fail(-13, "Cannot find job with id=" + jobId);
       } else {
-        message.reply(job.jobJO.copy().put("JOB_STATE", job.state));
+        JobDTO dto = job.jobJO.copy();
+        dto.getParams().put("JOB_STATE", job.state);
+        message.reply(dto);
       }
     });
 
-    eb.consumer(addressBase + BUS_ADDR.PARTLY_DONE, (Message<JsonObject> message) -> {
+    eb.consumer(addressBase + BUS_ADDR.PARTLY_DONE, (Message<JobDTO> message) -> {
       // worker completed its part of the job
       log.debug("Received PARTLY_DONE message: {}", message.body());
       JobItem ji = workerEndedJob(message, JobState.AVAILABLE);
+      log.debug("Partly done: {}", ji.jobJO);
 
-      //String workerAddr = getWorkerAddress(message);
-      asyncNegotiateJobWithNextIdleWorker();//(workerAddr);
+      String workerAddr = getWorkerAddress(message);
+      asyncNegotiateJobWith(workerAddr);
     });
-    eb.consumer(addressBase + BUS_ADDR.DONE, (Message<JsonObject> message) -> {
+    eb.consumer(addressBase + BUS_ADDR.DONE, (Message<JobDTO> message) -> {
       log.debug("Received DONE message: {}", message.body());
       JobItem ji = workerEndedJob(message, JobState.DONE);
 
-      //String workerAddr = getWorkerAddress(message);
-      asyncNegotiateJobWithNextIdleWorker();//(workerAddr);
+      String workerAddr = getWorkerAddress(message);
+      asyncNegotiateJobWith(workerAddr);
 
       if (ji.completionAddr != null) {
         log.debug("Notifying {} that job is done: {}", ji.completionAddr, ji.jobJO);
         vertx.eventBus().send(ji.completionAddr, ji.jobJO.copy());
       }
     });
-    eb.consumer(addressBase + BUS_ADDR.FAIL, (Message<JsonObject> message) -> {
+    eb.consumer(addressBase + BUS_ADDR.FAIL, (Message<JobDTO> message) -> {
       log.info("Received FAIL message: {}", message.body());
-      JsonObject jobJO = message.body();
+      JobDTO jobJO = message.body();
       JobItem job = getJobItem(jobJO);
       int failCount = incrementFailCount(job);
 
@@ -236,8 +254,8 @@ public class JobMarket extends AbstractVerticle {
       }
       JobItem ji = workerEndedJob(message, endState);
 
-      //String workerAddr = getWorkerAddress(message);
-      asyncNegotiateJobWithNextIdleWorker(); //(workerAddr);
+      String workerAddr = getWorkerAddress(message);
+      asyncNegotiateJobWith(workerAddr);
 
       if (endState == JobState.FAILED && ji.failureAddr != null) {
         log.debug("Notifying {} that job failed: {}", ji.failureAddr, ji.jobJO);
@@ -252,18 +270,18 @@ public class JobMarket extends AbstractVerticle {
   }
 
   private String readJobId(Message<Object> message) {
-    String jobId = message.headers().get(JOBID_HEADERATTRIBUTE);
-    if (jobId == null && (message.body() instanceof String))
-      jobId = (String) message.body();
-    return jobId;
+    if (message.body() instanceof String)
+      return (String) message.body();
+    else
+      throw new IllegalArgumentException("Cannot parse jobId from: "+message.body());
   }
 
   public static final String JOB_FAILEDCOUNT_ATTRIBUTE = "_jobFailedCount";
 
   private int incrementFailCount(JobItem ji) {
-    Integer count = ji.jobJO.getInteger(JOB_FAILEDCOUNT_ATTRIBUTE, Integer.valueOf(0));
+    Integer count = ji.jobJO.getParams().getInteger(JOB_FAILEDCOUNT_ATTRIBUTE, Integer.valueOf(0));
     int newCount = count.intValue() + 1;
-    ji.jobJO.put(JOB_FAILEDCOUNT_ATTRIBUTE, newCount);
+    ji.jobJO.getParams().put(JOB_FAILEDCOUNT_ATTRIBUTE, newCount);
     return newCount;
   }
 
@@ -271,17 +289,20 @@ public class JobMarket extends AbstractVerticle {
   private boolean isNegotiating = false;
 
   private void asyncNegotiateJobWithNextIdleWorker() {
+    String idleWorker = Iterables.getFirst(idleWorkers, null);
+    if (idleWorker == null) { // no workers available
+      return;
+    }
+    asyncNegotiateJobWith(idleWorker);
+  }
+  
+  private void asyncNegotiateJobWith(String idleWorker) {
     if (!isNegotiating) {
-      final JsonArray jobList = getAvailableJobs();
-      if (jobList.size() == 0) { // no jobs available
+      final JobListDTO jobList = getAvailableJobsFor(idleWorker);
+      if (jobList.jobs.size() == 0) { // no jobs available
         return;
       }
-
-      String idleWorker = Iterables.getFirst(idleWorkers, null);
-      if (idleWorker == null) { // no workers available
-        return;
-      }
-
+      
       log.info("Negotiating jobs with {}, idleWorkers={}", idleWorker, idleWorkers);
       isNegotiating = true; // make sure all code paths reset this to false
       asyncSendJobsTo(idleWorker, jobList);
@@ -290,11 +311,12 @@ public class JobMarket extends AbstractVerticle {
 
   private boolean jobAdded = false;
 
-  private void asyncSendJobsTo(final String workerAddr, final JsonArray jobList) {
+  private void asyncSendJobsTo(final String workerAddr, final JobListDTO jobList) {
     jobAdded = false;
+    
     log.debug("Sending to {} available jobs={}", workerAddr, jobList);
     DeliveryOptions delivOpt=new DeliveryOptions().setSendTimeout(10000L);
-    vertx.eventBus().send(workerAddr, jobList, delivOpt, (AsyncResult<Message<JsonObject>> selectedJobReply) -> {
+    vertx.eventBus().send(workerAddr, jobList, delivOpt, (AsyncResult<Message<JobDTO>> selectedJobReply) -> {
       //log.debug("reply from worker={}", selectedJobReply.result().headers().get(WORKER_ADDRESS));
       boolean negotiateWithNextIdle = true;
 
@@ -312,7 +334,8 @@ public class JobMarket extends AbstractVerticle {
             // jobItems may have changed by the time this reply is received
             if (jobAdded) {
               log.info("jobList has since changed; sending updated jobList to {}", workerAddr);
-              asyncSendJobsTo(workerAddr, getAvailableJobs());
+              JobListDTO availableJobs = getAvailableJobsFor(workerAddr);
+              asyncSendJobsTo(workerAddr, availableJobs);
               negotiateWithNextIdle = false; // still negotiating with current idleWorker
             } else {
               log.debug("Moving idleWorker to pickyWorkers queue: {}", workerAddr);
@@ -336,28 +359,37 @@ public class JobMarket extends AbstractVerticle {
     });
   }
 
-  private String toString(JsonArray jobList) {
+  private String toString(JobListDTO jobList) {
     StringBuilder sb = new StringBuilder();
-    jobList.forEach(j -> sb.append("\n  ").append(JobItem.getJobId((JsonObject) j)));
+    jobList.getJobs().forEach(j -> sb.append("\n  ").append(j.id));
     return sb.toString();
   }
 
-  private JsonArray getAvailableJobs() {
-    final JsonArray jobList = new JsonArray();
-    jobItems.forEach((k, v) -> {
-      if (v.state == JobState.AVAILABLE) {
-        jobList.add(v.jobJO.copy());
-      }
-    });
+  private JobListDTO getAvailableJobsFor(String workerAddr) {
+    final String jobType=knownWorkers.get(workerAddr).type;
+    List<JobDTO> jobListL = jobItems.entrySet().stream().filter(e->{
+      if (e.getValue().state != JobState.AVAILABLE)
+        return false;
+      return (jobType==null) || jobType.equals(e.getValue().jobJO.getType());
+    }).map( e ->{
+      JobItem ji = e.getValue();
+      JobDTO dto = ji.jobJO.copy();
+      return dto;
+    }).collect(Collectors.toList());
+
+    if(jobListL.size()==0)
+      log.info("No '{}' jobs for: {}", jobType, workerAddr);
+    
+    JobListDTO jobList = new JobListDTO(jobListL);
     return jobList;
   }
 
-  private JobItem workerStartedJob(Message<JsonObject> selectedJobMsg) {
-    JsonObject jobJO = (JsonObject) selectedJobMsg.body();
+  private JobItem workerStartedJob(Message<JobDTO> selectedJobMsg) {
+    JobDTO jobJO = selectedJobMsg.body();
     JobItem job = getJobItem(jobJO);
 
     String workerAddr = getWorkerAddress(selectedJobMsg);
-    log.debug("Started job: worker={} on jobId={}", workerAddr, job.jobId);
+    log.debug("Started job: worker={} on jobId={}", workerAddr, job.getId());
     if (!idleWorkers.remove(workerAddr))
       log.error("Could not remove {} from idleWorkers={}", workerAddr, idleWorkers);
 
@@ -366,7 +398,7 @@ public class JobMarket extends AbstractVerticle {
     return job;
   }
 
-  private JobItem workerEndedJob(Message<JsonObject> jobMsg, JobState newState) {
+  private JobItem workerEndedJob(Message<JobDTO> jobMsg, JobState newState) {
     JobItem job = getJobItem(jobMsg.body());
 
     String workerAddr = getWorkerAddress(jobMsg);
@@ -378,14 +410,20 @@ public class JobMarket extends AbstractVerticle {
     return job;
   }
 
-  private JobItem getJobItem(JsonObject jobJO) {
-    String jobId = JobItem.getJobId(jobJO);
+  private JobItem getJobItem(JobDTO jobJO) {
+    String jobId = jobJO.getId();
     JobItem job = jobItems.get(jobId);
     checkNotNull(job, "Cannot find job with id=" + jobId);
     return job;
   }
 
   ////
+  
+  @RequiredArgsConstructor
+  private static class Worker {
+    final String id;
+    final String type;
+  }
 
   protected static class JobItem {
 
@@ -393,24 +431,16 @@ public class JobMarket extends AbstractVerticle {
       AVAILABLE, STARTED, PROGRESSING, DONE, FAILED
     };
 
-    public static String getJobId(JsonObject jobJO) {
-      return jobJO.getString(JOBID);
-    }
-
     JobItem.JobState state;
-    final String jobId;
     final String completionAddr;
     final String failureAddr;
-    //String workerAddr;
-    final JsonObject jobJO;
     final int retryLimit; // 0 means don't retry
+    final JobDTO jobJO;
 
-    JobItem(Message<?> message) {
-      jobId = message.headers().get(JOBID_HEADERATTRIBUTE);
-      checkNotNull(jobId);
+    JobItem(Message<JobDTO> message) {
       completionAddr = message.headers().get(JOB_COMPLETE_ADDRESS);
       failureAddr = message.headers().get(JOB_FAILURE_ADDRESS);
-      jobJO = ((JsonObject) message.body()).copy();
+      jobJO = ((JobDTO) message.body()).copy();
 
       String retryLimitStr = message.headers().get(JOB_RETRY_LIMIT);
       if (retryLimitStr == null)
@@ -419,22 +449,25 @@ public class JobMarket extends AbstractVerticle {
         retryLimit = Integer.parseInt(retryLimitStr);
 
 
-      String existingJobId = jobJO.getString(JOBID);
-      if (existingJobId == null)
-        jobJO.put(JOBID, jobId);
-      else if (!existingJobId.equals(jobId))
-        throw new IllegalArgumentException("Job should not have attribute: " + JOBID);
+      checkNotNull(jobJO.id);
+      
+//      String existingJobId = jobJO.id;
+//      if (existingJobId == null)
+//        jobJO.id=jobId;
+//      else if (!existingJobId.equals(jobId))
+//        throw new IllegalArgumentException("Job's jobId attribute: "+jobJO.id+" != (msgHeader's jobIdAttrib="+jobId+")");
     }
 
-    public void mergeIn(JsonObject job) {
-      jobJO.mergeIn(job);
+    public String getId() {
+      return jobJO.id;
+    }
+
+    public void mergeIn(JobDTO job) {
+      if(job.params!=null)
+        jobJO.getParams().mergeIn(job.params);
     }
 
   }
-
-  public static final String JOBID = "_jobId";
-
-  private static final String JOBID_HEADERATTRIBUTE = "jobId";
 
   private static final String JOB_COMPLETE_ADDRESS = "jobCompleteAddress";
 
@@ -442,14 +475,13 @@ public class JobMarket extends AbstractVerticle {
 
   private static final String JOB_RETRY_LIMIT = "jobRetryLimit";
 
-  public static DeliveryOptions createProducerHeader(String jobId, String jobCompletionAddress) {
-    return createProducerHeader(jobId, jobCompletionAddress, null, 0);
+  public static DeliveryOptions createProducerHeader(String jobCompletionAddress) {
+    return createProducerHeader(jobCompletionAddress, null, 0);
   }
 
-  public static DeliveryOptions createProducerHeader(String jobId, String jobCompletionAddress,
+  public static DeliveryOptions createProducerHeader(String jobCompletionAddress,
       String jobFailureAddress, int jobRetryLimit) {
     DeliveryOptions opts = new DeliveryOptions();
-    opts.addHeader(JOBID_HEADERATTRIBUTE, jobId);
     if (jobCompletionAddress != null)
       opts.addHeader(JOB_COMPLETE_ADDRESS, jobCompletionAddress);
     if (jobFailureAddress != null)
@@ -459,13 +491,22 @@ public class JobMarket extends AbstractVerticle {
   }
 
   private static final String WORKER_ADDRESS = "workerAddress";
+  private static final String WORKER_JOBTYPE = "workerJobType";
 
-  public static DeliveryOptions createWorkerHeader(String workerAddress) {
-    return new DeliveryOptions().addHeader(WORKER_ADDRESS, workerAddress);
+  public static DeliveryOptions createWorkerHeader(String workerAddress, String workerJobType) {
+    DeliveryOptions opts = new DeliveryOptions()
+        .addHeader(WORKER_ADDRESS, workerAddress);
+    if(workerJobType!=null)
+        opts.addHeader(WORKER_JOBTYPE, workerJobType);
+    return opts;
   }
 
   public static String getWorkerAddress(Message<?> message) {
     return message.headers().get(WORKER_ADDRESS);
+  }
+
+  public static String getWorkerJobType(Message<?> message) {
+    return message.headers().get(WORKER_JOBTYPE);
   }
 
 }

@@ -23,13 +23,7 @@ import net.deelam.graphtools.api.hadoop.HdfsService;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryTinker;
 import net.deelam.vertx.depjobs.DependentJobManager;
 import net.deelam.vertx.inject.VertxRpcHelper;
-import net.deelam.vertx.jobmarket2.JobConsumer;
-import net.deelam.vertx.jobmarket2.JobDTO;
-import net.deelam.vertx.jobmarket2.JobMarket;
-import net.deelam.vertx.jobmarket2.JobProducer;
-import net.deelam.vertx.jobmarket2.ReportingWorker;
-import net.deelam.vertx.jobmarket2.VertxProgressMonitor;
-import net.deelam.vertx.rpc.HdfsSvc;
+import net.deelam.vertx.jobmarket2.*;
 
 @Slf4j
 public class HdfsDoerExample {
@@ -54,7 +48,8 @@ public class HdfsDoerExample {
 
     ///---------  JobConsumer
     {
-      HdfsSvc hdfsSvc = new HdfsSvc();
+      HadoopTitanConfigs ht=new HadoopTitanConfigs(null, null);
+      HdfsServiceImpl hdfsSvc = new HdfsServiceImpl(ht.getHadoopConfig());
       VertxRpcHelper.registerService(vertx, HDFS_ADDRESS, hdfsSvc);
     }
     {

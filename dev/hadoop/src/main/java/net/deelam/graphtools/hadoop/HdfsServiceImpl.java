@@ -18,10 +18,26 @@ import net.deelam.graphtools.api.hadoop.HdfsService;
 @Slf4j
 public class HdfsServiceImpl implements HdfsService {
   
+  private static final String HDFS_SVC_READY_FILE = "hdfsSvcReady.txt";
+  static {
+    File file = new File(HDFS_SVC_READY_FILE);
+    if(file.exists() && !file.delete())
+      log.warn("Could not delete file: {}", file);
+  }
+
   private final HdfsUtils hdfs;
   
   public HdfsServiceImpl(Configuration hadoopConfig) {
     hdfs=new HdfsUtils(hadoopConfig);
+    
+    System.out.println("===================== All HDFS RPC service ready ======================");
+    File file = new File(HDFS_SVC_READY_FILE);
+    try {
+      file.createNewFile();
+      file.deleteOnExit();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 
   @Override

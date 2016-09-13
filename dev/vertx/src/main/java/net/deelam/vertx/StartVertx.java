@@ -33,6 +33,11 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class StartVertx {
+  
+  public static void main(String[] args) {
+    String myIP = guessMyIPv4Address(null);
+    System.out.println(myIP);
+  }
 
   public static String guessMyIPv4Address(String ipPrefix) {
     try {
@@ -43,13 +48,17 @@ public class StartVertx {
             int lastOctet = i.getAddress()[3] & 0xFF; // convert to unsigned int
             log.debug("ip={} [3]={}", i, lastOctet);
             if (lastOctet > 1) { // if last byte is 0 or 1, don't choose it
-              if(ipPrefix==null || i.getHostAddress().startsWith(ipPrefix))
+              if(ipPrefix==null || i.getHostAddress().startsWith(ipPrefix)){
+                //log.debug("returning ip={}", i);
                 return i.getHostAddress();
+              }
             }
           }
         }
       }
+      log.warn("Cannot determine IP address using: {}", NetworkInterface.getNetworkInterfaces());
     } catch (SocketException se) {
+      log.info("Ignoring exception: ", se);
     }
     return null;
   }
@@ -138,7 +147,9 @@ public class StartVertx {
           myIp = guessMyIPv4Address(null);
         } else {
           String ipPrefix = serverIp.substring(0, serverIp.lastIndexOf(".")+1);
-          myIp = guessMyIPv4Address(ipPrefix);
+          myIp = guessMyIPv4Address(ipPrefix); // find an IP address in the same subnet as serverIp
+          if(myIp==null)
+            myIp = guessMyIPv4Address(null);
         }
         if(myIp==null)
           log.warn("Could not determine my IP as a Vertx cluster client");

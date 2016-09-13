@@ -18,8 +18,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.common.util.PropertiesUtil;
 import net.deelam.graphtools.util.ClassLoaderContext;
-import net.deelam.graphtools.util.PropertiesUtils;
 
 @Slf4j
 public final class HadoopConfigurationHelper {
@@ -124,7 +124,7 @@ public final class HadoopConfigurationHelper {
       log.info("Hadoop property file not specified; not loading file.");
     } else {
       try {
-        PropertiesUtils.loadProperties(hadoopPropsFile, hadoopProps);
+        PropertiesUtil.loadProperties(hadoopPropsFile, hadoopProps);
       } catch (IOException e1) {
         log.error("Error when reading " + hadoopPropsFile, e1);
       }

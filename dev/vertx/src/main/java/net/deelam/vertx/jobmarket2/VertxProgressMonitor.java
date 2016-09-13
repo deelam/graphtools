@@ -15,9 +15,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-import net.deelam.graphtools.api.HasProgress;
-import net.deelam.graphtools.api.HasProgress.ProgressState;
-import net.deelam.graphtools.api.ProgressMonitor;
+import net.deelam.common.progress.HasProgress;
+import net.deelam.common.progress.ProgressMonitor;
+import net.deelam.common.progress.HasProgress.ProgressState;
 
 /**
  */

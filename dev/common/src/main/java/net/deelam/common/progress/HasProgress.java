@@ -1,4 +1,4 @@
-package net.deelam.graphtools.api;
+package net.deelam.common.progress;
 
 import java.util.Collections;
 import java.util.HashMap;

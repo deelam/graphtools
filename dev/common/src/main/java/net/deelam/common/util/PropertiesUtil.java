@@ -1,4 +1,4 @@
-package net.deelam.graphtools.util;
+package net.deelam.common.util;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -9,10 +9,11 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Properties;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.java.Log;
 
-@Slf4j
-public class PropertiesUtils {
+@Log
+public class PropertiesUtil {
+  
   public static void loadProperties(String filename, Properties properties) throws FileNotFoundException, IOException {
     File propFile=new File(filename);
     if (!propFile.exists()) { // then look in classpath
@@ -31,7 +32,7 @@ public class PropertiesUtils {
       }
       String includedFiles=properties.getProperty("include");
       if (includedFiles != null){
-        log.info("  Also loading included files: {}", includedFiles);
+        log.info("  Also loading included files: {}"+ includedFiles);
         for (String includedFile : includedFiles.split(",")) {
           Properties includedProps = new Properties();
           loadProperties(includedFile.trim(), includedProps);

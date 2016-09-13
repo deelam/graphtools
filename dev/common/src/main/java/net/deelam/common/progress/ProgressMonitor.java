@@ -1,6 +1,6 @@
-package net.deelam.graphtools.api;
+package net.deelam.common.progress;
 
-import net.deelam.graphtools.api.HasProgress.ProgressState;
+import net.deelam.common.progress.HasProgress.ProgressState;
 
 /**
  * Polls process for status.

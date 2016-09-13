@@ -9,8 +9,8 @@ import javax.inject.Inject;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import net.deelam.graphtools.api.HasProgress;
-import net.deelam.graphtools.api.ProgressMonitor;
+import net.deelam.common.progress.HasProgress;
+import net.deelam.common.progress.ProgressMonitor;
 
 @Slf4j
 @RequiredArgsConstructor(onConstructor = @__(@Inject) )

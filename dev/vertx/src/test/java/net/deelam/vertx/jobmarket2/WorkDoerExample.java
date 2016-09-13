@@ -18,8 +18,8 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.common.progress.HasProgress.ProgressState;
 import net.deelam.graphtools.GraphUri;
-import net.deelam.graphtools.api.HasProgress.ProgressState;
 import net.deelam.graphtools.graphfactories.IdGraphFactoryTinker;
 import net.deelam.vertx.depjobs.DependentJobManager;
 

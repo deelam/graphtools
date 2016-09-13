@@ -64,10 +64,17 @@
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
-		</dependency>
-     <dependency>
+	</dependency>
+
+	<dependency>
+		<groupId>javax.inject</groupId>
+		<artifactId>javax.inject</artifactId>
+		<version>1</version>
+	</dependency>
+    <dependency>
       <groupId>com.google.inject</groupId>
       <artifactId>guice</artifactId>
+      <scope>test</scope>
     </dependency>
 
 	<dependency>
@@ -104,11 +111,11 @@
 		<artifactId>vertx-rpc</artifactId>
 		<version>3.1.1</version>
 	</dependency>
- 	<dependency>
+<!--  	<dependency>
 		<groupId>io.reactivex</groupId>
 		<artifactId>rxjava</artifactId>
 		<version>1.1.9</version>
-	</dependency>
+	</dependency> -->
 <!-- 	<dependency>
 		<groupId>co.paralleluniverse</groupId>
 		<artifactId>quasar-core</artifactId>

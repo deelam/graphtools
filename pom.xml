@@ -116,6 +116,11 @@
       </dependency>
       <dependency>
         <groupId>net.deelam</groupId>
+        <artifactId>common</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.deelam</groupId>
         <artifactId>graphtools-core</artifactId>
         <version>${project.version}</version>
       </dependency>

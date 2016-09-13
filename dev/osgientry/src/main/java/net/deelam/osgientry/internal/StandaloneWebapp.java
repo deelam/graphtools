@@ -6,13 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -20,16 +14,14 @@ import org.osgi.framework.Constants;
 import org.osgi.framework.launch.Framework;
 import org.osgi.framework.launch.FrameworkFactory;
 
+import net.deelam.common.util.Log4jUtil;
+import net.deelam.common.util.PropertiesUtil;
+
 public class StandaloneWebapp {
 
   public static void main(String[] argv) throws Exception {
 
-    if (System.getProperty("log4j.configurationFile") == null && new File("./log4j.xml").exists()) {
-      // set a default if file exist
-      System.out.println("Found ./log4j.xml file.  Setting log4j.configurationFile to it.");
-      System.setProperty("log4j.configurationFile", "./log4j.xml");
-    }
-    checkForLog4jFile();
+    Log4jUtil.loadXml();
 
     try {
       Map<String, String> config = new HashMap<String, String>();
@@ -52,7 +44,8 @@ public class StandaloneWebapp {
       // allows default configs to be overwritten from a file
       String propFile = "osgi.ini";
       try {
-        Properties properties = OsgiUtils.loadProperties(propFile, new Properties());
+        Properties properties = new Properties();
+        PropertiesUtil.loadProperties(propFile, properties);
         for (Map.Entry<Object, Object> entry : properties.entrySet()) {
           config.put(entry.getKey().toString(), entry.getValue().toString());
         }
@@ -146,21 +139,6 @@ public class StandaloneWebapp {
       return true;
     } catch (Exception e) {
       return false;
-    }
-  }
-
-  private static void checkForLog4jFile() {
-    String logConfigFile = System.getProperty("log4j.configurationFile");
-    if (logConfigFile != null) { // if property set, then check that file can be found
-      System.out.println("  Checking System property: log4j.configurationFile=" + logConfigFile);
-      ClassLoader cl = ClassLoader.getSystemClassLoader();
-      if (cl.getResource(logConfigFile) == null) {
-        URL[] urls = ((URLClassLoader) cl).getURLs();
-        System.err.println("  !!! Could not find logging config file " + logConfigFile
-            + " in classpath: " + Arrays.toString(urls));
-      } else {
-        System.out.println("    Found in classpath: " + logConfigFile);
-      }
     }
   }
 

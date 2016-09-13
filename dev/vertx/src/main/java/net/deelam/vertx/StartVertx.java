@@ -140,8 +140,10 @@ public class StartVertx {
           String ipPrefix = serverIp.substring(0, serverIp.lastIndexOf(".")+1);
           myIp = guessMyIPv4Address(ipPrefix);
         }
-      }      
-      ipPrefix = myIp.substring(0, myIp.lastIndexOf(".")+1);
+        if(myIp==null)
+          log.warn("Could not determine my IP as a Vertx cluster client");
+      }
+      ipPrefix = serverIp.substring(0, serverIp.lastIndexOf(".")+1);
       return this;
     }
 
@@ -162,9 +164,12 @@ public class StartVertx {
     }
     
     String clientSubnet = ipInfo.ipPrefix + "0..255"; // TODO: 6: dont assume this subnet
-    Collection<String> initIpAddr=Arrays.asList(clientSubnet+":"+ipInfo.serverPort+".."+ipInfo.getEndServerPort());
+    Collection<String> initIpAddr=Arrays.asList(
+        ipInfo.serverIp+":"+ipInfo.serverPort,
+        clientSubnet+":"+ipInfo.serverPort+".."+ipInfo.getEndServerPort());
     log.info("Using {} and initIpAddr={}", ipInfo, initIpAddr);
     ipFinder.setAddresses(initIpAddr);
+    //ipFinder.setMulticastGroup(ipInfo.serverIp);
     spi.setIpFinder(ipFinder);
     cfg.setDiscoverySpi(spi);
     cfg.setClientMode(!ipInfo.isServer);

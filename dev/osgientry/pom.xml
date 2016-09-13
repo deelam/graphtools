@@ -10,7 +10,10 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <artifactId>osgientry</artifactId>
   <packaging>bundle</packaging>
   <name>OSGi entry</name>
+  <!-- Usage: put in 0-framework subdirectory and run StandaloneWebapp to load OSGI for web apps -->
   <properties>
+  <!-- inline dependencies to reduce transient dep problem -->
+		<bundle.embedDependency>common;inline=true</bundle.embedDependency>
   </properties>
   <dependencies>
       <dependency>       
@@ -20,6 +23,10 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         <scope>provided</scope>         
         <optional>true</optional>        
       </dependency>
+		<dependency>
+			<groupId>net.deelam</groupId>
+			<artifactId>common</artifactId>
+		</dependency>
   </dependencies>
   <build>
     <plugins />

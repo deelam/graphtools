@@ -13,7 +13,7 @@ import org.apache.commons.configuration.ConfigurationException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.deelam.graphtools.util.PropertiesUtils;
+import net.deelam.common.util.PropertiesUtil;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -32,6 +32,14 @@ public class HadoopTitanConfigs {
   
   final String titanPropsFile;
   final String hadoopPropsFile;
+  
+  public HadoopTitanConfigs(){
+    this(null, null);
+  }
+  public HadoopTitanConfigs(String hadoopPropFile){
+    this(null, hadoopPropFile);
+  }
+  
   private HadoopConfigurationHelper helper = new HadoopConfigurationHelper();
 
   public void loadConfigs(String titanTablename) throws ConfigurationException, FileNotFoundException, IOException {
@@ -59,7 +67,7 @@ public class HadoopTitanConfigs {
       titanConfig = new BaseConfiguration();
       if (titanPropsFile != null) {
         Properties titanProps = new Properties();
-        PropertiesUtils.loadProperties(titanPropsFile, titanProps);
+        PropertiesUtil.loadProperties(titanPropsFile, titanProps);
         for (Entry<Object, Object> e : titanProps.entrySet()) {
           titanConfig.setProperty((String) e.getKey(), e.getValue());
         }

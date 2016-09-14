@@ -27,4 +27,11 @@
 			</properties>
 		</profile>
 	</profiles>
+	<dependencies>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<scope>provided</scope><!-- so that it is not included as dependency -->
+		</dependency>
+	</dependencies>
 </project>

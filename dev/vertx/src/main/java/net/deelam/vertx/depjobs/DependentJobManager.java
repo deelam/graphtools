@@ -415,7 +415,8 @@ public class DependentJobManager {
             synchronized (map) {
               JobDTO bodyJO=reply.result().body();
               //job = Json.decodeValue(bodyJO.toString(), DependentJob.class);
-              bodyJO.getParams().forEach(e->map.put(e.getKey(), e.getValue()));
+              //Do we need to do this?: bodyJO.getRequest().forEach(e->map.put(e.getKey(), e.getValue()));
+              //new JsonObject(Json.encode(bodyJO.getRequest()))
               map.notify();
             }
           });

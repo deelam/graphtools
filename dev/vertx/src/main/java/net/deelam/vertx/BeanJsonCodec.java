@@ -1,5 +1,7 @@
 package net.deelam.vertx;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 
 import io.vertx.core.buffer.Buffer;
@@ -10,13 +12,29 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Reminder: All bean classes and nested classes of fields must have no-arg constructor (which can be private)
+ * @author dnlam
+ */
 @RequiredArgsConstructor
 @Slf4j
 public class BeanJsonCodec<C> implements MessageCodec<C,C> {
   
+  static Map<Class<?>,EventBus> eventBuses=new HashMap<>();
   public static <C> void register(EventBus eb, Class<C> beanClass){
-    eb.registerDefaultCodec(beanClass, new BeanJsonCodec<C>(beanClass));
+    if(eventBuses.containsKey(beanClass))
+      log.info("Already registered BeanJsonCodec<{}> with {}; skipping registration", beanClass, eb);
+    else {
+      try{
+        // throws error if already registered
+        eb.registerDefaultCodec(beanClass, new BeanJsonCodec<C>(beanClass));
+        eventBuses.put(beanClass, eb);
+      }catch(Exception e){
+        log.error("", e); // log it and keep going
+      }
+    }
   }
+  
   ///
   
   private final Class<C> beanClass;
@@ -43,16 +61,17 @@ public class BeanJsonCodec<C> implements MessageCodec<C,C> {
 
   @Override
   public C decodeFromWire(int pos, Buffer buffer) {
-    log.info("Decoding {}", buffer);
     // My custom message starting from this *pos* of buffer
     int _pos = pos;
 
     // Length of JSON
     int length = buffer.getInt(_pos);
+    log.info("Decoding buffer of length={}", length);
 
     // Get JSON string by it`s length
     // Jump 4 because getInt() == 4 bytes
     String jsonStr = buffer.getString(_pos+=4, _pos+=length);
+    log.info("Decoding {}", jsonStr);
     C jobDTO = Json.decodeValue(jsonStr, beanClass);
 
     // We can finally create custom message object

@@ -9,6 +9,7 @@ import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.vertx.VerticleUtils;
 import net.deelam.vertx.jobmarket2.JobMarket.BUS_ADDR;
@@ -19,6 +20,7 @@ import net.deelam.vertx.jobmarket2.JobMarket.BUS_ADDR;
  */
 @RequiredArgsConstructor
 @Slf4j
+@ToString
 public class JobProducer extends AbstractVerticle {
   private final String serviceType;
   
@@ -31,7 +33,7 @@ public class JobProducer extends AbstractVerticle {
 
   @Override
   public void start() throws Exception {
-    log.info("Ready: " + this +" deploymentID="+deploymentID());
+    log.info("Ready: deploymentID={} this={}", deploymentID(), this);
     
     VerticleUtils.announceClientType(vertx, serviceType, msg->{
       jmPrefix=msg.body();

@@ -80,10 +80,10 @@ public class JobMarket2Test {
     public Boolean apply(JobDTO job) {
       boolean success=true; //++count % 2 == 0;
       try {
-        job.getParams().put("progress", "10%");
+        //job.getParams().put("progress", "10%");
         cons.sendJobProgress();
         Thread.sleep(2000);
-        job.getParams().put("progress2", "50%");
+        //job.getParams().put("progress2", "50%");
         cons.sendJobProgress();
         prod.getProgress(jobId, reply -> {
           if(reply.succeeded())
@@ -93,7 +93,7 @@ public class JobMarket2Test {
         });
         if(success){
           Thread.sleep(2000);
-          job.getParams().put("progress", "100%");
+          //job.getParams().put("progress", "100%");
           cons.sendJobProgress();
         }
       } catch (InterruptedException e) {
@@ -122,14 +122,14 @@ public class JobMarket2Test {
 
     {
       JobDTO job = new JobDTO("id-A",jobTypeA);
-      job.getParams().put("a", "aaaa");
+      //job.getParams().put("a", "aaaa");
       log.info("Adding job {}", job);
       prod.addJob(job);
     }
 
     {
       JobDTO jobB = new JobDTO("id-B",jobTypeB);
-      jobB.getParams().put("b", "bbbb");
+      //jobB.getParams().put("b", "bbbb");
       log.info("Adding job {}", jobB);
       prod.addJob(jobB);
     }

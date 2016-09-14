@@ -24,6 +24,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         <optional>true</optional>        
       </dependency>
 		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<scope>provided</scope><!-- so that it is not included as dependency -->
+		</dependency>
+		<dependency>
 			<groupId>net.deelam</groupId>
 			<artifactId>common</artifactId>
 		</dependency>

@@ -58,10 +58,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <dependencies>
         <dependency>
           <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-api</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.slf4j</groupId>
           <artifactId>slf4j-log4j12</artifactId>
         </dependency>
         <dependency>

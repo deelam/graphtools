@@ -17,6 +17,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.common.Pojo;
 import net.deelam.common.progress.HasProgress.ProgressState;
 import net.deelam.graphtools.GraphUri;
 import net.deelam.graphtools.api.hadoop.HdfsService;
@@ -99,8 +100,13 @@ public class HdfsDoerExample {
 
   @Accessors(chain = true)
   @Data
-  static class Request {
+  static class Request implements Pojo<Request>{
     String id;
+
+    @Override
+    public Request copy() {
+      return new Request().setId(id);
+    }
   }
 
   @RequiredArgsConstructor
@@ -114,7 +120,7 @@ public class HdfsDoerExample {
     void submit() {
       JobDTO job = new JobDTO("jsonJobId", JOB_TYPE).setRequesterAddr(jobListenerAddr)
           .setProgressPollInterval(1)
-          .encodeParams(new Request().setId("reqId1"));
+          .setRequest(new Request().setId("reqId1"));
       JobDTO job2 = new JobDTO("jsonJobId2", JOB_TYPE).setRequesterAddr(jobListenerAddr)
           .encodeParams(new Request().setId("reqId2"));
       if (jobProducer == null) {

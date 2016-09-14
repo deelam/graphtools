@@ -10,11 +10,14 @@ import java.util.function.Function;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import net.deelam.vertx.BeanJsonCodec;
+import net.deelam.vertx.PojoTypeInfoMixIn;
 import net.deelam.vertx.VerticleUtils;
 import net.deelam.vertx.jobmarket2.JobMarket.BUS_ADDR;
 
@@ -35,10 +38,16 @@ public class JobConsumer extends AbstractVerticle {
   @Override
   public void start() throws Exception {
     String myAddr = deploymentID();
-    log.info("JobConsumer ready: myAddr={}: {}", myAddr, this.getClass());
+    log.info("Ready: deploymentID={} this={}", deploymentID(), this);
+    
+    EventBus eb = vertx.eventBus();
+    PojoTypeInfoMixIn.register();
+    BeanJsonCodec.register(eb, JobDTO.class);
+    BeanJsonCodec.register(eb, JobListDTO.class);
+
     deliveryOptions = JobMarket.createWorkerHeader(myAddr, jobType);
 
-    vertx.eventBus().consumer(myAddr, jobListHandler);
+    eb.consumer(myAddr, jobListHandler);
 
     VerticleUtils.announceClientType(vertx, serviceType, msg -> {
       jmPrefix = msg.body();
@@ -115,7 +124,7 @@ public class JobConsumer extends AbstractVerticle {
   }
   
 
-  public static final String IS_PARTLY_DONE = "isPartlyDone";
+  private static final String IS_PARTLY_DONE = "isPartlyDone";
 
   @Setter
   private Handler<Message<JobListDTO>> jobListHandler = msg -> {
@@ -132,9 +141,9 @@ public class JobConsumer extends AbstractVerticle {
       threadPool.execute(() -> {
         try {
           if (worker.apply(pickedJob)) {
-            if (pickedJob.getParams().getBoolean(IS_PARTLY_DONE, false).booleanValue())
-              jobPartlyDone(); // creates new conversation
-            else
+//            if (pickedJob.getParams().getBoolean(IS_PARTLY_DONE, false).booleanValue())
+//              jobPartlyDone(); // creates new conversation
+//            else
               jobDone(); // creates new conversation
           } else {
             jobFailed(); // creates new conversation

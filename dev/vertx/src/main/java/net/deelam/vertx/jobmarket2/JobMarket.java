@@ -16,8 +16,10 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.vertx.BeanJsonCodec;
+import net.deelam.vertx.PojoTypeInfoMixIn;
 import net.deelam.vertx.VerticleUtils;
 import net.deelam.vertx.jobmarket2.JobMarket.JobItem.JobState;
 
@@ -52,6 +54,7 @@ import net.deelam.vertx.jobmarket2.JobMarket.JobItem.JobState;
  * @author dd
  */
 @Slf4j
+@ToString
 public class JobMarket extends AbstractVerticle {
   private final String serviceType;
 
@@ -110,7 +113,7 @@ public class JobMarket extends AbstractVerticle {
     initAddressPrefix();
 
     EventBus eb = vertx.eventBus();
-    
+    PojoTypeInfoMixIn.register();
     BeanJsonCodec.register(eb, JobDTO.class);
     BeanJsonCodec.register(eb, JobListDTO.class);
 
@@ -215,7 +218,7 @@ public class JobMarket extends AbstractVerticle {
         message.fail(-13, "Cannot find job with id=" + jobId);
       } else {
         JobDTO dto = job.jobJO.copy();
-        dto.getParams().put("JOB_STATE", job.state);
+        //dto.getParams().put("JOB_STATE", job.state);
         message.reply(dto);
       }
     });
@@ -267,7 +270,7 @@ public class JobMarket extends AbstractVerticle {
     // announce after setting eb.consumer
     VerticleUtils.announceServiceType(vertx, serviceType, addressBase);
 
-    log.info("Ready: " + this + " addressPrefix=" + addressBase);
+    log.info("Ready: addressBase={} this={}", addressBase, this);
   }
 
   private String readJobId(Message<Object> message) {
@@ -277,13 +280,15 @@ public class JobMarket extends AbstractVerticle {
       throw new IllegalArgumentException("Cannot parse jobId from: "+message.body());
   }
 
-  public static final String JOB_FAILEDCOUNT_ATTRIBUTE = "_jobFailedCount";
+  private static final String JOB_FAILEDCOUNT_ATTRIBUTE = "_jobFailedCount";
 
   private int incrementFailCount(JobItem ji) {
-    Integer count = ji.jobJO.getParams().getInteger(JOB_FAILEDCOUNT_ATTRIBUTE, Integer.valueOf(0));
-    int newCount = count.intValue() + 1;
-    ji.jobJO.getParams().put(JOB_FAILEDCOUNT_ATTRIBUTE, newCount);
-    return newCount;
+    ji.jobFailedCount+=1;
+    return ji.jobFailedCount;
+//    Integer count = ji.jobJO.getParams().getInteger(JOB_FAILEDCOUNT_ATTRIBUTE, Integer.valueOf(0));
+//    int newCount = count.intValue() + 1;
+//    ji.jobJO.getParams().put(JOB_FAILEDCOUNT_ATTRIBUTE, newCount);
+//    return newCount;
   }
 
   //negotiate with one worker at a time so workers don't choose the same job
@@ -436,6 +441,7 @@ public class JobMarket extends AbstractVerticle {
     final String completionAddr;
     final String failureAddr;
     final int retryLimit; // 0 means don't retry
+    int jobFailedCount=0;
     final JobDTO jobJO;
 
     JobItem(Message<JobDTO> message) {
@@ -464,8 +470,8 @@ public class JobMarket extends AbstractVerticle {
     }
 
     public void mergeIn(JobDTO job) {
-      if(job.params!=null)
-        jobJO.getParams().mergeIn(job.params);
+//      if(job.params!=null)
+//        jobJO.getParams().mergeIn(job.params);
     }
 
   }

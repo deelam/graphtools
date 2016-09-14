@@ -1,67 +1,73 @@
 package net.deelam.vertx.jobmarket2;
 
 import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
+import lombok.AccessLevel;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
+import net.deelam.common.Pojo;
 
 @Accessors(chain=true)
-@RequiredArgsConstructor
+@NoArgsConstructor(access=AccessLevel.PRIVATE)
 @Data
 public class JobDTO {
-  final String id;
-  final String type;
+  String id;
+  String type;
+  public JobDTO(String id, String type){
+    this.id=id;
+    this.type=type;
+  }
   
   String inputPath, outputPath;
   
   String requesterAddr; // Vertx eventbus address; job worker can register itself to this address
   int progressPollInterval;
 
-  String paramsClassname;
-  JsonObject params; // job-specific parameters
+  Pojo<?> request; // job-specific parameters
 
   public JobDTO copy() {
     JobDTO dto = new JobDTO(id,type)
         .setInputPath(inputPath).setOutputPath(outputPath)
         .setRequesterAddr(requesterAddr)
         .setProgressPollInterval(progressPollInterval)
-        .setParamsClassname(paramsClassname);
+        ;
 
-    if (params != null)
-      dto.params = params.copy();
+    if (request != null)
+      dto.request = request.copy();
 
     return dto;
   }
   
-  public JsonObject getParams() {
-    if (params == null)
-      params=new JsonObject();
-    return params;
-  }
+//  public JsonObject getParams() {
+//    if (params == null)
+//      params=new JsonObject();
+//    return params;
+//  }
   
-  public JobDTO encodeParams(Object obj){
-    if(params!=null)
-      throw new IllegalStateException("Params already set! "+params);
-    if(obj instanceof JsonObject)
-      params=((JsonObject) obj).copy();
-    else{
-      paramsClassname=obj.getClass().getName();
-      params=new JsonObject(Json.encode(obj));
-    }
-    return this;
+  public JobDTO encodeParams(Pojo obj){
+    return setRequest(obj);
+//    if(params!=null)
+//      throw new IllegalStateException("Params already set! "+params);
+//    params=params.copy();
+//    if(obj instanceof JsonObject)
+//    else{
+//      
+//      paramsClassname=obj.getClass().getName();
+//      params=new JsonObject(Json.encode(obj));
+//    }
+//    return this;
   }
 
   @SuppressWarnings("unchecked")
-  public <C> C decodeParams(ClassLoader cl) throws DecodeException, ClassNotFoundException {
-    if (params == null)
+  public <C extends Pojo> C decodeParams(ClassLoader cl) throws DecodeException, ClassNotFoundException {
+    if (request == null)
       return null;
-    if(paramsClassname==null){
-      return (C) params;
-    } else {
-      return (C) Json.decodeValue(params.encode(), cl.loadClass(paramsClassname));
-    }
+    return (C) request;
+//    if(paramsClassname==null){
+//      return (C) params;
+//    } else {
+//      return (C) Json.decodeValue(params.encode(), cl.loadClass(paramsClassname));
+//    }
   }
 
 

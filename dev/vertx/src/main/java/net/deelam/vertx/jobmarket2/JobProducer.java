@@ -64,12 +64,20 @@ public class JobProducer extends AbstractVerticle {
   }
 
   private void waitUntilReady() {
+    int count=0;
     while (!isReady())
       try {
+        ++count;
         log.info("Waiting for jobProducer to find jobMarket");
         Thread.sleep(1000); // wait until connected to jobMarket
+        if(count%10==0){
+          log.info("Re-trying to announceClient");
+          start();
+        }
       } catch (InterruptedException e) {
         log.warn("Interrupted while waiting",e);
+      } catch (Exception e) {
+        log.error("Error when re-announcing client", e);
       }
   }
 

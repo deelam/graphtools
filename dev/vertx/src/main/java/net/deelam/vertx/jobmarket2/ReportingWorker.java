@@ -31,7 +31,10 @@ public class ReportingWorker implements Function<JobDTO, Boolean>, HasProgress {
       doer.accept(job);
       return true;
     } catch (Exception e) {
-      e.printStackTrace();
+      log.error("Error during job processing", e);
+      ProgressState state = getProgress();
+      if(state.getPercent()>0)
+        log.warn("Should set percent to negative! {}", state);
       return false;
     }
   }

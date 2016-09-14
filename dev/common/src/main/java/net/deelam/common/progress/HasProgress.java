@@ -29,5 +29,14 @@ public interface HasProgress {
       this.message = message;
     }
 
+    public ProgressState setFailed(Throwable e) {
+      if(getPercent()==0)
+        setPercent(-1);
+      else if(getPercent()>0)
+        setPercent(-getPercent());
+      setMessage(e.getMessage());
+      return this;
+    }
+
   }
 }

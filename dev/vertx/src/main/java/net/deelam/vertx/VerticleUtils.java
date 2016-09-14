@@ -143,10 +143,10 @@ public final class VerticleUtils {
    * @return client's inbox event bus address
    */
   public synchronized static String announceClientType(Vertx vertx, String serviceType, Handler<Message<String>> serverRespHandler){
-    log.info("Announcing client of serviceType={} on vertx={}", serviceType, vertx);
+    log.info("Announcing client of serviceType={} on vertx={} with handler={}", serviceType, vertx, serverRespHandler);
     
     vertx.eventBus().consumer(YP_ADDRESS_PREFIX+"servers."+serviceType, (Message<String> msg) ->{
-      log.debug("Got server broadcast: {}", msg.body());
+      log.debug("Got server broadcast: serverAddr={}", msg.body());
       serverRespHandler.handle(msg); 
     }); // handle server's broadcast
     

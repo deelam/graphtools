@@ -57,8 +57,8 @@ public class DependentJobManager {
         jobProd.removeJob(jobId, null);
       DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
       log.debug("all jobs: {}", this);
-      log.info("Done jobId={} \n {}", jobId, toStringRemainingJobs(DependentJobFrame.STATE_PROPKEY));
       jobDone(jobV);
+      log.info("Done jobId={} \n {}", jobId, toStringRemainingJobs(DependentJobFrame.STATE_PROPKEY));
     });
     jobProd.addJobFailureHandler( (Message<JobDTO> msg) -> {
       log.info("==========> Job failed: {}", msg.body());
@@ -67,8 +67,8 @@ public class DependentJobManager {
         jobProd.removeJob(jobId, null);
       DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
       log.debug("all jobs: {}", this);
-      log.info("Failed jobId={} \n {}", jobId, toStringRemainingJobs(DependentJobFrame.STATE_PROPKEY));
       jobFailed(jobV);
+      log.info("Failed jobId={} \n {}", jobId, toStringRemainingJobs(DependentJobFrame.STATE_PROPKEY));
     });
   }
 

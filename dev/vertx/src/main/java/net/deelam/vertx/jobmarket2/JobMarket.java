@@ -124,12 +124,12 @@ public class JobMarket extends AbstractVerticle {
       }
       
       if (knownWorkers.containsKey(workerAddr))
-        log.debug("Worker already registered: {}", workerAddr);
+        log.info("Worker already registered: {}", workerAddr);
       else 
         knownWorkers.put(workerAddr, new Worker(workerAddr, workerType));
       
       if (idleWorkers.contains(workerAddr))
-        log.debug("Worker already registered and is idle: {}", workerAddr);
+        log.info("Worker already registered and is idle: {}", workerAddr);
       else if (!idleWorkers.add(workerAddr))
         log.error("Could not add {} to idleWorkers={}", workerAddr, idleWorkers);
 
@@ -166,6 +166,7 @@ public class JobMarket extends AbstractVerticle {
         }
       }
       if (addJob) {
+        log.info("Adding job: {}", ji);
         message.reply(OK_REPLY);
         jobItems.put(ji.getId(), ji);
 

@@ -7,6 +7,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.FileAlreadyExistsException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -179,6 +180,16 @@ public final class HdfsUtils {
       return fs.exists(new Path(path));
     }
   }
+  
+  public Path makeQualified(String path) throws IOException{
+    return makeQualified(new Path(path));
+  }
+  
+  public Path makeQualified(Path path) throws IOException{
+    try (FileSystem fs = FileSystem.get(hadoopConf)) {
+      return fs.makeQualified(path);
+    }
+  }
 
   public Path uploadFile(File srcFile, Path dest, boolean overwrite) throws IOException {
     if(!srcFile.exists())
@@ -198,7 +209,7 @@ public final class HdfsUtils {
             return copyIntoDirectory(fs, src, dest, overwrite);  // tested
           } else { // dest is a file
             // even if overwrite=true, fs.copyFromLocalFile() throws FileAlreadyExistsException
-            throw new IOException("Destination file exists: "+dest); // tested
+            throw new FileAlreadyExistsException("Destination file exists: "+dest); // tested
           }
         } else {
           log.info("Copying source directory to new directory: {}", dest);
@@ -214,7 +225,7 @@ public final class HdfsUtils {
               log.info("Destination file exists; deleting existing file and copying source file: {}", dest);
               return copy(fs, src, dest, overwrite); // tested
             }else{
-              throw new IOException("Destination file exists: "+dest); // tested
+              throw new FileAlreadyExistsException("Destination file exists: "+dest); // tested
             }
           }
         } else {

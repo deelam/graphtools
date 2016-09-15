@@ -11,40 +11,42 @@ import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.common.util.PropertiesUtil;
 
-@RequiredArgsConstructor
 @Slf4j
-public class HadoopTitanConfigs {
+public class HadoopTitanConfigs extends HadoopConfigs{
   
   public HadoopTitanConfigs copy(){
     HadoopTitanConfigs copy=new HadoopTitanConfigs(titanPropsFile, hadoopPropsFile);
     if(titanConfig!=null)
       copy.titanConfig=(BaseConfiguration) titanConfig.clone();
-    if(hadoopConfig!=null) 
-      copy.hadoopConfig=new org.apache.hadoop.conf.Configuration(hadoopConfig);
-    if(minHadoopConfig!=null) 
-      copy.minHadoopConfig=new org.apache.hadoop.conf.Configuration(minHadoopConfig);
+    super.copy(copy);
     return copy;
   }
   
   final String titanPropsFile;
-  final String hadoopPropsFile;
   
   public HadoopTitanConfigs(){
     this(null, null);
   }
-  public HadoopTitanConfigs(String hadoopPropFile){
-    this(null, hadoopPropFile);
+  public HadoopTitanConfigs(String titanPropFile, String hadoopPropFile){
+    super(hadoopPropFile);
+    titanPropsFile=titanPropFile;
   }
   
-  private HadoopConfigurationHelper helper = new HadoopConfigurationHelper();
-
+  @Override
+  public void loadConfigs() {
+    super.loadConfigs();
+    try {
+      getTitanConfig(null);
+    } catch (ConfigurationException | IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
   public void loadConfigs(String titanTablename) throws ConfigurationException, FileNotFoundException, IOException {
     /// load all configs
-    getHadoopConfig();
+    super.loadConfigs();
     getTitanConfig(titanTablename);
   }
 
@@ -103,42 +105,6 @@ public class HadoopTitanConfigs {
     }
 
     return titanConfig;
-  }
-
-  public org.apache.hadoop.conf.Configuration getHadoopConfig() {
-    try {
-      return getMinimalHadoopConfig();
-    } catch (ConfigurationException e) {
-      throw new RuntimeException(e);
-    } 
-  }
-  
-  private org.apache.hadoop.conf.Configuration hadoopConfig = null;
-  org.apache.hadoop.conf.Configuration getAllHadoopConfig() throws ConfigurationException{
-    if (hadoopConfig == null) {
-      hadoopConfig = helper.loadHadoopConfig(hadoopPropsFile);
-    }
-    return hadoopConfig;
-  }
-  
-  private org.apache.hadoop.conf.Configuration minHadoopConfig = null;
-  org.apache.hadoop.conf.Configuration getMinimalHadoopConfig() throws ConfigurationException{
-    if (minHadoopConfig == null) {
-      minHadoopConfig = helper.loadMinimalHadoopConfig(hadoopPropsFile);
-    }
-    return minHadoopConfig;
-  }
-
-  private HdfsUtils hdfsUtils;
-  public HdfsUtils getHdfsUtils() {
-    if (hdfsUtils == null) {
-      try {
-        hdfsUtils = new HdfsUtils(getMinimalHadoopConfig());
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-    }
-    return hdfsUtils;
   }
 
   ///

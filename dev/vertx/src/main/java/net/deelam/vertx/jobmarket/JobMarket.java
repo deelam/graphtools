@@ -244,7 +244,24 @@ public class JobMarket extends AbstractVerticle {
         vertx.eventBus().send(ji.failureAddr, ji.jobJO.copy());
       }
     });
-
+    
+    vertx.setPeriodic(1000, id->{
+      long availJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.AVAILABLE)).count();
+      long startedJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.STARTED)).count();
+      long progessingJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.PROGRESSING)).count();
+      if(availJobCount+startedJobCount+progessingJobCount==0)
+        return;
+      long doneJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.DONE)).count();
+      long failedJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.FAILED)).count();
+      log.info(availJobCount+" availJobs -> "+
+          startedJobCount+" .. "+
+          progessingJobCount+" -> "+
+          doneJobCount+" doneJobs, "+
+          failedJobCount+" failed \t:: "+
+          idleWorkers.size()+" idle vs "+
+          pickyWorkers.size()+" picky \t");
+    });
+    
     // announce after setting eb.consumer
     VerticleUtils.announceServiceType(vertx, serviceType, addressBase);
 

@@ -32,7 +32,7 @@ import net.deelam.graphtools.hadoop.HdfsUtils;
 public class SparkJobConfig {
   public static final String YARN_CLUSTER = "yarn-cluster"; //possible value for sparkMaster
   public static final String LOCAL = "local[*]"; //possible value for sparkMaster
-  
+
   Configuration config;
   String sparkMaster = LOCAL;
   String deployMode;
@@ -42,9 +42,9 @@ public class SparkJobConfig {
   String appJar;
   String mainClass;
   boolean verbose = true; // verbosity of spark-submit script
-  String log4jFile;  // affects application logging
+  String log4jFile; // affects application logging
   Configuration staticProps = new BaseConfiguration();
-  
+
   HadoopConfigs htConfigs = null;
 
   String appName;
@@ -55,7 +55,7 @@ public class SparkJobConfig {
   public boolean useHadoop() {
     return YARN_CLUSTER.equals(sparkMaster);
   }
-  
+
   public boolean isReady() {
     String[] fields = {sparkMaster, appNamePrefix, appJar, mainClass, appName};
     for (int i = 0; i < fields.length; ++i)
@@ -64,16 +64,16 @@ public class SparkJobConfig {
         return false;
       }
 
-    Map<?,?>[] maps = {classpath, staticFilesForJob};
+    Map<?, ?>[] maps = {classpath, staticFilesForJob};
     for (int i = 0; i < maps.length; ++i)
       if (maps[i].isEmpty()) {
         log.warn("Map {} is empty!", i);
         return false;
       }
-    
-    String[] filenames={ appJar };
-    for (int i = 0; i < filenames.length; ++i){
-      if(!new File(filenames[i]).exists()){
+
+    String[] filenames = {appJar};
+    for (int i = 0; i < filenames.length; ++i) {
+      if (!new File(filenames[i]).exists()) {
         log.warn("File {} does not exist!", filenames[i]);
         return false;
       }
@@ -105,34 +105,36 @@ public class SparkJobConfig {
   public void setInputParams(String key, String val) {
     inputParams.put(key, val);
   }
-  
+
   public String getInputParam(String key) {
     return inputParams.get(key);
   }
 
   public void setLog4j(String log4jFile) {
-    this.log4jFile=log4jFile;
-    if(log4jFile==null)
+    this.log4jFile = log4jFile;
+    if (log4jFile == null)
       return;
-    if(!new File(log4jFile).exists())
+    if (!new File(log4jFile).exists())
       log.warn("Log4j file not found: {}", log4jFile);
     else {
       addToFileArtifacts(log4jFile);
-      staticProps.addProperty("spark.driver.extraJavaOptions", "-Dlog4j.configuration="+log4jFile); // so log4j will load file
+      staticProps.addProperty("spark.driver.extraJavaOptions", "-Dlog4j.configuration=" + log4jFile); // so log4j will load file
     }
   }
 
   static final String INPUT_FILES_TO_COPY = "spark.file.artifacts";
+
   // so it can be copied to each spark executors
   public void addToFileArtifacts(String requiredFile) {
     staticProps.addProperty(INPUT_FILES_TO_COPY, requiredFile);
   }
 
-  public org.apache.hadoop.fs.Path copyToHdfs(HadoopConfigs htConfigs, String localFile, String destDirStr, boolean overwrite) throws IOException{
+  public org.apache.hadoop.fs.Path copyToHdfs(HadoopConfigs htConfigs, String localFile, String destDirStr,
+      boolean overwrite) throws IOException {
     HdfsUtils hdfs = htConfigs.getHdfsUtils();
     org.apache.hadoop.fs.Path destDir = hdfs.ensureDirExists(destDirStr); //new org.apache.hadoop.fs.Path(destDirUri);
     org.apache.hadoop.fs.Path dstPath = hdfs.uploadFile(new File(localFile), destDir, overwrite);
-	return dstPath;
+    return dstPath;
   }
 
   @SuppressWarnings("unchecked")
@@ -142,13 +144,13 @@ public class SparkJobConfig {
     sj.config = config;
 
     int dotIndex = filename.lastIndexOf('.');
-    String filebasename=filename;
-    if(dotIndex>1)
-      filebasename=filename.substring(0, dotIndex);
-    
+    String filebasename = filename;
+    if (dotIndex > 1)
+      filebasename = filename.substring(0, dotIndex);
+
     sj.appNamePrefix = config.getString("appNamePrefix", filebasename);
-    long uniqSuffix=System.currentTimeMillis();
-    sj.appName = config.getString("appName", sj.appNamePrefix+uniqSuffix);
+    long uniqSuffix = System.currentTimeMillis();
+    sj.appName = config.getString("appName", sj.appNamePrefix + uniqSuffix);
     sj.mainClass = config.getString("mainClass");
     sj.appJar = config.getString("appJar");
 
@@ -156,7 +158,7 @@ public class SparkJobConfig {
     sj.verbose = config.getBoolean("verbose", sj.verbose);
 
     // app logging
-    sj.log4jFile = config.getString("log4jFile", filebasename+"-log4j.xml");
+    sj.log4jFile = config.getString("log4jFile", filebasename + "-log4j.xml");
 
     //    reqInput.stream().forEach(key -> sj.inputParamsRequired.put(key, Void.TYPE));
 
@@ -169,34 +171,47 @@ public class SparkJobConfig {
 
     return sj;
   }
-  
+
   public static void main(String[] args) {
     URI destDirUri = URI.create(DEFAULT_DEST_DIR);
     System.out.println(destDirUri);
   }
-  
-  public static String DEFAULT_DEST_DIR="/tmp/sparkjobfiles/";
-  public SparkJobConfig setSparkMaster(String master, HadoopConfigs htConfigs) throws IOException{
-    URI destDirUri=null;
+
+  public static String DEFAULT_DEST_DIR = "/tmp/sparkjobfiles/";
+
+  public SparkJobConfig setSparkMaster(String master, HadoopConfigs htConfigs) throws IOException {
+    URI destDirUri = null;
     if (YARN_CLUSTER.equals(master)) {
-      destDirUri=URI.create(DEFAULT_DEST_DIR);
+      destDirUri = URI.create(DEFAULT_DEST_DIR);
     }
     return setSparkMaster(master, null, htConfigs, destDirUri, false);
   }
-  public SparkJobConfig setSparkMaster(String master, String deployMode, HadoopConfigs htConfigs, URI destDirUri, boolean overwrite) throws IOException {
+
+  /**
+   * 
+   * @param master
+   * @param deployMode "client" or "cluster"
+   * @param htConfigs
+   * @param destDirUri location for artifact files and classpath jars
+   * @param overwrite
+   * @return
+   * @throws IOException
+   */
+  public SparkJobConfig setSparkMaster(String master, String deployMode, HadoopConfigs htConfigs, URI destDirUri,
+      boolean overwrite) throws IOException {
     sparkMaster = master;
-    this.deployMode=deployMode;
+    this.deployMode = deployMode;
     this.htConfigs = htConfigs;
     if (YARN_CLUSTER.equals(sparkMaster)) {
       htConfigs.loadConfigs();
       copyFilesToHdfs(destDirUri, overwrite);
       copyClasspathToHdfs(destDirUri, overwrite);
-    } else if (sparkMaster.startsWith("local")){
+    } else if (sparkMaster.startsWith("local")) {
       // if hdfs desired, call copyFilesToHdfs() and copyClasspathToHdfs() after this
       resolveFiles();
       resolveClasspath();
     }
-    
+
     /// set other confs
     setLog4j(log4jFile);
 
@@ -217,8 +232,8 @@ public class SparkJobConfig {
   private List<String> getOrInferClasspath() throws IOException {
     String cpStr = config.getString("classpath");
     List<String> list;
-    if(cpStr.equalsIgnoreCase("INFER_FROM_APPJAR"))
-      list=ManifestUtil.getClasspathJars(appJar);
+    if (cpStr.equalsIgnoreCase("INFER_FROM_APPJAR"))
+      list = ManifestUtil.getClasspathJars(appJar);
     else
       list = config.getList("classpath");
     return list;
@@ -238,7 +253,7 @@ public class SparkJobConfig {
     files.stream().forEach(srcFile -> {
       File localFile = new File(srcFile);
       URI existing = map.put(srcFile, localFile.toURI());
-      if(existing!=null)
+      if (existing != null)
         log.warn("Overriding existing {}={} with {}", srcFile, existing, localFile.toURI());
     });
   }
@@ -249,7 +264,8 @@ public class SparkJobConfig {
     hdfsFileCache.clear();
   }
 
-  private void copyFilesToHdfs(boolean overwrite, URI destDirUri, List<String> files, Map<String, URI> map) throws IOException {
+  private void copyFilesToHdfs(boolean overwrite, URI destDirUri, List<String> files, Map<String, URI> map)
+      throws IOException {
     HdfsUtils hdfs = htConfigs.getHdfsUtils();
     org.apache.hadoop.fs.Path destDir = hdfs.ensureDirExists(destDirUri.toString()); //new org.apache.hadoop.fs.Path(destDirUri);
     files.stream().forEach(srcFile -> {
@@ -269,8 +285,8 @@ public class SparkJobConfig {
           }
           //if(map!=null)
           {
-            URI existing=map.put(srcFile, dstPath.toUri());
-            if(existing!=null)
+            URI existing = map.put(srcFile, dstPath.toUri());
+            if (existing != null)
               log.warn("Overriding existing {}={} with {}", srcFile, existing, localFile.toURI());
           }
 

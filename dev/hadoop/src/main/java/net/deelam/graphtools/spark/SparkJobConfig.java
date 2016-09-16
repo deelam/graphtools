@@ -26,8 +26,9 @@ import net.deelam.graphtools.hadoop.HdfsUtils;
 @Slf4j
 //@Getter
 public class SparkJobConfig {
-  public static final String YARN_CLUSTER = "yarn-cluster"; //possible value for sparkMaster
-  public static final String LOCAL = "local[*]"; //possible value for sparkMaster
+  public static final String LOCAL = "local[*]"; // for local execution 
+  public static final String YARN_CLUSTER = "yarn-cluster"; // spark driver runs on yarn; logs located on yarn
+  public static final String YARN_CLIENT = "yarn-client"; // good for debugging on yarn since we see logs on local client (except for some Hadoop IOExceptions)
 
   Configuration config;
   String sparkMaster = LOCAL;
@@ -53,7 +54,7 @@ public class SparkJobConfig {
   Map<String, String> inputParams = new HashMap<>();
 
   public boolean useHadoop() {
-    return YARN_CLUSTER.equals(sparkMaster);
+    return sparkMaster.startsWith("yarn");
   }
 
   public boolean isReady() {
@@ -173,20 +174,15 @@ public class SparkJobConfig {
     return sj;
   }
 
-  public static void main(String[] args) {
-    URI destDirUri = URI.create(DEFAULT_DEST_DIR);
-    System.out.println(destDirUri);
-  }
-
-  public static String DEFAULT_DEST_DIR = "/tmp/sparkjobfiles/";
-
-  public SparkJobConfig setSparkMaster(String master, HadoopConfigs htConfigs) throws IOException {
-    URI destDirUri = null;
-    if (YARN_CLUSTER.equals(master)) {
-      destDirUri = URI.create(DEFAULT_DEST_DIR);
-    }
-    return setSparkMaster(master, null, htConfigs, destDirUri, false);
-  }
+//  public static String DEFAULT_DEST_DIR = "/tmp/sparkjobfiles/";
+//
+//  public SparkJobConfig setSparkMaster(String master, HadoopConfigs htConfigs) throws IOException {
+//    URI destDirUri = null;
+//    if (YARN_CLUSTER.equals(master)) {
+//      destDirUri = URI.create(DEFAULT_DEST_DIR);
+//    }
+//    return setSparkMaster(master, null, htConfigs, destDirUri, false);
+//  }
 
   /**
    * 
@@ -203,7 +199,7 @@ public class SparkJobConfig {
     sparkMaster = master;
     this.deployMode = deployMode;
     this.htConfigs = htConfigs;
-    if (YARN_CLUSTER.equals(sparkMaster)) {
+    if (sparkMaster.startsWith("yarn")) {
       htConfigs.loadConfigs();
       copyFilesToHdfs(destDirUri, overwrite);
       copyClasspathToHdfs(destDirUri, overwrite);
@@ -211,6 +207,8 @@ public class SparkJobConfig {
       // if hdfs desired, call copyFilesToHdfs() and copyClasspathToHdfs() after this
       resolveFiles();
       resolveClasspath();
+    } else {
+      throw new UnsupportedOperationException(sparkMaster);
     }
 
     /// set other confs

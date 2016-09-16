@@ -431,6 +431,7 @@ public class JobMarket extends AbstractVerticle {
     final String type;
   }
 
+  @ToString
   protected static class JobItem {
 
     enum JobState {

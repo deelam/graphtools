@@ -4,12 +4,14 @@ import io.vertx.core.json.DecodeException;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.Accessors;
 import net.deelam.common.Pojo;
 
 @Accessors(chain=true)
 @NoArgsConstructor(access=AccessLevel.PRIVATE)
 @Data
+@ToString
 public class JobDTO {
   String id;
   String type;

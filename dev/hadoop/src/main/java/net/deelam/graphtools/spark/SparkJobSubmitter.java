@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +44,7 @@ public class SparkJobSubmitter {
   public SparkJobSubmitter(SparkJobConfig config) throws FileNotFoundException, IOException {
     { /// set env for child spark processes (executors?)
       Map<String, String> env = new HashMap<String, String>();
-      log.warn("Skipping until needed: Setting environment of child spark process based on System.getProperties():",
+      log.warn("Skipping until needed: Setting environment of child spark process based on System.getProperties()",
           System.getProperties());
       if (false)
         for (Entry<Object, Object> e : System.getProperties().entrySet()) {
@@ -70,6 +71,8 @@ public class SparkJobSubmitter {
 
     launcher.setAppResource(config.appJar);
     launcher.setMainClass(config.mainClass);
+    if(config.appArgs.size()>0)
+      launcher.addAppArgs(config.appArgs.toArray(new String[config.appArgs.size()]));
     launcher.setConf("spark.app.name", config.appName);
     launcher.setVerbose(config.verbose);
 
@@ -99,9 +102,18 @@ public class SparkJobSubmitter {
      */
     for (Iterator<String> itr = config.staticProps.getKeys(); itr.hasNext();) {
       String key = itr.next();
-      List<?> valueList = config.staticProps.getList(key);
+      List<String> valueList = config.staticProps.getList(key);
       if (valueList.size() > 1) {
-        log.error("What to do with this key {} with valueList={}", key, valueList);
+        switch(key){
+          case "spark.driver.extraJavaOptions":
+          case "spark.executor.extraJavaOptions":
+            String concatStr = valueList.stream().collect(Collectors.joining(" "));
+            launcher.setConf(key, concatStr);
+            break;
+          //TODO: 2: handle other multivalued spark options
+          default:
+            log.error("What to do with this key {} with valueList={}", key, valueList);
+        }
       } else {
         String value = config.staticProps.getString(key);
         if (key.startsWith("spark.")) {

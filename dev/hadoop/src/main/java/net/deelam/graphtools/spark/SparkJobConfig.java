@@ -4,11 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileAlreadyExistsException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.configuration.BaseConfiguration;
@@ -41,12 +37,16 @@ public class SparkJobConfig {
   @Setter
   String appJar;
   String mainClass;
+  @Getter
+  @Setter
+  List<String> appArgs;
   boolean verbose = true; // verbosity of spark-submit script
   String log4jFile; // affects application logging
   Configuration staticProps = new BaseConfiguration();
 
   HadoopConfigs htConfigs = null;
 
+  @Getter
   String appName;
   Map<String, URI> classpath = new LinkedHashMap<>(); // must preserve order
   Map<String, URI> staticFilesForJob = new HashMap<>();
@@ -67,8 +67,8 @@ public class SparkJobConfig {
     Map<?, ?>[] maps = {classpath, staticFilesForJob};
     for (int i = 0; i < maps.length; ++i)
       if (maps[i].isEmpty()) {
-        log.warn("Map {} is empty!", i);
-        return false;
+        log.info("Map {} is empty!", i);
+        //okay if empty: return false;
       }
 
     String[] filenames = {appJar};
@@ -153,6 +153,7 @@ public class SparkJobConfig {
     sj.appName = config.getString("appName", sj.appNamePrefix + uniqSuffix);
     sj.mainClass = config.getString("mainClass");
     sj.appJar = config.getString("appJar");
+    sj.appArgs = config.getList("appArgs", new ArrayList<String>());
 
     // spark-submitter script verbosity
     sj.verbose = config.getBoolean("verbose", sj.verbose);

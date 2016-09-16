@@ -36,11 +36,7 @@ public class HadoopConfigs {
   public void loadConfigs(){
     getHadoopConfig();
   }
-  public void loadConfigs(String titanTablename) throws ConfigurationException, FileNotFoundException, IOException {
-    /// load all configs
-    getHadoopConfig();
-  }
-
+  
   public org.apache.hadoop.conf.Configuration getHadoopConfig() {
     try {
       return getMinimalHadoopConfig();

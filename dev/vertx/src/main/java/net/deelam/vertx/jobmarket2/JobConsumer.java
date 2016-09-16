@@ -141,7 +141,7 @@ public class JobConsumer extends AbstractVerticle {
       threadPool.execute(() -> {
         try {
           if (worker.apply(pickedJob)) {
-//            if (pickedJob.getParams().getBoolean(IS_PARTLY_DONE, false).booleanValue())
+//FIXME:            if (pickedJob.getParams().getBoolean(IS_PARTLY_DONE, false).booleanValue())
 //              jobPartlyDone(); // creates new conversation
 //            else
               jobDone(); // creates new conversation

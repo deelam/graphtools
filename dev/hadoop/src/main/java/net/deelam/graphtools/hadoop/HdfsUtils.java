@@ -181,6 +181,27 @@ public final class HdfsUtils {
     }
   }
   
+  public boolean isDirectory(String path) throws IOException{
+    try (FileSystem fs = FileSystem.get(hadoopConf)) {
+      return fs.isDirectory(new Path(path));
+    }
+  }
+  
+  public Path ensureDirExists(String path) throws IOException {
+    Path p = new Path(path);
+    try (FileSystem fs = FileSystem.get(hadoopConf)) {
+      if(fs.exists(p))
+        if(fs.isDirectory(p))
+          return p;
+        else
+          throw new FileAlreadyExistsException("Cannot create directory because file exists: "+p);
+      else {
+        fs.mkdirs(p);
+        return p;
+      }
+    }
+  }
+
   public Path makeQualified(String path) throws IOException{
     return makeQualified(new Path(path));
   }
@@ -199,7 +220,7 @@ public final class HdfsUtils {
       // which causes 'new Path(file.toURI()).getName()' to return empty string rather than the desired directory name
       Path src = new Path(srcFile.getAbsolutePath()); 
       dest=fs.makeQualified(dest);
-      log.info("Copying {} to {}", src, dest);
+      log.info("Received request to copy {} to {}", src, dest);
 
       if(srcFile.isDirectory()){
         if(fs.exists(dest)){
@@ -247,18 +268,20 @@ public final class HdfsUtils {
     // must check in case destDir is an existing file and may be overridden 
     if(!fs.isDirectory(destDir))
       throw new IllegalArgumentException("Directory does not exist: "+destDir);
-    fs.copyFromLocalFile(false, overwrite, src, destDir);
     Path dstFile = new Path(destDir, src.getName());
+    if(!overwrite && fs.exists(dstFile))
+      throw new FileAlreadyExistsException(dstFile.toString()); // otherwise fs.copyFromLocalFile() throws misleading IOException
+    fs.copyFromLocalFile(false, overwrite, src, destDir);
     Path qualPath = fs.makeQualified(dstFile);
     log.info("Copied to {}", qualPath);
     return qualPath;
   }
 
-  private Path mkdirs(String dir) throws IOException {
+  public Path mkdirs(String dir) throws IOException {
     try (FileSystem fs = FileSystem.get(hadoopConf)) {
       Path dirPath = new Path(dir);
-      fs.mkdirs(dirPath);
       log.info("Making dir: {}", dir);
+      fs.mkdirs(dirPath);
       return dirPath;
     }
   }

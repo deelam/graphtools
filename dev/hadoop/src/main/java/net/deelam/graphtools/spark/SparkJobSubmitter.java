@@ -67,7 +67,26 @@ public class SparkJobSubmitter {
 
     launcher.setMaster(config.sparkMaster);
     if (config.deployMode != null)
-      launcher.setDeployMode(config.deployMode); // e.g., "client" 
+      launcher.setDeployMode(config.deployMode); 
+    /* Deploy modes:
+     * "client": local? driver
+     * "cluster": remote driver (in the cluster) to reduce latency 
+     * 
+     * http://stackoverflow.com/questions/34391977/spark-submit-does-automatically-upload-the-jar-to-cluster/34516023#34516023:
+     * There are two deploy modes that can be used to launch Spark applications on YARN.
+     *  
+     * In yarn-cluster mode, the Spark driver runs inside an application master process which is managed by YARN on the cluster, 
+     * and the client can go away after initiating the application. In yarn-client mode, the driver runs in the client process, 
+     * and the application master is only used for requesting resources from YARN.
+     * 
+     * YARN cluster mode. Spark submit does upload your jars to the cluster. In particular, it puts the jars in HDFS so your 
+     * driver can just read from there. As in other deployments, the executors pull the jars from the driver.
+     * 
+     * In yarn-cluster mode, the driver runs on a different machine than the client, 
+     * so SparkContext.addJar won’t work out of the box with files that are local to the client. 
+     * To make files on the client available to SparkContext.addJar, include them with the --jars option in the launch command.
+     * 
+     */
 
     launcher.setAppResource(config.appJar);
     launcher.setMainClass(config.mainClass);

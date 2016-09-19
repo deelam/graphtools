@@ -21,7 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 public class BeanJsonCodec<C> implements MessageCodec<C,C> {
   
   static Map<Class<?>,EventBus> eventBuses=new HashMap<>();
-  public static <C> void register(EventBus eb, Class<C> beanClass){
+  public synchronized static <C> void register(EventBus eb, Class<C> beanClass){
     if(eventBuses.containsKey(beanClass))
       log.info("Already registered BeanJsonCodec<{}> with {}; skipping registration", beanClass, eb);
     else {

@@ -9,7 +9,7 @@ import java.util.logging.LogManager;
 public class JavaLoggingUtil {
   
     public static void configureJUL() throws IOException {
-      configureJUL("%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS %4$s %2$s %5$s%6$s%n");
+      configureJUL("%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS [%4$s] %2$s: %5$s%6$s%n");
       //configureJUL("%1$tH:%1$tM:%1$tS [%4$s] %5$s%6$s%n");
     }
     

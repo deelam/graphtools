@@ -5,7 +5,6 @@ package net.deelam.graphtools.spark;
 
 import java.io.*;
 import java.net.URI;
-import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -18,11 +17,12 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 
-import lombok.AllArgsConstructor;
+import net.deelam.common.StreamGobbler;
+import net.deelam.common.util.FileDirectoryUtil;
+import net.deelam.common.util.JavaLoggingUtil;
 import net.deelam.graphtools.spark.launcher.SparkLauncher;
 
 /**
@@ -129,7 +129,7 @@ public class SparkJobSubmitter {
             String concatStr = valueList.stream().collect(Collectors.joining(" "));
             launcher.setConf(key, concatStr);
             break;
-          //TODO: 2: handle other multivalued spark options
+          //TODO: 2: handle other multivalued spark options https://spark.apache.org/docs/1.3.0/configuration.html
           default:
             log.error("What to do with this key {} with valueList={}", key, valueList);
         }
@@ -161,7 +161,7 @@ public class SparkJobSubmitter {
       } else {
         log.info("No environment variable SPARK_HOME; searching for spark directory...");
         String[] prefixes = {"spark_home", "spark-2", "spark-1", "spark-SKIP"};
-        File sparkDirFile = findFirstDirectoryWithPrefix(new File("."), prefixes);
+        File sparkDirFile = FileDirectoryUtil.findFirstDirectoryWithPrefix(new File("."), prefixes);
         if (sparkDirFile == null)
           throw new FileNotFoundException("SPARK_HOME directory not found with prefixes: " + Arrays.toString(prefixes));
         sparkHome = sparkDirFile.getAbsolutePath();
@@ -232,61 +232,16 @@ public class SparkJobSubmitter {
     launcher.setConf(SparkLauncher.EXECUTOR_EXTRA_CLASSPATH, classpathStr);
   }
 
-
-
-  private static FileFilter directoryFilter = (File dir) -> dir.isDirectory();
-
-  public static File findFirstDirectoryWithPrefix(final File parentDir, final String[] dirPrefixes) {
-    final File[] fileList = parentDir.listFiles(directoryFilter);
-    for (String prefix : dirPrefixes) {
-      for (File f : fileList)
-        if (f.getName().startsWith(prefix))
-          return f;
-    }
-    return null;
-  }
-
   /// ----------------------------------------------------------------------
 
   public Process startJob(Consumer<SparkLauncher> configure) throws IOException {
     configure.accept(launcher);
     Process spark = launcher.launch();
     // redirect spark process output
-    StreamGobbler errorGobbler = new StreamGobbler(spark.getErrorStream(), StreamGobbler.StreamLogLevel.ERR);
-    StreamGobbler outputGobbler = new StreamGobbler(spark.getInputStream(), StreamGobbler.StreamLogLevel.OUT);
-    errorGobbler.start();
-    outputGobbler.start();
+    // all output seems to go to ERR
+    JavaLoggingUtil.configureJUL("%1$tH:%1$tM:%1$tS [%4$s] %3$s: %5$s%6$s%n");
+    new StreamGobbler(spark.getErrorStream(), StreamGobbler.StreamLogLevel.OUT).start();
+    new StreamGobbler(spark.getInputStream(), StreamGobbler.StreamLogLevel.OUT).start();
     return spark;
-  }
-
-  // http://stackoverflow.com/questions/1732455/redirect-process-output-to-stdout
-  @AllArgsConstructor
-  static class StreamGobbler extends Thread {
-    private static final Logger logLauncher = LoggerFactory.getLogger(StreamGobbler.class);
-    InputStream is;
-    StreamLogLevel logLevel;
-
-    enum StreamLogLevel {
-      OUT, ERR
-    };
-
-    public void run() {
-      try (InputStreamReader isr = new InputStreamReader(is, Charset.forName("UTF-8"))) {
-        BufferedReader br = new BufferedReader(isr);
-        String line = null;
-        while ((line = br.readLine()) != null) {
-          switch (logLevel) {
-            case ERR: // all output seems to go to ERR
-              logLauncher.info(line);
-              break;
-            case OUT:
-              logLauncher.info(line);
-              break;
-          }
-        }
-      } catch (IOException ioe) {
-        ioe.printStackTrace();
-      }
-    }
   }
 }

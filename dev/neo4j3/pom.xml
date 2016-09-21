@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>net.deelam</groupId>
+		<artifactId>graphtools-dev-pom</artifactId>
+		<version>0.0.4-SNAPSHOT</version>
+	</parent>
+	<artifactId>graphtools-neo4j3</artifactId>
+	<packaging>bundle</packaging>
+	<name>GraphTools Neo4j 3.x</name>
+	<properties>
+		<tinkerpop.version>3.2.2</tinkerpop.version>
+		<neo4j.version>3.0.4</neo4j.version>
+		<bundle.import_package>
+			javassist.util.proxy, <!-- needed by frames; must manually import -->
+			*
+		</bundle.import_package>
+	</properties>
+	<profiles>
+		<profile>
+			<activation>
+				<property>
+					<name>osgiBundling</name>
+				</property>
+			</activation>
+			<properties>
+        <!-- <bundle.embedDependency>*;scope=compile|runtime;type=!pom;inline=false</bundle.embedDependency> -->
+			</properties>
+		</profile>
+	</profiles>
+	<dependencies>
+	
+	<dependency>
+		<groupId>net.deelam</groupId>
+		<artifactId>graphtools-core</artifactId>
+		<exclusions>
+			<exclusion>
+				<artifactId>blueprints-core</artifactId>
+				<groupId>com.tinkerpop.blueprints</groupId>
+			</exclusion>
+		</exclusions>
+	</dependency>
+	<dependency>
+		<groupId>net.deelam</groupId>
+		<artifactId>neo4j-tinkerpop-api-impl</artifactId>
+		<version>0.4-${neo4j.version}</version>
+	</dependency>
+	<dependency>
+		<groupId>org.neo4j</groupId>
+		<artifactId>neo4j-slf4j</artifactId>
+		<version>${neo4j.version}</version>
+	</dependency>
+	
+	<dependency>
+		<groupId>org.apache.tinkerpop</groupId>
+		<artifactId>tinkergraph-gremlin</artifactId>
+		<version>${tinkerpop.version}</version>
+	</dependency>
+	<dependency>
+		<groupId>org.apache.tinkerpop</groupId>
+		<artifactId>neo4j-gremlin</artifactId>
+		<version>${tinkerpop.version}</version>
+	</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+		</dependency>
+<!-- 		<dependency>
+			<groupId>commons-configuration</groupId>
+			<artifactId>commons-configuration</artifactId>
+		</dependency>
+ -->		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.fastjson</groupId>
+			<artifactId>boon</artifactId>
+			<version>0.33</version>
+		</dependency>
+<!--
+		<dependency>
+			<groupId>com.tinkerpop.blueprints</groupId>
+			<artifactId>blueprints-core</artifactId>
+		</dependency>
+
+	<dependency>
+      <groupId>com.tinkerpop</groupId>
+      <artifactId>frames</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    
+		<dependency>
+			<groupId>com.tinkerpop.blueprints</groupId>
+			<artifactId>blueprints-neo4j-graph</artifactId>
+			<scope>provided</scope>
+		</dependency> 
+-->
+	<!-- 
+<dependency>
+	<groupId>com.orientechnologies</groupId>
+	<artifactId>orient-commons</artifactId>
+	<version>2.0-M1</version>
+</dependency>
+<dependency>
+	<groupId>com.orientechnologies</groupId>
+	<artifactId>orientdb-community</artifactId>
+	<version>2.1.5</version>
+</dependency>
+ -->
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.4</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<mainClass>graphtools.Run</mainClass>
+							<addClasspath>true</addClasspath>
+							<classpathPrefix>lib</classpathPrefix>
+							<useUniqueVersions>false</useUniqueVersions>
+						</manifest>
+						<manifestEntries>
+							<Class-Path>.</Class-Path>
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

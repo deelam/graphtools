@@ -1,0 +1,41 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>net.deelam</groupId>
+    <artifactId>neo4j-tinkerpop-api-impl</artifactId>
+    <version>0.4-3.0.4</version>
+    <packaging>jar</packaging>
+    <name>Neo4j Tinkerpop API Implementation (updated to Neo4j 3.0.4)</name>
+
+    <properties>
+        <neo4j.version>3.0.4</neo4j.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+    <groupId>org.neo4j</groupId>
+    <artifactId>neo4j-tinkerpop-api-impl</artifactId>
+    <version>0.4-3.0.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j</artifactId>
+            <version>${neo4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-enterprise</artifactId>
+            <version>${neo4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-kernel</artifactId>
+            <version>${neo4j.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+    </build>
+</project>

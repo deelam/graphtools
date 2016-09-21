@@ -32,7 +32,7 @@ public class PropertiesUtil {
       }
       String includedFiles=properties.getProperty("include");
       if (includedFiles != null){
-        log.info("  Also loading included files: {}"+ includedFiles);
+        log.info("  Also loading included files: "+ includedFiles);
         for (String includedFile : includedFiles.split(",")) {
           Properties includedProps = new Properties();
           loadProperties(includedFile.trim(), includedProps);

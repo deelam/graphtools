@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+
 /**
  * @author dnlam
  *
@@ -19,5 +20,7 @@ public interface HdfsService {
   CompletableFuture<List<String>> listDir(String path, boolean recursive) throws IOException;
 
   CompletableFuture<Boolean> exists(String path) throws IOException;
+
+  CompletableFuture<String> ensureDirExists(String path) throws IOException;
 
 }

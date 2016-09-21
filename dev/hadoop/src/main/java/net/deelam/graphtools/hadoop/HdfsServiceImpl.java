@@ -87,4 +87,16 @@ public class HdfsServiceImpl implements HdfsService {
       throw e;
     }
   }
+  
+  @Override
+  public CompletableFuture<String> ensureDirExists(String path) throws IOException {
+    log.info("RPC: ensureDirExists({})", path);
+    try{
+      Path qualPath=hdfs.ensureDirExists(path);
+      return CompletableFuture.completedFuture(qualPath.toUri().toString());
+    } catch (Throwable e){ // exceptions are not obvious on RPC client so print them here
+      e.printStackTrace();
+      throw e;
+    }
+  }
 }

@@ -244,4 +244,13 @@ public class SparkJobSubmitter {
     new StreamGobbler(spark.getInputStream(), StreamGobbler.StreamLogLevel.OUT).start();
     return spark;
   }
+
+  public int waitFor(Process spark) throws InterruptedException {
+    int retCode = spark.waitFor();
+    JavaLoggingUtil.disableJUL();
+    if (retCode > 0) {
+      throw new IllegalStateException("Sparkjob failed with return code=" + retCode);
+    }
+    return retCode;
+  }
 }

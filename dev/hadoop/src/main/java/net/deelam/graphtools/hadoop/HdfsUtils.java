@@ -192,12 +192,14 @@ public final class HdfsUtils {
     try (FileSystem fs = FileSystem.get(hadoopConf)) {
       if(fs.exists(p))
         if(fs.isDirectory(p))
-          return p;
+          return fs.makeQualified(p);
         else
           throw new FileAlreadyExistsException("Cannot create directory because file exists: "+p);
       else {
-        fs.mkdirs(p);
-        return p;
+        if(fs.mkdirs(p))
+          return fs.makeQualified(p);
+        else
+          throw new RuntimeException("fs.mkdirs() returned false: "+p);
       }
     }
   }

@@ -23,7 +23,13 @@ public class JavaLoggingUtil {
           + "";
       //System.out.println(julConfigStr);
       InputStream is = new ByteArrayInputStream(julConfigStr.getBytes(StandardCharsets.UTF_8));
+      System.out.println(JavaLoggingUtil.class+": Enabling JUL");
       LogManager.getLogManager().readConfiguration(is);
     }
+    
+    public static void disableJUL() {
+      System.out.println(JavaLoggingUtil.class+": Disabling JUL");
+      LogManager.getLogManager().reset();
+    }    
 }
 

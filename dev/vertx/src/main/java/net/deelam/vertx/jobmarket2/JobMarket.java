@@ -3,6 +3,7 @@ package net.deelam.vertx.jobmarket2;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.Iterables;
@@ -97,7 +98,6 @@ public class JobMarket extends AbstractVerticle {
   private LinkedHashSet<String> idleWorkers = new LinkedHashSet<>();
   private LinkedHashSet<String> pickyWorkers = new LinkedHashSet<>();
 
-  @SuppressWarnings("unused")
   private Handler<AsyncResult<Message<JsonObject>>> debugReplyHandler = (reply) -> {
     if (reply.succeeded()) {
       log.debug("reply={}", reply);
@@ -267,22 +267,31 @@ public class JobMarket extends AbstractVerticle {
       }
     });
     
+    AtomicInteger sameLogMsgCount=new AtomicInteger(0);
     vertx.setPeriodic(1000, id->{
       long availJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.AVAILABLE)).count();
       long startedJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.STARTED)).count();
       long progessingJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.PROGRESSING)).count();
-      if(availJobCount+startedJobCount+progessingJobCount==0)
-        return;
+//      if(availJobCount+startedJobCount+progessingJobCount==0)
+//        return;
       long doneJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.DONE)).count();
       long failedJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.FAILED)).count();
-      log.info(availJobCount+" availJobs -> "+
+      String logMsg = availJobCount+" availJobs -> "+
           startedJobCount+" .. "+
           progessingJobCount+" -> "+
           doneJobCount+" doneJobs, "+
           failedJobCount+" failed \t:: "+
           idleWorkers.size()+" idle vs "+
           pickyWorkers.size()+" picky \t of "+
-          knownWorkers.size()+" workers");
+          knownWorkers.size()+" workers";
+      if(!logMsg.equals(prevLogMsg)){
+        log.info(logMsg);
+        prevLogMsg=logMsg;
+        sameLogMsgCount.set(0);
+      } else {
+        if(sameLogMsgCount.incrementAndGet()>10)
+          prevLogMsg=null;
+      }
     });
 
     // announce after setting eb.consumer
@@ -290,6 +299,8 @@ public class JobMarket extends AbstractVerticle {
 
     log.info("Ready: addressBase={} this={}", addressBase, this);
   }
+  
+  private String prevLogMsg;
 
   private String readJobId(Message<Object> message) {
     if (message.body() instanceof String)
@@ -298,15 +309,9 @@ public class JobMarket extends AbstractVerticle {
       throw new IllegalArgumentException("Cannot parse jobId from: "+message.body());
   }
 
-  private static final String JOB_FAILEDCOUNT_ATTRIBUTE = "_jobFailedCount";
-
   private int incrementFailCount(JobItem ji) {
     ji.jobFailedCount+=1;
     return ji.jobFailedCount;
-//    Integer count = ji.jobJO.getParams().getInteger(JOB_FAILEDCOUNT_ATTRIBUTE, Integer.valueOf(0));
-//    int newCount = count.intValue() + 1;
-//    ji.jobJO.getParams().put(JOB_FAILEDCOUNT_ATTRIBUTE, newCount);
-//    return newCount;
   }
 
   //negotiate with one worker at a time so workers don't choose the same job
@@ -321,13 +326,11 @@ public class JobMarket extends AbstractVerticle {
   }
   
   private void asyncNegotiateJobWith(String idleWorker) {
-    if (!isNegotiating) {
+    if (isNegotiating) {
+      log.info("Currently negotiating; skipping negotiation with {}", idleWorker);
+    } else {
       final JobListDTO jobList = getAvailableJobsFor(idleWorker);
-      if (jobList.jobs.size() == 0) { // no jobs available
-        return;
-      }
-      
-      log.info("Negotiating jobs with {}, idleWorkers={}", idleWorker, idleWorkers);
+      log.info("Negotiating jobs with {}, jobList={}", idleWorker, jobList);
       isNegotiating = true; // make sure all code paths reset this to false
       asyncSendJobsTo(idleWorker, jobList);
     }
@@ -338,49 +341,60 @@ public class JobMarket extends AbstractVerticle {
   private void asyncSendJobsTo(final String workerAddr, final JobListDTO jobList) {
     jobAdded = false;
     
-    log.debug("Sending to {} available jobs={}", workerAddr, jobList);
-    DeliveryOptions delivOpt=new DeliveryOptions().setSendTimeout(10000L);
-    vertx.eventBus().send(workerAddr, jobList, delivOpt, (AsyncResult<Message<JobDTO>> selectedJobReply) -> {
-      //log.debug("reply from worker={}", selectedJobReply.result().headers().get(WORKER_ADDRESS));
-      boolean negotiateWithNextIdle = true;
-
-      if (selectedJobReply.failed()) {
-        log.warn(
-            "selectedJobReply failed: {}.  Removing worker={} permanently -- have worker register again if appropriate",
-            workerAddr, selectedJobReply.cause());
-        if (!idleWorkers.remove(workerAddr))
-          log.error("Could not remove {} from idleWorkers={}", workerAddr, idleWorkers);
-      } else if (selectedJobReply.succeeded()) {
-        if (selectedJobReply.result().body() == null) {
-          /*if (jobList.size() > 0) */ {
-            log.debug("Worker {} did not choose a job: {}", workerAddr, toString(jobList));
-
-            // jobItems may have changed by the time this reply is received
-            if (jobAdded) {
-              log.info("jobList has since changed; sending updated jobList to {}", workerAddr);
-              JobListDTO availableJobs = getAvailableJobsFor(workerAddr);
-              asyncSendJobsTo(workerAddr, availableJobs);
-              negotiateWithNextIdle = false; // still negotiating with current idleWorker
-            } else {
-              log.debug("Moving idleWorker to pickyWorkers queue: {}", workerAddr);
-              if (!idleWorkers.remove(workerAddr)) {
-                log.error("Could not remove {} from idleWorkers={}", workerAddr, idleWorkers);
+    if(jobList.jobs.size()==0){
+      log.debug("Not sending to {} empty jobList", workerAddr);
+      moveToPickyWorkers(workerAddr);
+      isNegotiating = false; // close current negotiation
+      asyncNegotiateJobWithNextIdleWorker();
+    } else {
+      log.debug("Sending to {} available jobs={}", workerAddr, jobList);
+      DeliveryOptions delivOpt=new DeliveryOptions().setSendTimeout(10000L);
+      vertx.eventBus().send(workerAddr, jobList, delivOpt, (AsyncResult<Message<JobDTO>> selectedJobReply) -> {
+        //log.debug("reply from worker={}", selectedJobReply.result().headers().get(WORKER_ADDRESS));
+        boolean negotiateWithNextIdle = true;
+  
+        if (selectedJobReply.failed()) {
+          log.warn(
+              "selectedJobReply failed: {}.  Removing worker={} permanently -- have worker register again if appropriate",
+              workerAddr, selectedJobReply.cause());
+          if (!idleWorkers.remove(workerAddr))
+            log.error("Could not remove {} from idleWorkers={}", workerAddr, idleWorkers);
+        } else if (selectedJobReply.succeeded()) {
+          if (selectedJobReply.result().body() == null) {
+            /*if (jobList.size() > 0) */ {
+              log.debug("Worker {} did not choose a job: {}", workerAddr, toString(jobList));
+  
+              // jobItems may have changed by the time this reply is received
+              if (jobAdded) {
+                log.info("jobList has since changed; sending updated jobList to {}", workerAddr);
+                JobListDTO availableJobs = getAvailableJobsFor(workerAddr);
+                asyncSendJobsTo(workerAddr, availableJobs);
+                negotiateWithNextIdle = false; // still negotiating with current idleWorker
               } else {
-                if (!pickyWorkers.add(workerAddr))
-                  log.error("Could not add {} to pickyWorkers={}", workerAddr, pickyWorkers);
+                moveToPickyWorkers(workerAddr);
               }
             }
+          } else {
+            workerStartedJob(selectedJobReply.result());
           }
-        } else {
-          workerStartedJob(selectedJobReply.result());
         }
-      }
+  
+        if (negotiateWithNextIdle) {
+          isNegotiating = false; // close current negotiation
+          asyncNegotiateJobWithNextIdleWorker();
+        }
+      });
+    }
+  }
 
-      if (negotiateWithNextIdle) {
-        isNegotiating = false; // close current negotiation
-        asyncNegotiateJobWithNextIdleWorker();
-      }
-    });
+  private void moveToPickyWorkers(final String workerAddr) {
+    log.debug("Moving idleWorker to pickyWorkers queue: {}", workerAddr);
+    if (!idleWorkers.remove(workerAddr)) {
+      log.error("Could not remove {} from idleWorkers={}", workerAddr, idleWorkers);
+    } else {
+      if (!pickyWorkers.add(workerAddr))
+        log.error("Could not add {} to pickyWorkers={}", workerAddr, pickyWorkers);
+    }
   }
 
   private String toString(JobListDTO jobList) {
@@ -444,6 +458,7 @@ public class JobMarket extends AbstractVerticle {
   ////
   
   @RequiredArgsConstructor
+  @ToString
   private static class Worker {
     final String id;
     final String type;

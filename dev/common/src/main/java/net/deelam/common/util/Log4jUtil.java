@@ -24,13 +24,14 @@ public class Log4jUtil {
       //System.out.println("  Checking that System property: log4j.configurationFile=" + logConfigFile+" is in classpath");
       {
         ClassLoader cl = ClassLoader.getSystemClassLoader();
-        if (cl.getResource(logConfigFile) == null) {
+        URL foundLogConfigFile = cl.getResource(logConfigFile);
+        if (foundLogConfigFile == null) {
           URL[] urls = ((URLClassLoader) cl).getURLs();
           System.err.println("  !!! Could not find logging config file " + logConfigFile
               + " in classpath: " + Arrays.toString(urls));
           System.err.println("Remember to add path to log4j.xml file to classpath!");
         } else {
-          System.out.println("  Found in classpath: " + logConfigFile);
+          System.out.println("  Found in classpath: " + foundLogConfigFile);
         }
       }
     }

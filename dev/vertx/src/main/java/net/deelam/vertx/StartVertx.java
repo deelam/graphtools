@@ -66,20 +66,25 @@ public class StartVertx {
   public enum CLUSTER_MANAGER { HAZELCAST, IGNITE };
 
   public static void create(VertxOptions options, boolean isServer, Consumer<Vertx> vertxCons) {
-    create(CLUSTER_MANAGER.IGNITE, options, isServer, null, 0, vertxCons);
+    create(CLUSTER_MANAGER.IGNITE, options, isServer, null, null, 0, vertxCons);
   }
   
   public static void create(VertxOptions options, boolean isServer, String serverIp, int serverPort,
       Consumer<Vertx> vertxCons) {
-    create(CLUSTER_MANAGER.IGNITE, options, isServer, serverIp, serverPort, vertxCons);
+    create(CLUSTER_MANAGER.IGNITE, options, isServer, null, serverIp, serverPort, vertxCons);
   }
-  public static void create(CLUSTER_MANAGER cm, VertxOptions options, boolean isServer, String serverIp, int serverPort,
+  public static void create(VertxOptions options, boolean isServer, String myIp, String serverIp, int serverPort,
+      Consumer<Vertx> vertxCons) {
+    create(CLUSTER_MANAGER.IGNITE, options, isServer, myIp, serverIp, serverPort, vertxCons);
+  }
+  
+  public static void create(CLUSTER_MANAGER cm, VertxOptions options, boolean isServer, String myIp, String serverIp, int serverPort,
       Consumer<Vertx> vertxCons) {
     if (options.isClustered()) {
       Stopwatch sw= Stopwatch.createStarted();
       // declare the interface server and clients should bind to
       IpInfo ipInfo=IpInfo.builder().isServer(isServer)
-          .serverIp(serverIp).serverPort(serverPort).build().infer();
+          .myIp(myIp).serverIp(serverIp).serverPort(serverPort).build().infer();
       
       ClusterManager clusterManager;
       switch(cm){
@@ -129,6 +134,17 @@ public class StartVertx {
     String ipPrefix;
     boolean isServer;
     
+    String getMyIp(){
+      if(myIp==null){
+        myIp = guessMyIPv4Address(ipPrefix); // find an IP address in the same subnet as serverIp
+        if(myIp==null && ipPrefix!=null)
+          myIp = guessMyIPv4Address(null);
+        if(myIp==null)
+          log.warn("Could not determine my IP");
+      }
+      return myIp;
+    }
+    
     IpInfo infer(){
       // set defaults
       if(serverPort<=0)
@@ -138,23 +154,16 @@ public class StartVertx {
         
       if(isServer){
         if (serverIp == null)
-          serverIp = guessMyIPv4Address(null);
+          serverIp = getMyIp();
+        else
+          myIp = serverIp;
         if (serverIp == null)
-          throw new RuntimeException("Cannot guess IP; provide the IP address of the Vertx cluster server");
-        myIp=serverIp;
-      } else {
-        if(serverIp==null){
-          myIp = guessMyIPv4Address(null);
-        } else {
-          String ipPrefix = serverIp.substring(0, serverIp.lastIndexOf(".")+1);
-          myIp = guessMyIPv4Address(ipPrefix); // find an IP address in the same subnet as serverIp
-          if(myIp==null)
-            myIp = guessMyIPv4Address(null);
-        }
-        if(myIp==null)
-          log.warn("Could not determine my IP as a Vertx cluster client");
+          throw new RuntimeException("Cannot determine IP; provide the IP address of this Vertx cluster server");
       }
-      ipPrefix = serverIp.substring(0, serverIp.lastIndexOf(".")+1);
+      
+      if(serverIp!=null)
+        ipPrefix = serverIp.substring(0, serverIp.lastIndexOf(".")+1);
+      getMyIp();
       return this;
     }
 

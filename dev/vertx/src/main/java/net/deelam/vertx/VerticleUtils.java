@@ -111,16 +111,27 @@ public final class VerticleUtils {
    */
   public static MessageConsumer<Object> announceServiceType(Vertx vertx, String type, String serviceContactInfo){
     // TODO: add utility to detect existence of services listening on the same eventBus topic 
-    log.info("Announcing service type={}: {} on vertx={}", type, serviceContactInfo, vertx);
     // in response to client's broadcast, notify that particular client (Vertx does not allow msg.reply())
-    MessageConsumer<Object> consumer = vertx.eventBus().consumer(YP_ADDRESS_PREFIX+"clients."+type, msg ->{
+    String listenAddr = genServerListenAddr(type);
+    log.info("Announcing service type={}: {} listening at {}", type, serviceContactInfo, listenAddr);
+    MessageConsumer<Object> consumer = vertx.eventBus().consumer(listenAddr, msg ->{
       String clientAddress=(String) msg.body();
       log.debug("Got {} client registration from {}", type, clientAddress);
       connectWithClient(vertx, serviceContactInfo, clientAddress);
     });
     
-    vertx.eventBus().publish(YP_ADDRESS_PREFIX+"servers."+type, serviceContactInfo); // server's broadcast
+    String publishAddr = genClientListenAddr(type);
+    log.debug("Publishing to {}", publishAddr);
+    vertx.eventBus().publish(publishAddr, serviceContactInfo); // server's broadcast
     return consumer;
+  }
+
+  private static String genClientListenAddr(String type) {
+    return YP_ADDRESS_PREFIX+"servers."+type;
+  }
+
+  private static String genServerListenAddr(String type) {
+    return YP_ADDRESS_PREFIX+"clients."+type;
   }
 
   private static void connectWithClient(Vertx vertx, String serviceContactInfo, String clientAddress) {
@@ -143,9 +154,9 @@ public final class VerticleUtils {
    * @return client's inbox event bus address
    */
   public synchronized static String announceClientType(Vertx vertx, String serviceType, Handler<Message<String>> serverRespHandler){
-    log.info("Announcing client of serviceType={} on vertx={} with handler={}", serviceType, vertx, serverRespHandler);
-    
-    vertx.eventBus().consumer(YP_ADDRESS_PREFIX+"servers."+serviceType, (Message<String> msg) ->{
+    String clientListenAddr = genClientListenAddr(serviceType);
+    log.info("Announcing client of serviceType={}: listening at {} with handler={}", serviceType, clientListenAddr, serverRespHandler);
+    vertx.eventBus().consumer(clientListenAddr, (Message<String> msg) ->{
       log.debug("Got server broadcast: serverAddr={}", msg.body());
       serverRespHandler.handle(msg); 
     }); // handle server's broadcast
@@ -157,8 +168,9 @@ public final class VerticleUtils {
       msg.reply("Got it");
     }); // handle server response to client's broadcast
     
-    log.debug("Publishing client address for service={}: {}", serviceType, myAddress);
-    vertx.eventBus().publish(YP_ADDRESS_PREFIX+"clients."+serviceType, myAddress); // client's broadcast
+    String serverListenAddr = genServerListenAddr(serviceType);
+    log.debug("Publishing client address={} for serviceType={} to {}", myAddress, serviceType, serverListenAddr);
+    vertx.eventBus().publish(serverListenAddr, myAddress); // client's broadcast
     return myAddress;
   }
 

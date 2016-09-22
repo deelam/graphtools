@@ -86,8 +86,9 @@ public class DependentJobManager {
 
   public String toString() {
     return 
-        ("Submitted jobs="+submittedJobs.toString())+
-        ("\n\tWaiting jobs="+waitingJobs.toString());
+        //("Submitted jobs="+submittedJobs.toString())+
+        ("\n\tWaiting jobs="+waitingJobs.toString())+
+        ("\n\tUnsubmitted jobs="+unsubmittedJobs.toString());
     // return GraphUtils.toString(graph, 1000, "jobType", "state");
   }
   

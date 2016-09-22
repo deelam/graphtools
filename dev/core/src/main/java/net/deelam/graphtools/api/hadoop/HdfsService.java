@@ -23,4 +23,6 @@ public interface HdfsService {
 
   CompletableFuture<String> ensureDirExists(String path) throws IOException;
 
+  CompletableFuture<Boolean> delete(String path) throws IOException;
+
 }

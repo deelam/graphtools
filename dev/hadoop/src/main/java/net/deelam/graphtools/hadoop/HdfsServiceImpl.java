@@ -99,4 +99,16 @@ public class HdfsServiceImpl implements HdfsService {
       throw e;
     }
   }
+  
+  @Override
+  public CompletableFuture<Boolean> delete(String path) throws IOException {
+    log.info("RPC: delete({})", path);
+    try{
+      boolean success=hdfs.delete(path);
+      return CompletableFuture.completedFuture(Boolean.valueOf(success));
+    } catch (Throwable e){ // exceptions are not obvious on RPC client so print them here
+      e.printStackTrace();
+      throw e;
+    }
+  }
 }

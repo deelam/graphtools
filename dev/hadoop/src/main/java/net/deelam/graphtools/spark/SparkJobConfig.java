@@ -171,6 +171,7 @@ public class SparkJobConfig {
     ((Iterator<String>) config.getKeys("spark"))
         .forEachRemaining(key -> sj.staticProps.addProperty(key, config.getString(key)));
 
+    log.debug("Read properties from {}: {}", filename, sj);
     return sj;
   }
 
@@ -235,6 +236,7 @@ public class SparkJobConfig {
       list = ManifestUtil.getClasspathJars(appJar);
     else
       list = config.getList("classpath");
+    log.debug("classpath={}", list);
     return list;
   }
 
@@ -257,7 +259,7 @@ public class SparkJobConfig {
     });
   }
 
-  private static Map<String, URI> hdfsFileCache = new HashMap<>();
+  private static Map<String, org.apache.hadoop.fs.Path> hdfsFileCache = new HashMap<>();
 
   public void clearHdfsCache() {
     hdfsFileCache.clear();
@@ -270,31 +272,34 @@ public class SparkJobConfig {
     files.stream().forEach(srcFile -> {
       File localFile = new File(srcFile);
       try {
-        URI hdfsPath = hdfsFileCache.get(srcFile);
-        boolean exists = false;
-        if (hdfsPath != null)
-          exists = hdfs.exists(hdfsPath.toString());
-        if (!exists) {
+        org.apache.hadoop.fs.Path hdfsCachedPath = hdfsFileCache.get(srcFile);
+        if (hdfsCachedPath != null && hdfs.exists(hdfsCachedPath.toString()) ){
+          log.info("Using existing file from cached filepath: {}", hdfsCachedPath);
+          setHdfsPath(map, srcFile, localFile, hdfsCachedPath);
+          return;
+        }
+        
+        {
           org.apache.hadoop.fs.Path dstPath;
           try {
             dstPath = hdfs.uploadFile(localFile, destDir, overwrite);
           } catch (FileAlreadyExistsException e) {// can occur when overwrite=false
             dstPath = new org.apache.hadoop.fs.Path(hdfs.makeQualified(destDir), localFile.getName());
-            log.warn("Not overwritting existing file: {}", dstPath);
+            log.info("Not overwritting existing file: {}", dstPath);
           }
-          //if(map!=null)
-          {
-            URI existing = map.put(srcFile, dstPath.toUri());
-            if (existing != null)
-              log.warn("Overriding existing {}={} with {}", srcFile, existing, localFile.toURI());
-          }
-
-          hdfsFileCache.put(srcFile, dstPath.toUri());
+          setHdfsPath(map, srcFile, localFile, dstPath);
+          hdfsFileCache.put(srcFile, dstPath);
         }
       } catch (IOException e) {
         e.printStackTrace();
       }
     });
+  }
+
+  private void setHdfsPath(Map<String, URI> map, String srcFile, File localFile, org.apache.hadoop.fs.Path dstPath) {
+    URI existing = map.put(srcFile, dstPath.toUri());
+    if (existing != null)
+      log.warn("Overriding existing {}={} with {}", srcFile, existing, localFile.toURI());
   }
 
 }

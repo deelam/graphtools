@@ -122,7 +122,7 @@ public class HdfsDoerExample {
           .setProgressPollInterval(1)
           .setRequest(new Request().setId("reqId1"));
       JobDTO job2 = new JobDTO("jsonJobId2", JOB_TYPE).setRequesterAddr(jobListenerAddr)
-          .encodeParams(new Request().setId("reqId2"));
+          .setRequest(new Request().setId("reqId2"));
       if (jobProducer == null) {
         depJobMgr.addJob(job);
         depJobMgr.addJob(job2, job.getId());
@@ -165,7 +165,7 @@ public class HdfsDoerExample {
     public void accept(JobDTO job) {
       try {
         log.info("Using hdfs={}", hdfs);
-        Request req = job.decodeParams(Request.class.getClassLoader());
+        Request req = (Request) job.getRequest();
         log.info("Params objects={}", req);
 
         state.setPercent(0).setMessage("Start job " + job.getId()).getMetrics().clear();
@@ -173,7 +173,7 @@ public class HdfsDoerExample {
         state.setPercent(50).setMessage("At 50%").getMetrics().put("A", 49);
         Thread.sleep(1000);
         state.setPercent(100).setMessage("Done 100%!").getMetrics().put("B", 99);
-      } catch (DecodeException | ClassNotFoundException | InterruptedException e) {
+      } catch (DecodeException | InterruptedException e) {
         throw new RuntimeException(e);
       }
     }

@@ -27,6 +27,7 @@ import com.tinkerpop.blueprints.util.wrappers.id.IdGraph;
 import com.tinkerpop.frames.FramedTransactionalGraph;
 
 import io.vertx.core.eventbus.Message;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.graphtools.FramedGraphProvider;
 import net.deelam.vertx.depjobs.DependentJobFrame.STATE;
@@ -79,8 +80,11 @@ public class DependentJobManager {
     }
   }
 
+  @Getter
   private Map<String, JobDTO> waitingJobs = Collections.synchronizedMap(new HashMap<>());
+  @Getter
   private Map<String, JobDTO> submittedJobs = Collections.synchronizedMap(new HashMap<>());
+  @Getter
   private Map<String, JobDTO> unsubmittedJobs = Collections.synchronizedMap(new HashMap<>());
 
 

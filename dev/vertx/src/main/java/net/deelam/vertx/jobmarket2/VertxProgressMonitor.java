@@ -40,11 +40,11 @@ public class VertxProgressMonitor implements ProgressMonitor {
   private final int pollIntervalInSeconds;
   private final String busAddr;
 
-  private final JsonObject props = new JsonObject();
-
-  public void setProperty(String key, Object value) {
-    props.put(key, value);
-  }
+//  private final JsonObject props = new JsonObject();
+//
+//  public void setProperty(String key, Object value) {
+//    props.put(key, value);
+//  }
 
   private HasProgress progressMaker = null;
   private Timer timer;
@@ -117,7 +117,7 @@ public class VertxProgressMonitor implements ProgressMonitor {
       log.debug("Progress of {} by {}: {}", jobId, progressMaker, p);
 
       // accumulate metrics in props
-      p.getMetrics().entrySet().stream().forEach(e -> props.put(e.getKey(), e.getValue()));
+//      p.getMetrics().entrySet().stream().forEach(e -> props.put(e.getKey(), e.getValue()));
       update(p);
     }
   }
@@ -125,7 +125,7 @@ public class VertxProgressMonitor implements ProgressMonitor {
   private static final BiFunction<VertxProgressMonitor, ProgressState, JsonObject> DEFAULT_MESSAGE_PROVIDER =
       (pm, state) -> {
         JsonObject jo = new JsonObject(Json.encode(state));
-        jo.mergeIn(pm.props);
+//        jo.mergeIn(pm.props);
         
         {
           String statusMsg;
@@ -134,7 +134,7 @@ public class VertxProgressMonitor implements ProgressMonitor {
           } else if (state.getPercent() < 0) {
             statusMsg = "Failed: " + pm.jobId + " at "+state.getPercent();
           } else {
-            statusMsg = "Progress=" + pm.jobId + " at "+state.getPercent();
+            statusMsg = "Progress: " + pm.jobId + " at "+state.getPercent();
           }
           jo.put("STATUS_MESSAGE", statusMsg);
         }

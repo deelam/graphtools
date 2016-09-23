@@ -141,7 +141,7 @@ public final class HadoopConfigurationHelper {
     log.info("Checking files in yarn.application.classpath exist ...");
     String[] cpArr = cpStr.split(":");
     for (String jarFile : cpArr) {
-      int starIndex = jarFile.indexOf("*");
+      int starIndex = jarFile.indexOf('*');
       if (starIndex > 0) {
         jarFile = jarFile.substring(0, starIndex);
       }

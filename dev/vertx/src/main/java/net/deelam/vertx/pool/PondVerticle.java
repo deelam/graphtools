@@ -547,7 +547,7 @@ public class PondVerticle extends AbstractVerticle {
 
     final String[] pairs = url.getQuery().split("&");
     for (String pair : pairs) {
-      final int idx = pair.indexOf("=");
+      final int idx = pair.indexOf('=');
       try {
         String key = idx > 0 ? URLDecoder.decode(pair.substring(0, idx), "UTF-8") : pair;
         if (key.equals(VERSION_PARAM)) {

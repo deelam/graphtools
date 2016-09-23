@@ -7,6 +7,7 @@ import net.deelam.common.progress.HasProgress.ProgressState;
  * Receives push updates from process.
  */
 public interface ProgressMonitor extends AutoCloseable {
+  
 	void setProgressMaker(HasProgress process);
 
 	void update(ProgressState p);

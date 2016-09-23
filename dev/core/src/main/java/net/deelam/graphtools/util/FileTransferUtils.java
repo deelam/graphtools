@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.FileAlreadyExistsException;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -125,6 +126,33 @@ public class FileTransferUtils {
     }catch(Exception e){
       log.error("Problem uploading to hdfs; local file is available at {}", file.getAbsolutePath());
       throw e;
+    }
+  }
+
+  public static void deleteDirIfEmpty(HdfsService hdfs, String uriStr) throws IOException {
+    URI uri = URI.create(uriStr);
+    switch (uri.getScheme()) {
+      case "file":{
+        File dir = new File(uri);
+        File[] files = dir.listFiles();
+        if (files.length == 0)
+          if (!dir.delete())
+            log.warn("Could not delete empty directory");
+      }
+        break;
+      case "hdfs": {
+        try{
+          List<String> files = hdfs.listDir(uriStr, true).get();
+          if (files.size() == 0)
+            if (!hdfs.delete(uriStr).get())
+              log.warn("Could not delete empty directory");
+        }catch(ExecutionException|InterruptedException e){
+          log.warn("Could not delete directory", e);
+        }
+      }
+        break;
+      default:
+        throw new IllegalArgumentException("Unknown scheme for: " + uri);
     }
   }
 

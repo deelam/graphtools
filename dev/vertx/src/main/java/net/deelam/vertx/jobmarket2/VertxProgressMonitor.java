@@ -127,17 +127,17 @@ public class VertxProgressMonitor implements ProgressMonitor {
         JsonObject jo = new JsonObject(Json.encode(state));
 //        jo.mergeIn(pm.props);
         
-        {
-          String statusMsg;
-          if (state.getPercent() >= 100) {
-            statusMsg = "Complete: " + pm.jobId + " at "+state.getPercent();
-          } else if (state.getPercent() < 0) {
-            statusMsg = "Failed: " + pm.jobId + " at "+state.getPercent();
-          } else {
-            statusMsg = "Progress: " + pm.jobId + " at "+state.getPercent();
-          }
-          jo.put("STATUS_MESSAGE", statusMsg);
-        }
+//        {
+//          String statusMsg;
+//          if (state.getPercent() >= 100) {
+//            statusMsg = "Complete: " + pm.jobId + " at "+state.getPercent();
+//          } else if (state.getPercent() < 0) {
+//            statusMsg = "Failed: " + pm.jobId + " at "+state.getPercent();
+//          } else {
+//            statusMsg = "Progress: " + pm.jobId + " at "+state.getPercent();
+//          }
+//          jo.put(STATUS_MESSAGE, statusMsg);
+//        }
         return jo;
       };
 
@@ -160,10 +160,10 @@ public class VertxProgressMonitor implements ProgressMonitor {
     vertx.eventBus().publish(busAddr, msgObj);
 
     if (otherBusAddrs != null) {
-      log.debug("Notifying otherBusAddressPrefix={}", otherBusAddrs);
-      otherBusAddrs.stream().forEach(addrPrefix -> {
+      log.debug("Notifying otherBusAddresses={}", otherBusAddrs);
+      otherBusAddrs.stream().forEach(addr -> {
         //log.debug("Notifying "+addrPrefix);
-        vertx.eventBus().publish(addrPrefix, msgObj);
+        vertx.eventBus().publish(addr, msgObj);
       });
     }
   }

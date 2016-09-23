@@ -30,11 +30,12 @@ public interface HasProgress {
       this.message = message;
     }
 
-    public void starting(Object object) {
+    String jobId;
+    public void starting(String jobId, Object object) {
       if (object == null)
-        starting(null);
+        starting(jobId, null);
       else
-        starting("Starting: " + object.toString());
+        starting(jobId, "Starting: " + object.toString());
     }
 
     public void done(Object object) {
@@ -44,7 +45,8 @@ public interface HasProgress {
         done("Done: " + object.toString());
     }
 
-    public ProgressState starting(String msg) {
+    public ProgressState starting(String jobId, String msg) {
+      this.jobId=jobId;
       setPercent(1);
       if (msg == null)
         setMessage("Starting");

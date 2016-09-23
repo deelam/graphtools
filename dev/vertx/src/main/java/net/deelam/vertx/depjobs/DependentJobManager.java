@@ -66,6 +66,8 @@ public class DependentJobManager {
       String jobId = msg.body().getId();
       if(false)
         jobProd.removeJob(jobId, null);
+      log.info("==========> cancelJobsDependentOn failedJob: {}", jobId);
+      cancelJobsDependentOn(jobId, null);
       DependentJobFrame jobV = graph.getVertex(jobId, DependentJobFrame.class);
       log.debug("all jobs: {}", this);
       jobFailed(jobV);

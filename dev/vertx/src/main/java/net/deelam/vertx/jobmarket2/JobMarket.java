@@ -17,6 +17,7 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import net.deelam.vertx.BeanJsonCodec;
@@ -267,38 +268,47 @@ public class JobMarket extends AbstractVerticle {
       }
     });
     
-    AtomicInteger sameLogMsgCount=new AtomicInteger(0);
-    vertx.setPeriodic(1000, id->{
-      long availJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.AVAILABLE)).count();
-      long startedJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.STARTED)).count();
-      long progessingJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.PROGRESSING)).count();
-//      if(availJobCount+startedJobCount+progessingJobCount==0)
-//        return;
-      long doneJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.DONE)).count();
-      long failedJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.FAILED)).count();
-      String logMsg = availJobCount+" availJobs -> "+
-          startedJobCount+" .. "+
-          progessingJobCount+" -> "+
-          doneJobCount+" doneJobs, "+
-          failedJobCount+" failed \t:: "+
-          idleWorkers.size()+" idle vs "+
-          pickyWorkers.size()+" picky \t of "+
-          knownWorkers.size()+" workers";
-      if(!logMsg.equals(prevLogMsg)){
-        log.info(logMsg);
-        prevLogMsg=logMsg;
-        sameLogMsgCount.set(0);
-      } else {
-        if(sameLogMsgCount.incrementAndGet()>10)
-          prevLogMsg=null;
-      }
-    });
+    if(statusPeriod>0){
+      AtomicInteger sameLogMsgCount=new AtomicInteger(0);
+      vertx.setPeriodic(statusPeriod, id->{
+        long availJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.AVAILABLE)).count();
+        long startedJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.STARTED)).count();
+        long progessingJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.PROGRESSING)).count();
+  //      if(availJobCount+startedJobCount+progessingJobCount==0)
+  //        return;
+        long doneJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.DONE)).count();
+        long failedJobCount = jobItems.entrySet().stream().filter(e -> (e.getValue().state == JobState.FAILED)).count();
+        String logMsg = availJobCount+" availJobs -> "+
+            startedJobCount+" .. "+
+            progessingJobCount+" -> "+
+            doneJobCount+" doneJobs, "+
+            failedJobCount+" failed \t:: "+
+            idleWorkers.size()+" idle vs "+
+            pickyWorkers.size()+" picky \t of "+
+            knownWorkers.size()+" workers";
+        if(!logMsg.equals(prevLogMsg)){
+          log.info(logMsg);
+          prevLogMsg=logMsg;
+          sameLogMsgCount.set(0);
+        } else {
+          if(sameLogMsgCount.incrementAndGet()>sameLogThreshold)
+            prevLogMsg=null;
+        }
+      });
+    }
 
     // announce after setting eb.consumer
     VerticleUtils.announceServiceType(vertx, serviceType, addressBase);
 
     log.info("Ready: addressBase={} this={}", addressBase, this);
   }
+  
+  private int statusPeriod, sameLogThreshold;
+  public void periodicLogs(int statusPeriod, int sameLogThreshold) {
+    this.statusPeriod=statusPeriod;
+    this.sameLogThreshold=sameLogThreshold;
+  }
+
   
   private String prevLogMsg;
 

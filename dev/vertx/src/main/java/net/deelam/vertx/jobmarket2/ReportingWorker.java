@@ -30,8 +30,8 @@ public class ReportingWorker implements Function<JobDTO, Boolean>, HasProgress {
       pm.setProgressMaker(this);
       doer.accept(job);
       return true;
-    } catch (Exception e) {
-      log.error("Error during job processing", e);
+    } catch (Throwable e) {
+      log.error("Error during job processing by "+doer, e);
       ProgressState state = getProgress();
       if(state.getPercent()>0)
         log.warn("Should set percent to negative! {}", state);

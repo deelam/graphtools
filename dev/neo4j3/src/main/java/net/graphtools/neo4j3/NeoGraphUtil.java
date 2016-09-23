@@ -3,6 +3,8 @@ package net.graphtools.neo4j3;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.tinkerpop.gremlin.neo4j.structure.Neo4jGraph;
+import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -20,8 +22,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class NeoGraphUtil {
 
-  public static Neo4jGraphAPI openNeoGraph(File DB_PATH) {
-    GraphDatabaseService graphDb = openGraphDB(DB_PATH);
+  public static Graph openGraph(File dbPath){
+    Neo4jGraphAPI neoGraph=NeoGraphUtil.openNeoGraph(dbPath);
+    return Neo4jGraph.open(neoGraph);
+  }
+  public static Neo4jGraphAPI openNeoGraph(File dbPath) {
+    GraphDatabaseService graphDb = openGraphDB(dbPath);
     return new Neo4jGraphAPIImpl(graphDb);
   }
 
@@ -38,6 +44,7 @@ public class NeoGraphUtil {
         //        .setConfig( GraphDatabaseSettings.string_block_size, "60" )
         //        .setConfig( GraphDatabaseSettings.array_block_size, "300" )
         .newGraphDatabase();
+    log.info("Opened graph: {}", graphDb);
 
     registerShutdownHook(graphDb);
     return graphDb;

@@ -24,6 +24,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <module>hadoop</module>
     <module>enricher</module>
     <module>vertx</module>
+    <module>neo4j3/neo4j-tinkerpop-api-impl</module>
     <module>neo4j3</module>
   </modules>
   <profiles>
